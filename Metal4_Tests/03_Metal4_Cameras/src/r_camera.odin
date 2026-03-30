@@ -1,0 +1,45 @@
+package main
+
+import "core:math"
+import la "core:math/linalg"
+
+// The linalg package conventions apply (right-handed coordinate system):
+//	- +x is left
+//	- +y is up
+//	- +z is forward
+
+R_Camera :: struct {
+	position: [3]f32,
+	rotation: [3]f32,
+
+	world_top: [3]f32,
+	near: f32,
+	far: f32,
+
+	aspect: f32,
+	fov: f32,
+}
+
+
+r_camera_view_matrix :: proc(camera: R_Camera) -> matrix[4,4]f32 {
+	look_direction := [3]f32 {
+		math.cos(camera.rotation.y) * math.cos(camera.rotation.x),
+		math.sin(camera.rotation.x),
+		math.sin(camera.rotation.y) * math.cos(camera.rotation.x),
+	}
+	look_target := camera.position + look_direction
+
+	view := la.matrix4_look_at(camera.position, look_target, [3]f32{ 0.0, 1.0, 0.0 })
+	return view
+}
+
+r_camera_proj_matrix :: proc(camera: R_Camera) -> matrix[4,4]f32 {
+	proj := la.matrix4_perspective_f32(camera.fov, camera.aspect, camera.near, camera.far)
+	return proj
+}
+
+
+r_update_camera_from_input :: proc(camera: ^R_Camera) {
+	// left := la.cross()
+}
+
