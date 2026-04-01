@@ -14,9 +14,129 @@ La libreria deve funzionare su hardware Apple dotato di processore Apple Silicon
 - Verrà utilizzata l'API di accelerazione grafica Metal 4, che, grazie alle nuove features introdotte rende la conversione realistica.
 - Si targeta quindi macOs 26 Tahoe
 
-# Struttura multi-layer
+## Struttura multi-layer
 
-L'api inizialmente sarà implementata al di sopra di Metal 4, tuttavia è necessario  
+L'api inizialmente sarà implementata al di sopra di Metal 4, tuttavia è necessario progettare la libreria in modo che sia possibile espandere in un possibile futuro la funzionalità anche ad altre piattaforme con altre Api di accelerazione grafica (come Vulkan).  
+Siccome alcune piattaforme supportano più Api (ad esempio Windows, con DirectX e Vulkan, o MacOs, con Metal 3 e Metal 4), sarebbe possibile dover decidere quale utilizzare a start-up time. Si decide quindi di adottare un sistema a con backend hot-swappabile al momento di start-up dell'applicazione.  
+
+È desiderabile anche avere controlli extra sull'utilizzo della libreria, specialmente negli ambienti di sviluppo, prima dell'ambiente di production. Si adotterà quindi un sistema a layer, ispirato dal funzionamento di Vulkan:
+
+```
+|     Applicazione     | --v
+                           NoGfx library call
+|  Layer di debugging  | <--
+|  Layer di traduzione | --v
+                           Native Api call
+|     Metal/VK/DX      | <--
+```
+
+Il funzionamento del layer di debugging è quello di analizzare gli input di ogni funzione, validando i valori passati.  
+L'ultimo layer è sempre quello di traduzione, che converte la chiamata a NoGfx nell'equivalente nativo.
+
+Questa soluzione porta vantaggi in termini di separazione tra codice di gestione degli errori e di traduzione, portando quindi ad una semplice organizzazione.  
+È possibile utilizzare anche più di due layer, nel caso si vogliano implementare altre funzionalità di debugging (api tracing, etc...)
+
+A lato implementativo, un layer si presenterà come una grade vtable.
+```c
+typedef struct GpuLayer {
+  void* (*gpuMalloc)(size_t bytes, size_t align, MEMORY memory);
+  void (*gpuFree)(void* ptr);
+  // ...
+} GpuLayer;
+```
+
+## Multithreading
+L'articolo originario non specifica nel dettaglio come la sincronizzazione dovrebbe avvenire. Sono stati quindi scelte le seguenti guidelines:
+- La creazione e distruzione di risorse deve poter avvenire in modo asincrono (thread-safe). Ciò comprende anche l'allocazione e deallocazione dei buffer.
+- L'encoding di un `GpuCommandBuffer` è thread-unsafe, deve essere sincrona o esternamente sincronizzata dall'utente.
+- L'accodamento dei messaggi nella `GpuQueue` deve poter avvenire in modo asincrono (thread-safe).
+
+## Espansione dell'API
+L'Api NoGfx risulta quasi totalmente completa, però omette alcuni dettagli, nel particolare:
+- Inizializzazione della libreria.
+- Selezione del device e dettagli di creazione della `GpuQueue`.
+- Presentazione a schermo.
+- Gestione degli errori (che possono generare dal layer di validazione o dall'API nativa sottostante).
+- Accesso ai primitivi dell'api nativa.
+
+#### Inizializzazione della libreria e selezione del device
+Al momento dell'inizializzazione l'utilizzatore della libreria dovrà stabilire le proprietà di inizializzazione di essa. Per far ciò utilizzerà la struttura `GpuInitDesc`, specificando api sottostante da utilizzare, richiedendo o meno la validazione e fornendo layer extra di terze parti.
+
+Una volta inizializzato la libreria, l'utilizzatore dovrà quindi selezionare un dispositivo fisico da utilizzare. Nel caso di dispositivi Apple, ce ne sarà sempre solo uno: la scheda grafica integrata al processore. Nel futuro, se la libreria verrà portata a Vulkan, sarà possibile che l'utilizzatore avrà più schede grafiche disponibili (ad esempio, sia un'integrata, che quella dedicata).  
+Per far ciò sono disponibili le funzioni `gpuEnumerateDevices` e `gpuSelectDevices`. Ogni dispositivo è identificato da un ID numerico.
+Si nota che l'utilizzatore non può chiamare altre funzioni prima di aver selezionato un dispositivo.
+
+Al momento della terminazione dell'applicazione l'utente potrà chiamare `gpuDeinit`.
+
+Segue quindi la parte di Api rilevante:
+
+```c
+typedef enum GPU_BACKEND {
+  GPU_NONE = 0,
+  GPU_METAL_4,
+  GPU_VULKAN,
+  // ... 
+};
+
+typedef enum GPU_DEVICE_TYPE {
+  GPU_INTEGRATED,
+  GPU_DEDICATED,
+};
+
+typedef struct GpuInitDesc {
+  BACKEND backend;
+  bool validationEnabled;
+  GpuLayer* extraLayers;
+  size_t extraLayerCount;
+} GpuInitDesc;
+
+typedef size_t GpuDeviceId;
+
+typedef struct GpuDeviceInfo {
+  GpuDeviceId identifier;
+  const char* name;
+  const char* vendor;
+  GPU_DEVICE_TYPE type;
+  // TODO: device capabilities, limits, etc...
+} GpuDeviceInfo;
+
+void gpuInit(const GPUInitDesc* desc, GPU_RESULT* result);
+void gpuDeinit();
+
+size_t gpuEnumerateDevices(GpuDeviceInfo* devices, size_t devices_size, GPU_RESULT* result);
+void gpuSelectDevice(GpuDeviceId deviceId, GPU_RESULT* result);
+```
+
+#### Creazione della Queue
+TODO: Su Metal non servirebbe specificare nient'altro in teoria. Probabilmente si intende qualcosa di simile alle QueueFamilies di vulkan, ma non saprei
+
+#### Presentazione
+TODO: Guarda cosa fanno Vulkan, WebGpu e SDL3_GPU. Metal è proprio semplice.
+
+#### Gestione degli errori
+La maggior parte delle api moderne lavorano con sistemi di callback per informare l'utente degli errori o problemi avvenuti. Questo tuttavia rende difficile sapere esattamente dove un'errore è originato, la libreria quindi utilizzerà una gestione degli errori a livello di chiamata a funzione.
+
+Ogni funzione accetterà come ultimo paramentro un valore puntatore a `GPU_RESULT`. Allora, se sono avvenuti problemi con l'esecuzione della chiamata a funzione, verrà ritornato l'errore in tale variabile.  
+Possiamo considerare il layer di validazione come adeguato se riesce a riconoscere tutte le configurazioni di comandi invalide prima che queste ultime raggiungino l'api nativa. Se quindi viene ricevuto un messaggio d'errore da essa (attraverso il callback), allora tale messaggio è da considerarsi bug nel layer di validazione.  
+Questa osservazione rende un sistema basato effettivamente su "errori come risultato" compatibile con sistemi basati su callback.
+
+Si nota che se il puntatore al result risulta `null`, allora il valore risultato verrà semplicemente scartato.
+
+#### Pseudo C++
+Notiamo infine che l'api è in pseudo C++, quindi non utilizzabile da C o da linguaggi compatibili con esso. Vengono proposte alcune finali modifiche:
+- Rimozione di valori di default
+- Utilizzo di puntatore+lunghezza al posto di `std::span` e `ByteSpan`.
+- Modifica dei tipi enum, in modo da avere un _namespace_ di appartenenza (`MEMORY_DEFAULT` -> `GPU_MEMORY_DEFAULT`).
+Viene anche applicata l'ottimizzazione di passare grandi strutture attraverso puntatori const.
+
+Segue quindi l'api da implementare nel completo:
+```c
+      \    /\
+       )  ( ')
+      (  /  )
+todo   \(__)|
+```
+<!-- NOTA: Siccome il documento verrà stampato (e mettere codice nella tesi non piace in generale), considera se è meglio fornire un link a github. -->
 
 ## Analisi dell'API e risoluzione delle incrongruenze
 
@@ -24,7 +144,7 @@ L'api inizialmente sarà implementata al di sopra di Metal 4, tuttavia è necess
 Per buffer si intende un blob continuo di memoria acessibile dalla scheda grafica ed, opzionalmente, dalla cpu.
 
 L'api ammette molteplici tipologie di buffer:
-  - `MEMORY_DEFAULT`: il buffer risiede nella memoria della scheda grafica, ma è accessibile in scrittura dalla cpu attraverso `cpu mapped gpu pointers`.
+  - `MEMORY_DEFAULT`: il buffer risiede nella memoria della scheda grafica, ma è accessibile in scrittura dalla cpu attraverso _cpu mapped gpu pointers_.
   - `MEMORY_GPU`: il buffer risiede nella memoria della scheda grafica. Non è accessibile dalla gpu direttamente.
   - `MEMORY_READBACK`: il buffer risiede nella memoria della scheda grafica, ma è accessibile in lettura dalla cpu.
 
@@ -67,6 +187,20 @@ Questi tipi di buffer sono estremamente simili ai buffer di tipologia `MEMORY_DE
 Il corrispettivo è un `MTLBuffer` con resource option `MTLStorageModeShared | MTLResourceCPUCacheModeDefaultCache | MTLResourceHazardTrackingModeUntracked`. L'opzione `MTLResourceCPUCacheModeDefaultCache` garantisce una tipologia di gestione della cache più lenta, ma ottimale per la lettura dal buffer.
 
 # Progettazione dell'implementazione
+<!-- Si è deciso di usare C, nel particolare C89 (anche conosciuto come ANSI C), in quanto la codebase deve restare compatibile sia con ObjectiveC (per interop con Metal), sia con C++ (per un'eventuale futuro interop con DirectX). -->  
+<!-- Diversamente da come spesso si pensi, C e C++ sono due linguaggi differenti, che, nella loro crescita negli ultimi quarant'anni, hanno avuto un'evoluzione diversa. -->  
+<!-- C++ è un quasi superset di C89, per questo viene scelta questa versione: risulta facile sin dall'inizio creare codice che sia compilabile in entrambi i linguaggi. -->
+
+<!-- ObjectiveC è un superset stretto di C. Questo rimane vero anche per versioni più recenti di C89. Non risultano quindi problemi. -->
+Si è deciso di adottare l'utilizzo di C++, mantenendo l'ABI della libreria C-compatible.
+
+Si programmerà in modo data-oriented, ponendo molta enfasi sull'utilizzo della memoria, degli allocatori, etc...
+Verranno quindi evitate feature di C++ moderno, preferendo quindi un C++ più in stile C.
+
+Objective-C++ verrà utilizzato per l'integrazione con Metal.
+
+## Scelta del linguaggio di shading
+In previsione del futuro, viene scelto, Slang, in quanto è l'unico linguaggio cross-platform che supporta puntatori a device memory. Verrà sviluppata una libreria slang che renderà trasparente l'integrazione con NoGfx.
 
 # Progettazione del testing
 
@@ -74,15 +208,17 @@ Il corrispettivo è un `MTLBuffer` con resource option `MTLStorageModeShared | M
 
 A prima vista, sia DirectX 12, che Vulkan risultano adatti ad essere utilizzati come backend per NoGfx. Infatti sarebbe possibile implementare l'intera api cpu-side in entrambe le piattaforme.
 
-Risulta problematica la situazione quando si parla di linguaggi di shading GPU side: sia HLSL, che GLSL non supportano i device pointers, limitando quindi ciò che è possibile "codificare" con l'api a lato cpu.
-Il problema non è di supporto hardware, in quanto e schede grafiche a moderne supportano tali tipi di puntatori (come si può anche vedere dal funzionamento di Cuda e di OpenCL). Il bytecode Spirv infatti supporta infatti i device pointers attraverso estensioni. Vulkan supporta l'esecuzioni di tali tipi di shader quando la feature `VK_KHR_device_address` è disponibile.
+Risulta problematica la situazione quando si parla di linguaggi di shading GPU side: sia HLSL, che GLSL non supportano i device pointers, limitando quindi ciò che è possibile "codificare" con l'api a lato cpu.  
+Il problema non è di supporto hardware, in quanto e schede grafiche a moderne supportano tali tipi di puntatori (come si può anche vedere dal funzionamento di Cuda e di OpenCL). Il bytecode Spirv supporta infatti i device pointers attraverso estensioni. Vulkan supporta l'esecuzioni di tali tipi di shader quando la feature `VK_KHR_buffer_device_address` risulta disponibile ([supportata in più dell'80% dei sistemi](https://vulkan.gpuinfo.org/displayextensiondetail.php?extension=VK_KHR_buffer_device_address)).
 
-Se si parla di Vulkan, quindi risolvere questo problema richiederebbe semplicemente l'utilizzo di linguaggi con supporto per tali tipi di puntatori, come Slang, il quale può risultare un'alternativa a GLSL.
+Se si parla di Vulkan, quindi risolvere questo problema richiederebbe semplicemente l'utilizzo di linguaggi con supporto per tali tipi di puntatori, come Slang, il quale può risultare un'alternativa a GLSL.  
 Non vi è invece alcuna alternativa per DirectX 12, in quanto il bytecode DXIL non supporta il concetto di puntatore, rendendo quindi la possibile implementazione non totalmente accurata a quella descritta nell'articolo.
 
 Altre api, come OpenGL, DirectX 11 e precedenti, WebGL e WebGpu risultano troppo limitanti per implementare NoGfx, anche per quanto riguarda il cpu-side.
 
+<!-- TODO: analizzare anche il caso Metal 3, siccome MacOs Tahoe non è ancora molto diffuso -->
+
 # Glossario
-amd64 = x86_64
+amd64 = x86_64  
 arm64 = aarch64
 
