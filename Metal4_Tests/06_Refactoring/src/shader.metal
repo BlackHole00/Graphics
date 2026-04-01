@@ -61,7 +61,6 @@ vertex V_Out v_main(
 
 	V_Out out;
 	out.position	= camera.projection * camera.view * instance.model * float4(current_vertex.position, 1.0);
-	// out.position	= float4(current_vertex.position, 1.0);
 	out.uv		= current_vertex.uv;
 	out.instance_id = instance_id;
 
