@@ -70,6 +70,18 @@ Il corrispettivo è un `MTLBuffer` con resource option `MTLStorageModeShared | M
 
 # Progettazione del testing
 
+# Analisi della fattibilità di integrazione con altre Api di accelerazione grafica
+
+A prima vista, sia DirectX 12, che Vulkan risultano adatti ad essere utilizzati come backend per NoGfx. Infatti sarebbe possibile implementare l'intera api cpu-side in entrambe le piattaforme.
+
+Risulta problematica la situazione quando si parla di linguaggi di shading GPU side: sia HLSL, che GLSL non supportano i device pointers, limitando quindi ciò che è possibile "codificare" con l'api a lato cpu.
+Il problema non è di supporto hardware, in quanto e schede grafiche a moderne supportano tali tipi di puntatori (come si può anche vedere dal funzionamento di Cuda e di OpenCL). Il bytecode Spirv infatti supporta infatti i device pointers attraverso estensioni. Vulkan supporta l'esecuzioni di tali tipi di shader quando la feature `VK_KHR_device_address` è disponibile.
+
+Se si parla di Vulkan, quindi risolvere questo problema richiederebbe semplicemente l'utilizzo di linguaggi con supporto per tali tipi di puntatori, come Slang, il quale può risultare un'alternativa a GLSL.
+Non vi è invece alcuna alternativa per DirectX 12, in quanto il bytecode DXIL non supporta il concetto di puntatore, rendendo quindi la possibile implementazione non totalmente accurata a quella descritta nell'articolo.
+
+Altre api, come OpenGL, DirectX 11 e precedenti, WebGL e WebGpu risultano troppo limitanti per implementare NoGfx, anche per quanto riguarda il cpu-side.
+
 # Glossario
 amd64 = x86_64
 arm64 = aarch64
