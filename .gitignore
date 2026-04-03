@@ -3,6 +3,8 @@
 **/*.spall
 
 **/out
+**/*.a
+**/*.o
 **/*.metal.ir
 **/*.metallib
 **/*.dSYM
