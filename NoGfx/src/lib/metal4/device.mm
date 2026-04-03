@@ -1,14 +1,7 @@
 #include "device.h"
 
 #include <lib/metal4/context.h>
-#include <Metal/Metal.h>
 
-typedef struct {
-	GpuDeviceInfo*	info;
-	id<MTLDevice>*	devices;
-
-	size_t		count;
-} Mtl4AvailableDevicesList;
 Mtl4AvailableDevicesList gMtl4AvailableDevicesList;
 
 bool mtl4CheckDeviceSuitability(id<MTLDevice> device) {
@@ -89,13 +82,7 @@ void mtl4EnumerateDevices(GpuDeviceInfo** devices, size_t* devices_count, GpuRes
 	return;
 }
 
-void mtl4SelectDevice(GpuDeviceId deviceId, GpuResult* result) {
-	// TODO: Move validation out
-	if (deviceId >= gMtl4AvailableDevicesList.count) {
-		*result = GPU_INVALID_DEVICE;
-		return;
-	}
-
+void mtl4SelectDevice(GpuDeviceId deviceId, GpuResult*) {
 	gMtl4Context.device = gMtl4AvailableDevicesList.devices[deviceId];
 	gMtl4Context.selectedDeviceId = deviceId;
 }

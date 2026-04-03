@@ -17,6 +17,8 @@ typedef enum GpuResult {
 	GPU_OUT_OF_CPU_MEMORY,
 	GPU_OUT_OF_GPU_MEMORY,
 
+	GPU_INVALID_PARAMETERS,
+
 	GPU_GENERAL_ERROR,
 } GpuResult;
 

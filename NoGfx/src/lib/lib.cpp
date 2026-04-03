@@ -14,15 +14,16 @@ void gpuInit(const GpuInitDesc* desc, GpuResult* result) {
 		*result = GPU_BACKEND_NOT_SUPPORTED;
 		return;
 	}
-
-	const GpuLayer* validationLayer	= gpuAcquireValidationLayerFor(desc->backend);
-	if (validationLayer == nullptr) {
-		*result = GPU_BACKEND_NOT_SUPPORTED;
-		return;
-	}
-
 	gpuPushLayer(baseLayer);
-	gpuPushLayer(validationLayer);
+
+	if (desc->validationEnabled) {
+		const GpuLayer* validationLayer	= gpuAcquireValidationLayerFor(desc->backend);
+		if (validationLayer == nullptr) {
+			*result = GPU_BACKEND_NOT_SUPPORTED;
+			return;
+		}
+		gpuPushLayer(validationLayer);
+	}
 
 	GPU_LAYERED_CALL_NO_PARAMS(layerInit, result);
 	if (*result != GPU_SUCCESS) {

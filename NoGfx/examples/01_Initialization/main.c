@@ -12,7 +12,7 @@ GpuBackend selectBackend(void) {
 int main(void) {
 	GpuInitDesc desc;
 	desc.backend		= selectBackend();
-	desc.validationEnabled	= 1;
+	desc.validationEnabled	= true;
 	desc.extraLayers	= NULL;
 	desc.extraLayerCount	= 0;
 
@@ -46,15 +46,16 @@ int main(void) {
 	}
 
 	if (devices_count <= 0) {
-		printf("No available devices found. Aborting.");
+		printf("No available devices found. Aborting.\n");
 		return -1;
 	}
 
 	gpuSelectDevice(devices[0].identifier, &result);
 	if (result != GPU_SUCCESS) {
-		printf("Could not select a the specified device. Aborting.");
+		printf("Could not select a the specified device. Aborting.\n");
 		return -1;
 	}
+	printf("Using device `%s`.\n", devices[0].name);
 
 	gpuDeinit();
 	return 0;
