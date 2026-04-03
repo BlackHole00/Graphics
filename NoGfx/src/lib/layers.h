@@ -12,7 +12,7 @@ typedef struct {
 } GpuActiveLayers;
 extern GpuActiveLayers gGpuActiveLayers;
 
-#define GPU_LAYERED_CALL_NO_PARAMS(_function)				\
+#define GPU_LAYERED_CALL_NO_RESULT(_function)				\
 for (size_t i = gGpuActiveLayers.count; i > 0; i--) {			\
 	auto function = gGpuActiveLayers.layers[i - 1]->_function;	\
 	if (function != nullptr) {					\
@@ -20,11 +20,25 @@ for (size_t i = gGpuActiveLayers.count; i > 0; i--) {			\
 	}								\
 }
 
-#define GPU_LAYERED_CALL(_function, ...)				\
+#define GPU_LAYERED_CALL_NO_PARAMS(_function, _result_ptr)		\
 for (size_t i = gGpuActiveLayers.count; i > 0; i--) {			\
 	auto function = gGpuActiveLayers.layers[i - 1]->_function;	\
 	if (function != nullptr) {					\
-		function(__VA_ARGS__);					\
+		function(_result_ptr);					\
+		if (*_result_ptr != GPU_SUCCESS) {			\
+			break;						\
+		}							\
+	}								\
+}
+
+#define GPU_LAYERED_CALL(_function, _result_ptr, ...)			\
+for (size_t i = gGpuActiveLayers.count; i > 0; i--) {			\
+	auto function = gGpuActiveLayers.layers[i - 1]->_function;	\
+	if (function != nullptr) {					\
+		function(__VA_ARGS__, _result_ptr);			\
+		if (*_result_ptr != GPU_SUCCESS) {			\
+			break;						\
+		}							\
 	}								\
 }
 

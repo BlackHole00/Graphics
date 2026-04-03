@@ -25,12 +25,12 @@ typedef enum GpuBackend {
 	GPU_METAL_4,
 	GPU_VULKAN,
 	// ... 
-} GPU_BACKEND;
+} GpuBackend;
 
-typedef enum GPU_DEVICE_TYPE {
+typedef enum GpuDeviceType {
 	GPU_INTEGRATED,
 	GPU_DEDICATED,
-} GPU_DEVICE_TYPE;
+} GpuDeviceType;
 
 typedef size_t GpuDeviceId;
 
@@ -38,7 +38,7 @@ typedef struct GpuDeviceInfo {
 	GpuDeviceId identifier;
 	const char* name;
 	const char* vendor;
-	GPU_DEVICE_TYPE type;
+	GpuDeviceType type;
 	// TODO: device capabilities, limits, etc...
 } GpuDeviceInfo;
 
@@ -51,7 +51,7 @@ typedef struct GpuLayer {
 } GpuLayer;
 
 typedef struct GpuInitDesc {
-	GPU_BACKEND backend;
+	GpuBackend backend;
 	bool validationEnabled;
 	GpuLayer* extraLayers;
 	size_t extraLayerCount;

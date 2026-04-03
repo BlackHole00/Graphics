@@ -43,4 +43,12 @@ on_error_cleanup:
 	return;
 }
 
+void mtl4Deinit(void) {
+	if (gMtl4Context.device != nullptr) {
+		[gMtl4Context.device release];
+	}
+
+	free(gMtl4Context.globalBackingMemory);
+	free(gMtl4Context.tempBackingMemory);
+}
 

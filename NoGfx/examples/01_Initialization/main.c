@@ -28,7 +28,8 @@ int main(void) {
 	size_t devices_count;
 	gpuEnumerateDevices(&devices, &devices_count, &result);
 	if (result != GPU_SUCCESS) {
-		printf("Get the available devices. Got error %d.\n", result);
+		printf("Failed to get the available devices. Got error %d.\n", result);
+		return -1;
 	}
 
 	printf("Available devices:\n");
@@ -44,7 +45,16 @@ int main(void) {
 		);
 	}
 
-	// gpuSelectDevice(GpuDeviceId deviceId, GpuResult *result)
+	if (devices_count <= 0) {
+		printf("No available devices found. Aborting.");
+		return -1;
+	}
+
+	gpuSelectDevice(devices[0].identifier, &result);
+	if (result != GPU_SUCCESS) {
+		printf("Could not select a the specified device. Aborting.");
+		return -1;
+	}
 
 	gpuDeinit();
 	return 0;

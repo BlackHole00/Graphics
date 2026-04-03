@@ -4,7 +4,9 @@
 #include <Metal/Metal.h>
 
 typedef struct {
-	GpuDeviceInfo*	devices;
+	GpuDeviceInfo*	info;
+	id<MTLDevice>*	devices;
+
 	size_t		count;
 } Mtl4AvailableDevicesList;
 Mtl4AvailableDevicesList gMtl4AvailableDevicesList;
@@ -19,8 +21,14 @@ void mtl4PrepareAvailableDevicesList(GpuResult* result) {
 	GpuArenaState onErrorRecoveryState = gpuBeginArenaTemp(arena);
 
 	NSArray<id<MTLDevice>>* mtlDevices = MTLCopyAllDevices();
+
 	GpuDeviceInfo* devicesInfo = gpuArenaAlloc<GpuDeviceInfo>(arena, [mtlDevices count]);
 	if (devicesInfo == nullptr) {
+		*result = GPU_OUT_OF_CPU_MEMORY;
+		goto on_error_cleanup;
+	}
+	id<MTLDevice>* devices; devices = gpuArenaAlloc<id<MTLDevice>>(arena, [mtlDevices count]);
+	if (devices == nullptr) {
 		*result = GPU_OUT_OF_CPU_MEMORY;
 		goto on_error_cleanup;
 	}
@@ -29,7 +37,7 @@ void mtl4PrepareAvailableDevicesList(GpuResult* result) {
 
 	for (size_t i = 0; i < [mtlDevices count]; i++) {
 		id<MTLDevice> mtlDevice = mtlDevices[i];
-		GpuDeviceInfo* deviceInfo = &devicesInfo[i];
+		GpuDeviceInfo* deviceInfo = &devicesInfo[deviceId];
 
 		if (!mtl4CheckDeviceSuitability(mtlDevice)) {
 			continue;
@@ -48,15 +56,17 @@ void mtl4PrepareAvailableDevicesList(GpuResult* result) {
 		// TODO: Actually check for other types of vendor. This should be fine, since only Apple hardware is
 		//	supported.
 		deviceInfo->vendor = "Apple";
-
 		deviceInfo->identifier = deviceId;
 		deviceInfo->type = [mtlDevice isLowPower] ? GPU_INTEGRATED : GPU_DEDICATED;
+
+		devices[deviceId] = mtlDevice;
 
 		deviceId++;
 	}
 
-	gMtl4AvailableDevicesList.devices = devicesInfo;
-	gMtl4AvailableDevicesList.count = [mtlDevices count];
+	gMtl4AvailableDevicesList.info = devicesInfo;
+	gMtl4AvailableDevicesList.devices = devices;
+	gMtl4AvailableDevicesList.count = deviceId;
 
 	[mtlDevices release];
 
@@ -64,7 +74,7 @@ void mtl4PrepareAvailableDevicesList(GpuResult* result) {
 	return;
 
 on_error_cleanup:
-	gMtl4AvailableDevicesList.devices = nullptr;
+	gMtl4AvailableDevicesList.info = nullptr;
 	gMtl4AvailableDevicesList.count = 0;
 
 	gpuEndArenaTemp(onErrorRecoveryState);
@@ -72,10 +82,21 @@ on_error_cleanup:
 }
 
 void mtl4EnumerateDevices(GpuDeviceInfo** devices, size_t* devices_count, GpuResult* result) {
-	*devices = gMtl4AvailableDevicesList.devices;
+	*devices = gMtl4AvailableDevicesList.info;
 	*devices_count = gMtl4AvailableDevicesList.count;
 
 	*result = GPU_SUCCESS;
 	return;
+}
+
+void mtl4SelectDevice(GpuDeviceId deviceId, GpuResult* result) {
+	// TODO: Move validation out
+	if (deviceId >= gMtl4AvailableDevicesList.count) {
+		*result = GPU_INVALID_DEVICE;
+		return;
+	}
+
+	gMtl4Context.device = gMtl4AvailableDevicesList.devices[deviceId];
+	gMtl4Context.selectedDeviceId = deviceId;
 }
 

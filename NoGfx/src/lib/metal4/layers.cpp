@@ -5,9 +5,9 @@
 
 GpuLayer gMtl4BaseLayer = {
 	/*layerInit=*/			mtl4Init,
-	/*gpuDeinit=*/			nullptr,
+	/*gpuDeinit=*/			mtl4Deinit,
 	/*gpuEnumerateDevices=*/	mtl4EnumerateDevices,
-	/*gpuSelectDevice=*/		nullptr,
+	/*gpuSelectDevice=*/		mtl4SelectDevice,
 };
 
 GpuLayer gMtl4ValidationLayer;

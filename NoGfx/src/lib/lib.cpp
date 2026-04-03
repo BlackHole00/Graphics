@@ -24,7 +24,7 @@ void gpuInit(const GpuInitDesc* desc, GpuResult* result) {
 	gpuPushLayer(baseLayer);
 	gpuPushLayer(validationLayer);
 
-	GPU_LAYERED_CALL(layerInit, result);
+	GPU_LAYERED_CALL_NO_PARAMS(layerInit, result);
 	if (*result != GPU_SUCCESS) {
 		return;
 	}
@@ -33,11 +33,14 @@ void gpuInit(const GpuInitDesc* desc, GpuResult* result) {
 }
 
 void gpuDeinit(void) {
-	GPU_LAYERED_CALL_NO_PARAMS(gpuDeinit);
+	GPU_LAYERED_CALL_NO_RESULT(gpuDeinit);
 }
 
 void gpuEnumerateDevices(GpuDeviceInfo **devices, size_t *devices_count, GpuResult *result) {
-	GPU_LAYERED_CALL(gpuEnumerateDevices, devices, devices_count, result);
+	GPU_LAYERED_CALL(gpuEnumerateDevices, result, devices, devices_count);
 }
 
+void gpuSelectDevice(GpuDeviceId deviceId, GpuResult* result) {
+	GPU_LAYERED_CALL(gpuSelectDevice, result, deviceId);
+}
 
