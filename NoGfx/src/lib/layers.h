@@ -13,34 +13,46 @@ typedef struct {
 extern GpuActiveLayers gGpuActiveLayers;
 
 #define GPU_LAYERED_CALL_NO_RESULT(_function)				\
-for (size_t i = gGpuActiveLayers.count; i > 0; i--) {			\
-	auto function = gGpuActiveLayers.layers[i - 1]->_function;	\
+for (size_t _i = gGpuActiveLayers.count; _i > 0; _i--) {		\
+	auto function = gGpuActiveLayers.layers[_i - 1]->_function;	\
 	if (function != nullptr) {					\
 		function();						\
 	}								\
 }
 
-#define GPU_LAYERED_CALL_NO_PARAMS(_function, _result_ptr)		\
-for (size_t i = gGpuActiveLayers.count; i > 0; i--) {			\
-	auto function = gGpuActiveLayers.layers[i - 1]->_function;	\
-	if (function != nullptr) {					\
-		function(_result_ptr);					\
-		if (*_result_ptr != GPU_SUCCESS) {			\
-			break;						\
-		}							\
-	}								\
-}
+#define GPU_LAYERED_CALL_NO_PARAMS(_function, _result_ptr)			\
+do {										\
+	GpuResult _result;							\
+	for (size_t _i = gGpuActiveLayers.count; _i > 0; _i--) {		\
+		auto function = gGpuActiveLayers.layers[_i - 1]->_function;	\
+		if (function != nullptr) {					\
+			function(&_result);					\
+			if (_result != GPU_SUCCESS) {				\
+				break;						\
+			}							\
+		}								\
+	}									\
+	if (_result_ptr != nullptr) {						\
+		*_result_ptr = _result;						\
+	}									\
+} while(0);
 
-#define GPU_LAYERED_CALL(_function, _result_ptr, ...)			\
-for (size_t i = gGpuActiveLayers.count; i > 0; i--) {			\
-	auto function = gGpuActiveLayers.layers[i - 1]->_function;	\
-	if (function != nullptr) {					\
-		function(__VA_ARGS__, _result_ptr);			\
-		if (*_result_ptr != GPU_SUCCESS) {			\
-			break;						\
-		}							\
-	}								\
-}
+#define GPU_LAYERED_CALL(_function, _result_ptr, ...)				\
+do {										\
+	GpuResult _result;							\
+	for (size_t _i = gGpuActiveLayers.count; _i > 0; _i--) {		\
+		auto function = gGpuActiveLayers.layers[_i - 1]->_function;	\
+		if (function != nullptr) {					\
+			function(__VA_ARGS__, &_result);			\
+			if (_result != GPU_SUCCESS) {				\
+				break;						\
+			}							\
+		}								\
+	}									\
+	if (_result_ptr != nullptr) {						\
+		*_result_ptr = _result;						\
+	}									\
+} while(0);
 
 bool gpuPushLayer(const GpuLayer* layer);
 

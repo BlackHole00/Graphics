@@ -4,8 +4,16 @@
 #include <gpu/gpu.h>
 #include <lib/common/common.h>
 #include <lib/common/arena.h>
+#include <lib/metal4/device.h>
 
 #include <Metal/Metal.h>
+
+typedef struct {
+	GpuDeviceInfo*	info;
+	id<MTLDevice>*	devices;
+
+	size_t		count;
+} Mtl4AvailableDevicesList;
 
 typedef struct {
 	CmnArena	globalArena;
@@ -14,6 +22,7 @@ typedef struct {
 	CmnArena	tempArena;
 	uint8_t*	tempBackingMemory;
 
+	Mtl4AvailableDevicesList availableDevices;
 	id<MTLDevice>	device;
 	GpuDeviceId	selectedDeviceId;
 } Mtl4Context;

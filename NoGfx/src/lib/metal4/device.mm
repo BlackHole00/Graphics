@@ -2,8 +2,6 @@
 
 #include <lib/metal4/context.h>
 
-Mtl4AvailableDevicesList gMtl4AvailableDevicesList;
-
 bool mtl4CheckDeviceSuitability(id<MTLDevice> device) {
 	return device.hasUnifiedMemory &&
 		[device supportsFamily:MTLGPUFamilyMetal4];
@@ -15,13 +13,13 @@ void mtl4PrepareAvailableDevicesList(GpuResult* result) {
 
 	NSArray<id<MTLDevice>>* mtlDevices = MTLCopyAllDevices();
 
-	GpuDeviceInfo* devicesInfo = cmnArenaAlloc<GpuDeviceInfo>(arena, [mtlDevices count]);
+	GpuDeviceInfo* devicesInfo = cmnArenaAlloc<GpuDeviceInfo>(arena, mtlDevices.count);
 	if (devicesInfo == nullptr) {
 		*result = GPU_OUT_OF_CPU_MEMORY;
 		goto on_error_cleanup;
 	}
-	id<MTLDevice>* devices; devices = cmnArenaAlloc<id<MTLDevice>>(arena, [mtlDevices count]);
-	if (devices == nullptr) {
+	id<MTLDevice>* suitableMtlDevices; suitableMtlDevices = cmnArenaAlloc<id<MTLDevice>>(arena, mtlDevices.count);
+	if (suitableMtlDevices == nullptr) {
 		*result = GPU_OUT_OF_CPU_MEMORY;
 		goto on_error_cleanup;
 	}
@@ -36,13 +34,14 @@ void mtl4PrepareAvailableDevicesList(GpuResult* result) {
 			continue;
 		}
 
-		size_t deviceNameLength = [[mtlDevice name] maximumLengthOfBytesUsingEncoding:NSUTF8StringEncoding];
+		size_t deviceNameLength = [mtlDevice.name maximumLengthOfBytesUsingEncoding:NSUTF8StringEncoding];
 		deviceInfo->name = cmnArenaAlloc<char>(arena, deviceNameLength);
 		if (deviceInfo->name == nullptr) {
 			*result = GPU_OUT_OF_CPU_MEMORY;
 			goto on_error_cleanup;
 		}
-		[[mtlDevice name] getCString:(char*)deviceInfo->name
+		[mtlDevice.name
+			getCString:(char*)deviceInfo->name
 			maxLength:deviceNameLength
 			encoding:NSUTF8StringEncoding];
 
@@ -50,16 +49,17 @@ void mtl4PrepareAvailableDevicesList(GpuResult* result) {
 		//	supported.
 		deviceInfo->vendor = "Apple";
 		deviceInfo->identifier = deviceId;
-		deviceInfo->type = [mtlDevice isLowPower] ? GPU_INTEGRATED : GPU_DEDICATED;
+		// TODO: Apple describes the M-series GPUs as high power, even if they are integrated :*(
+		deviceInfo->type = mtlDevice.isLowPower ? GPU_INTEGRATED : GPU_DEDICATED;
 
-		devices[deviceId] = mtlDevice;
+		suitableMtlDevices[deviceId] = mtlDevice;
 
 		deviceId++;
 	}
 
-	gMtl4AvailableDevicesList.info = devicesInfo;
-	gMtl4AvailableDevicesList.devices = devices;
-	gMtl4AvailableDevicesList.count = deviceId;
+	gMtl4Context.availableDevices.info = devicesInfo;
+	gMtl4Context.availableDevices.devices = suitableMtlDevices;
+	gMtl4Context.availableDevices.count = deviceId;
 
 	[mtlDevices release];
 
@@ -67,23 +67,23 @@ void mtl4PrepareAvailableDevicesList(GpuResult* result) {
 	return;
 
 on_error_cleanup:
-	gMtl4AvailableDevicesList.info = nullptr;
-	gMtl4AvailableDevicesList.count = 0;
+	gMtl4Context.availableDevices.info = nullptr;
+	gMtl4Context.availableDevices.count = 0;
 
 	cmnEndArenaTemp(onErrorRecoveryState);
 	[mtlDevices release];
 }
 
 void mtl4EnumerateDevices(GpuDeviceInfo** devices, size_t* devices_count, GpuResult* result) {
-	*devices = gMtl4AvailableDevicesList.info;
-	*devices_count = gMtl4AvailableDevicesList.count;
+	*devices = gMtl4Context.availableDevices.info;
+	*devices_count = gMtl4Context.availableDevices.count;
 
 	*result = GPU_SUCCESS;
 	return;
 }
 
 void mtl4SelectDevice(GpuDeviceId deviceId, GpuResult*) {
-	gMtl4Context.device = gMtl4AvailableDevicesList.devices[deviceId];
+	gMtl4Context.device = gMtl4Context.availableDevices.devices[deviceId];
 	gMtl4Context.selectedDeviceId = deviceId;
 }
 
