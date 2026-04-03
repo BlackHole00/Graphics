@@ -1,5 +1,5 @@
-#ifndef GPU_COMMONARENA_H
-#define GPU_COMMONARENA_H
+#ifndef CMN_COMMONARENA_H
+#define CMN_COMMONARENA_H
 
 #include <lib/common/common.h>
 
@@ -7,33 +7,33 @@ typedef struct {
 	uint8_t*	backing;
 	size_t		backing_size;
 	size_t		used;
-} GpuArena;
+} CmnArena;
 
 typedef struct {
-	GpuArena*	arena;
+	CmnArena*	arena;
 	size_t		original_used;
-} GpuArenaState;
+} CmnArenaState;
 
-GpuArena gpuCreateArena(uint8_t* backing_memory, size_t backing_memory_size);
+CmnArena cmnCreateArena(uint8_t* backing_memory, size_t backing_memory_size);
 
-template <typename T> T* gpuArenaAlloc(GpuArena* arena, size_t count = 1, size_t align = 0);
-void gpuArenaFreeAll(GpuArena* arena);
+template <typename T> T* cmnArenaAlloc(CmnArena* arena, size_t count = 1, size_t align = 0);
+void cmnArenaFreeAll(CmnArena* arena);
 
-GpuArenaState gpuBeginArenaTemp(GpuArena* arena);
-void gpuEndArenaTemp(GpuArenaState state);
+CmnArenaState cmnBeginArenaTemp(CmnArena* arena);
+void cmnEndArenaTemp(CmnArenaState state);
 
-typedef class GpuArenaTempGuard {
+typedef class CmnArenaTempGuard {
 public:
-	GpuArenaState state;
+	CmnArenaState state;
 
-	GpuArenaTempGuard(GpuArena* arena) {
-		this->state = gpuBeginArenaTemp(arena);
+	CmnArenaTempGuard(CmnArena* arena) {
+		this->state = cmnBeginArenaTemp(arena);
 	}
-	~GpuArenaTempGuard() {
-		gpuEndArenaTemp(this->state);
+	~CmnArenaTempGuard() {
+		cmnEndArenaTemp(this->state);
 	}
-} GpuArenaTempGuard;
+} CmnArenaTempGuard;
 
 #include "arena.inc"
 
-#endif // GPU_COMMONARENA_H
+#endif // CMN_COMMONARENA_H

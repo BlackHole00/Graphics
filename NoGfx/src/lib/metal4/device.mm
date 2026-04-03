@@ -17,17 +17,17 @@ bool mtl4CheckDeviceSuitability(id<MTLDevice> device) {
 }
 
 void mtl4PrepareAvailableDevicesList(GpuResult* result) {
-	GpuArena* arena = &gMtl4Context.globalArena;
-	GpuArenaState onErrorRecoveryState = gpuBeginArenaTemp(arena);
+	CmnArena* arena = &gMtl4Context.globalArena;
+	CmnArenaState onErrorRecoveryState = cmnBeginArenaTemp(arena);
 
 	NSArray<id<MTLDevice>>* mtlDevices = MTLCopyAllDevices();
 
-	GpuDeviceInfo* devicesInfo = gpuArenaAlloc<GpuDeviceInfo>(arena, [mtlDevices count]);
+	GpuDeviceInfo* devicesInfo = cmnArenaAlloc<GpuDeviceInfo>(arena, [mtlDevices count]);
 	if (devicesInfo == nullptr) {
 		*result = GPU_OUT_OF_CPU_MEMORY;
 		goto on_error_cleanup;
 	}
-	id<MTLDevice>* devices; devices = gpuArenaAlloc<id<MTLDevice>>(arena, [mtlDevices count]);
+	id<MTLDevice>* devices; devices = cmnArenaAlloc<id<MTLDevice>>(arena, [mtlDevices count]);
 	if (devices == nullptr) {
 		*result = GPU_OUT_OF_CPU_MEMORY;
 		goto on_error_cleanup;
@@ -44,7 +44,7 @@ void mtl4PrepareAvailableDevicesList(GpuResult* result) {
 		}
 
 		size_t deviceNameLength = [[mtlDevice name] maximumLengthOfBytesUsingEncoding:NSUTF8StringEncoding];
-		deviceInfo->name = gpuArenaAlloc<char>(arena, deviceNameLength);
+		deviceInfo->name = cmnArenaAlloc<char>(arena, deviceNameLength);
 		if (deviceInfo->name == nullptr) {
 			*result = GPU_OUT_OF_CPU_MEMORY;
 			goto on_error_cleanup;
@@ -77,7 +77,7 @@ on_error_cleanup:
 	gMtl4AvailableDevicesList.info = nullptr;
 	gMtl4AvailableDevicesList.count = 0;
 
-	gpuEndArenaTemp(onErrorRecoveryState);
+	cmnEndArenaTemp(onErrorRecoveryState);
 	[mtlDevices release];
 }
 

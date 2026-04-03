@@ -1,5 +1,5 @@
-#ifndef GPU_COMMONCOMMON_H
-#define GPU_COMMONCOMMON_H
+#ifndef CMN_COMMONCOMMON_H
+#define CMN_COMMONCOMMON_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -10,4 +10,4 @@
 #include "compiler.h"
 #include "language.h"
 
-#endif // GPU_COMMONCOMMON_H
+#endif // CMN_COMMONCOMMON_H

@@ -1,11 +1,11 @@
 #include <lib/common/common.h>
 
-#if !defined(GPU_LANGUAGE_CPP) && GPU_LANGUAGE_VERSION < 2011
+#if !defined(CMN_LANGUAGE_CPP) && CMN_LANGUAGE_VERSION < 2011
 	#error NoGfx requires a cpp compiler supporting C++ 11.
 #endif
 
 
-#ifdef GPU_PLATFORM_DARWIN
+#ifdef CMN_PLATFORM_DARWIN
 	#include "build_darwin.mm"
 #else
 	#error NoGfx currently supports only macOs.

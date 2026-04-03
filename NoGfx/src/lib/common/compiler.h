@@ -1,15 +1,15 @@
-#ifndef GPU_COMMONCOMPILERS_H
-#define GPU_COMMONCOMPILERS_H
+#ifndef CMN_COMMONCOMPILERS_H
+#define CMN_COMMONCOMPILERS_H
 
 #ifdef __clang__
-	#define STD_COMPILER_CLANG 1
+	#define CMN_COMPILER_CLANG 1
 #elif defined(__GNUC__)
-	#define STD_COMPILER_GCC 1
+	#define CMN_COMPILER_GCC 1
 #elif defined(_MSC_VER)
-	#define STD_COMPILER_MSVC 1
+	#define CMN_COMPILER_MSVC 1
 #else
-	#define STD_COMPILER_UNKNOWN 1
+	#define CMN_COMPILER_UNKNOWN 1
 #endif
 
-#endif // GPU_COMMONCOMPILERS_H
+#endif // CMN_COMMONCOMPILERS_H
 

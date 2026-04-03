@@ -25,8 +25,8 @@ void mtl4Init(GpuResult* result) {
 		goto on_error_cleanup;
 	}
 
-	gMtl4Context.globalArena	= gpuCreateArena(gMtl4Context.globalBackingMemory, MTL4_GLOBAL_MEMORY);
-	gMtl4Context.tempArena		= gpuCreateArena(gMtl4Context.tempBackingMemory, MTL4_TEMP_MEMORY);
+	gMtl4Context.globalArena	= cmnCreateArena(gMtl4Context.globalBackingMemory, MTL4_GLOBAL_MEMORY);
+	gMtl4Context.tempArena		= cmnCreateArena(gMtl4Context.tempBackingMemory, MTL4_TEMP_MEMORY);
 
 	mtl4PrepareAvailableDevicesList(result);
 	if (*result != GPU_SUCCESS) {

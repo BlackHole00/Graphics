@@ -1,6 +1,6 @@
 #include <string.h>
 
-inline GpuArena gpuCreateArena(uint8_t* backing_memory, size_t backing_memory_size) {
+inline CmnArena cmnCreateArena(uint8_t* backing_memory, size_t backing_memory_size) {
 	memset(backing_memory, 0, backing_memory_size);
 
 	return {
@@ -12,7 +12,7 @@ inline GpuArena gpuCreateArena(uint8_t* backing_memory, size_t backing_memory_si
 
 // Align must be a power of 2
 template <class T>
-T* gpuArenaAlloc(GpuArena* arena, size_t count, size_t align) {
+T* cmnArenaAlloc(CmnArena* arena, size_t count, size_t align) {
 	if (align == 0) {
 		align = alignof(T);
 	}
@@ -34,19 +34,19 @@ T* gpuArenaAlloc(GpuArena* arena, size_t count, size_t align) {
 	return (T*)aligned;
 }
 
-inline void gpuArenaFreeAll(GpuArena* arena) {
+inline void cmnArenaFreeAll(CmnArena* arena) {
 	memset(arena->backing, 0, arena->used);
 	arena->used = 0;
 }
 
-inline GpuArenaState gpuBeginArenaTemp(GpuArena* arena) {
+inline CmnArenaState cmnBeginArenaTemp(CmnArena* arena) {
 	return {
 		/*arena=*/arena,
 		/*original_used=*/arena->used,
 	};
 }
 
-inline void gpuEndArenaTemp(GpuArenaState state) {
+inline void cmnEndArenaTemp(CmnArenaState state) {
 	memset(state.arena->backing + state.original_used, 0, state.arena->used - state.original_used);
 	state.arena->used = state.original_used;
 }

@@ -1,6 +1,6 @@
 #include "layers.h"
 
-#ifdef GPU_PLATFORM_DARWIN
+#ifdef CMN_PLATFORM_DARWIN
 
 #include <lib/metal4/layers.h>
 

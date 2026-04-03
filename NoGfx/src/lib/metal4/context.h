@@ -8,10 +8,10 @@
 #include <Metal/Metal.h>
 
 typedef struct {
-	GpuArena	globalArena;
+	CmnArena	globalArena;
 	uint8_t*	globalBackingMemory;
 
-	GpuArena	tempArena;
+	CmnArena	tempArena;
 	uint8_t*	tempBackingMemory;
 
 	id<MTLDevice>	device;

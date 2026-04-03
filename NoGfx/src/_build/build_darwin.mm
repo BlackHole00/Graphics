@@ -1,6 +1,6 @@
 #include <lib/common/language.h>
 
-#ifndef GPU_LANGUAGE_OBJECTIVECPP
+#ifndef CMN_LANGUAGE_OBJECTIVECPP
 	#error NoGfx requires a compiler supporting Objective-C++ when targeting macOs.
 #endif
 
