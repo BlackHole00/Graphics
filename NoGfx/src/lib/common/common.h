@@ -10,4 +10,6 @@
 #include "compiler.h"
 #include "language.h"
 
+#include "result.h"
+
 #endif // CMN_COMMONCOMMON_H

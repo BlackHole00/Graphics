@@ -4,6 +4,8 @@
 	#error NoGfx requires a compiler supporting Objective-C++ when targeting macOs.
 #endif
 
+#include <lib/common/page_posix.cpp>
+
 #include <lib/lib.cpp>
 #include <lib/layers.cpp>
 #include <lib/layers_darwin.cpp>

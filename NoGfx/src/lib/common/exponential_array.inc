@@ -78,7 +78,6 @@ T& cmnGet(CmnExponentialArray<T, N>* array, size_t index) {
 	return array->buckets[bucketIndex][elementIndex];
 }
 
-// 11000
 inline void cmnDecomposeExponentialArrayIndex(size_t index, size_t* bucketIndex, size_t* elementIndex) {
 	size_t start = CMN_EXPONENTIALARRAY_BASE_BUCKET_LEN_BITS;
 
