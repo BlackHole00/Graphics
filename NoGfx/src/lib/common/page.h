@@ -3,6 +3,7 @@
 
 #include <lib/common/common.h>
 #include <lib/common/arena.h>
+#include <lib/common/pool.h>
 
 typedef enum CmnPagePerm {
 	CMN_PAGE_READABLE	= 0x1,
@@ -24,6 +25,9 @@ void cmnDestroyPage(CmnPage page);
 
 inline CmnArena cmnPageToArena(CmnPage page) {
 	return cmnCreateArena((uint8_t*)page.baseAddress, page.size);
+}
+inline CmnPool cmnPageToPool(CmnPage page, size_t blockSize) {
+	return cmnCreatePool((uint8_t*)page.baseAddress, page.size, blockSize, 0);
 }
 
 #endif // CMN_PAGE_H

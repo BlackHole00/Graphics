@@ -5,6 +5,7 @@
 #endif
 
 #include <lib/common/page_posix.cpp>
+#include <lib/common/pool.cpp>
 
 #include <lib/lib.cpp>
 #include <lib/layers.cpp>

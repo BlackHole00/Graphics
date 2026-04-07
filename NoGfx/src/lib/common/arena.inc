@@ -1,11 +1,11 @@
 #include <string.h>
 
-inline CmnArena cmnCreateArena(uint8_t* backing_memory, size_t backing_memory_size) {
-	memset(backing_memory, 0, backing_memory_size);
+inline CmnArena cmnCreateArena(uint8_t* backingMemory, size_t backingMemorySize) {
+	memset(backingMemory, 0, backingMemorySize);
 
 	return {
-		/*backing=*/		backing_memory,
-		/*backing_size=*/	backing_memory_size,
+		/*backing=*/		backingMemory,
+		/*backingSize=*/	backingMemorySize,
 		/*used=*/		0,
 	};
 }
@@ -23,14 +23,14 @@ T* cmnArenaAlloc(CmnArena* arena, size_t count, size_t align, CmnResult* result)
 	uintptr_t aligned = (base + (align - 1)) & ~(uintptr_t)(align - 1);
 	size_t padding = aligned - base;
 
-	size_t total_size = padding + sizeof(T) * count;
+	size_t totalSize = padding + sizeof(T) * count;
 
-	if (arena->used + total_size > arena->backing_size) {
+	if (arena->used + totalSize > arena->backingSize) {
 		CMN_SET_RESULT(result, CMN_OUT_OF_MEMORY);
 		return nullptr;
 	}
 
-	arena->used += total_size;
+	arena->used += totalSize;
 
 	CMN_SET_RESULT(result, CMN_SUCCESS);
 	return (T*)aligned;
@@ -44,12 +44,12 @@ inline void cmnArenaFreeAll(CmnArena* arena) {
 inline CmnArenaState cmnBeginArenaTemp(CmnArena* arena) {
 	return {
 		/*arena=*/arena,
-		/*original_used=*/arena->used,
+		/*originalUsed=*/arena->used,
 	};
 }
 
 inline void cmnEndArenaTemp(CmnArenaState state) {
-	memset(state.arena->backing + state.original_used, 0, state.arena->used - state.original_used);
-	state.arena->used = state.original_used;
+	memset(state.arena->backing + state.originalUsed, 0, state.arena->used - state.originalUsed);
+	state.arena->used = state.originalUsed;
 }
 

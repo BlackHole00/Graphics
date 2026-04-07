@@ -5,16 +5,16 @@
 
 typedef struct {
 	uint8_t*	backing;
-	size_t		backing_size;
+	size_t		backingSize;
 	size_t		used;
 } CmnArena;
 
 typedef struct {
 	CmnArena*	arena;
-	size_t		original_used;
+	size_t		originalUsed;
 } CmnArenaState;
 
-CmnArena cmnCreateArena(uint8_t* backing_memory, size_t backing_memory_size);
+CmnArena cmnCreateArena(uint8_t* backingMemory, size_t backingMemorySize);
 
 template <typename T> T* cmnArenaAlloc(CmnArena* arena, size_t count, size_t align, CmnResult* result);
 template <typename T> T* cmnArenaAlloc(CmnArena* arena, size_t count, CmnResult* result) {
