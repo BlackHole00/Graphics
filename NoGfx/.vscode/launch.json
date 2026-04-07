@@ -7,6 +7,14 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Test",
+            "program": "${workspaceFolder}/build/test",
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "00_Test",
             "program": "${workspaceFolder}/examples/00_Test/out",
             "args": [],
