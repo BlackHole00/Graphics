@@ -20,11 +20,11 @@ template <typename T, size_t N>
 struct CmnExponentialArray;
 
 
-template <typename T, size_t N> void cmnCreateExponentialArray(CmnExponentialArray<T, N>* array, CmnArena* arena);
-template <typename T, size_t N> bool cmnResize(CmnExponentialArray<T, N>* array, size_t length);
+template <typename T, size_t N> void cmnCreateExponentialArray(CmnExponentialArray<T, N>* array, CmnArena* arena, CmnResult* result);
+template <typename T, size_t N> bool cmnResize(CmnExponentialArray<T, N>* array, size_t length, CmnResult* result);
 template <typename T, size_t N> void cmnSet(CmnExponentialArray<T, N>* array, size_t index, const T& value);
 template <typename T, size_t N>   T& cmnGet(CmnExponentialArray<T, N>* array, size_t index);
-template <typename T, size_t N> bool cmnAppend(CmnExponentialArray<T, N>* array, const T& value);
+template <typename T, size_t N> bool cmnAppend(CmnExponentialArray<T, N>* array, const T& value, CmnResult* result);
 
 inline void cmnDecomposeExponentialArrayIndex(size_t index, size_t* bucketIndex, size_t* elementIndex);
 

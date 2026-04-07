@@ -18,5 +18,7 @@ void canAccessPageMemory(Test* test) {
 		size_t offset = i * 128;
 		TEST_ASSERT(test, memoryBytes[offset] == i);
 	}
+
+	cmnDestroyPage(page);
 }
 

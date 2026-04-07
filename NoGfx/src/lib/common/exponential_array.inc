@@ -1,18 +1,18 @@
 template <typename T, size_t N>
-void cmnCreateExponentialArray(CmnExponentialArray<T, N>* array, CmnArena* arena) {
+void cmnCreateExponentialArray(CmnExponentialArray<T, N>* array, CmnArena* arena, CmnResult* result) {
 	array->backingArena	= arena;
 	memset(array->buckets, 0, sizeof(array->buckets));
 	array->length		= 0;
 	array->last_filled_bucket = 0;
 
-	array->buckets[0]	= cmnArenaAlloc<T>(array->backingArena, CMN_EXPONENTIALARRAY_BASE_BUCKET_LEN);
+	array->buckets[0]	= cmnArenaAlloc<T>(array->backingArena, CMN_EXPONENTIALARRAY_BASE_BUCKET_LEN, result);
 }
 
 template <typename T, size_t N>
-bool cmnAppend(CmnExponentialArray<T, N>* array, const T& value) {
+bool cmnAppend(CmnExponentialArray<T, N>* array, const T& value, CmnResult* result) {
 	size_t idx = array->length;
 
-	if (!cmnResize(array, array->length + 1)) {
+	if (!cmnResize(array, array->length + 1, result)) {
 		return false;
 	}
 
@@ -21,8 +21,9 @@ bool cmnAppend(CmnExponentialArray<T, N>* array, const T& value) {
 }
 
 template <typename T, size_t N>
-bool cmnResize(CmnExponentialArray<T, N>* array, size_t length) {
+bool cmnResize(CmnExponentialArray<T, N>* array, size_t length, CmnResult* result) {
 	if (array->length >= length) {
+		CMN_SET_RESULT(result, CMN_SUCCESS);
 		return true;
 	}
 
@@ -30,11 +31,14 @@ bool cmnResize(CmnExponentialArray<T, N>* array, size_t length) {
 	cmnDecomposeExponentialArrayIndex(length, &bucketIndex, &elementIndex);
 
 	if (bucketIndex >= N) {
+		CMN_SET_RESULT(result, CMN_OUT_OF_MEMORY);
 		return false;
 	}
 
 	if (bucketIndex <= array->last_filled_bucket) {
 		array->length = length;
+
+		CMN_SET_RESULT(result, CMN_SUCCESS);
 		return true;
 	}
 
@@ -45,7 +49,8 @@ bool cmnResize(CmnExponentialArray<T, N>* array, size_t length) {
 
 		array->buckets[i] = cmnArenaAlloc<T>(
 			array->backingArena,
-			1 << (CMN_EXPONENTIALARRAY_BASE_BUCKET_LEN_BITS + i - 1)
+			1 << (CMN_EXPONENTIALARRAY_BASE_BUCKET_LEN_BITS + i - 1),
+			result
 		);
 		if (array->buckets[i] == nullptr) {
 			return false;
@@ -55,6 +60,8 @@ bool cmnResize(CmnExponentialArray<T, N>* array, size_t length) {
 	}
 
 	array->length = length;
+
+	CMN_SET_RESULT(result, CMN_SUCCESS);
 	return true;
 }
 

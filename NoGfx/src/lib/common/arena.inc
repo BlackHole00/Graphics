@@ -12,7 +12,7 @@ inline CmnArena cmnCreateArena(uint8_t* backing_memory, size_t backing_memory_si
 
 // Align must be a power of 2
 template <class T>
-T* cmnArenaAlloc(CmnArena* arena, size_t count, size_t align) {
+T* cmnArenaAlloc(CmnArena* arena, size_t count, size_t align, CmnResult* result) {
 	if (align == 0) {
 		align = alignof(T);
 	}
@@ -26,11 +26,13 @@ T* cmnArenaAlloc(CmnArena* arena, size_t count, size_t align) {
 	size_t total_size = padding + sizeof(T) * count;
 
 	if (arena->used + total_size > arena->backing_size) {
+		CMN_SET_RESULT(result, CMN_OUT_OF_MEMORY);
 		return nullptr;
 	}
 
 	arena->used += total_size;
 
+	CMN_SET_RESULT(result, CMN_SUCCESS);
 	return (T*)aligned;
 }
 

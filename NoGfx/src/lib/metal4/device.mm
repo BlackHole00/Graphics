@@ -13,12 +13,12 @@ void mtl4PrepareAvailableDevicesList(GpuResult* result) {
 
 	NSArray<id<MTLDevice>>* mtlDevices = MTLCopyAllDevices();
 
-	GpuDeviceInfo* devicesInfo = cmnArenaAlloc<GpuDeviceInfo>(arena, mtlDevices.count);
+	GpuDeviceInfo* devicesInfo = cmnArenaAlloc<GpuDeviceInfo>(arena, mtlDevices.count, nullptr);
 	if (devicesInfo == nullptr) {
 		*result = GPU_OUT_OF_CPU_MEMORY;
 		goto on_error_cleanup;
 	}
-	id<MTLDevice>* suitableMtlDevices; suitableMtlDevices = cmnArenaAlloc<id<MTLDevice>>(arena, mtlDevices.count);
+	id<MTLDevice>* suitableMtlDevices; suitableMtlDevices = cmnArenaAlloc<id<MTLDevice>>(arena, mtlDevices.count, nullptr);
 	if (suitableMtlDevices == nullptr) {
 		*result = GPU_OUT_OF_CPU_MEMORY;
 		goto on_error_cleanup;
@@ -35,7 +35,7 @@ void mtl4PrepareAvailableDevicesList(GpuResult* result) {
 		}
 
 		size_t deviceNameLength = [mtlDevice.name maximumLengthOfBytesUsingEncoding:NSUTF8StringEncoding];
-		deviceInfo->name = cmnArenaAlloc<char>(arena, deviceNameLength);
+		deviceInfo->name = cmnArenaAlloc<char>(arena, deviceNameLength, 0, NULL);
 		if (deviceInfo->name == nullptr) {
 			*result = GPU_OUT_OF_CPU_MEMORY;
 			goto on_error_cleanup;
