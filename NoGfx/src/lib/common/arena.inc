@@ -1,7 +1,9 @@
 #include <string.h>
 
-inline CmnArena cmnCreateArena(uint8_t* backingMemory, size_t backingMemorySize) {
-	memset(backingMemory, 0, backingMemorySize);
+inline CmnArena cmnCreateArena(uint8_t* backingMemory, size_t backingMemorySize, bool clearBackingMemory) {
+	if (clearBackingMemory) {
+		memset(backingMemory, 0, backingMemorySize);
+	}
 
 	return {
 		/*backing=*/		backingMemory,

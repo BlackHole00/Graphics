@@ -38,11 +38,11 @@ struct CmnExponentialArray {
 	size_t last_filled_bucket;
 
 	const T& operator[](size_t index) const {
-		return cmnGet<T, N>(this, index);
+		return cmnGet<T, N>((CmnExponentialArray<T, N>*)this, index);
 	}
 
 	T& operator[](size_t index) {
-		return cmnGet(this, index);
+		return cmnGet<T, N>(this, index);
 	}
 };
 

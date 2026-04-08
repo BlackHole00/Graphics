@@ -24,7 +24,7 @@ CmnPage cmnCreatePage(size_t size, CmnPagePerms permissions, CmnResult* result);
 void cmnDestroyPage(CmnPage page);
 
 inline CmnArena cmnPageToArena(CmnPage page) {
-	return cmnCreateArena((uint8_t*)page.baseAddress, page.size);
+	return cmnCreateArena((uint8_t*)page.baseAddress, page.size, false);
 }
 inline CmnPool cmnPageToPool(CmnPage page, size_t blockSize) {
 	return cmnCreatePool((uint8_t*)page.baseAddress, page.size, blockSize, 0);

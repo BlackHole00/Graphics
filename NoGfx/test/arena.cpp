@@ -10,7 +10,7 @@ void checkForArenaMemoryCoherency(Test* test) {
 		testOutOfMemory(test);
 	}
 
-	CmnArena arena = cmnCreateArena(backingMemory, backingMemorySize);
+	CmnArena arena = cmnCreateArena(backingMemory, backingMemorySize, true);
 
 	for (size_t i = 0; i < 32; i++) {
 		uint32_t* memory = cmnArenaAlloc<uint32_t>(&arena, 32, nullptr);

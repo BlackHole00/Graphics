@@ -11,7 +11,7 @@ void checkForExponentialArrayDataCoherency(Test* test) {
 		testOutOfMemory(test);
 	}
 
-	CmnArena arena = cmnCreateArena(memory, 1024 * sizeof(int32_t));
+	CmnArena arena = cmnCreateArena(memory, 1024 * sizeof(int32_t), true);
 
 	CmnExponentialArray<int32_t> arr;
 	cmnCreateExponentialArray(&arr, &arena, &result);
@@ -35,7 +35,7 @@ void checkForExponentialArrayMemoryCoherency(Test* test) {
 		testOutOfMemory(test);
 	}
 
-	CmnArena arena = cmnCreateArena(memory, 1024 * sizeof(int32_t));
+	CmnArena arena = cmnCreateArena(memory, 1024 * sizeof(int32_t), true);
 
 	CmnExponentialArray<int32_t> arr;
 	cmnCreateExponentialArray(&arr, &arena, &result);
