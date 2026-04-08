@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #include <lib/metal4/device.h>
+#include <lib/common/type_traits.h>
 
 // 128 KB
 #define MTL4_GLOBAL_MEMORY 128 * 1024

@@ -4,6 +4,8 @@
 #include <Metal/Metal.h>
 
 #include <lib/common/arena.h>
+#include <lib/common/pool.h>
+#include <lib/common/page.h>
 #include <lib/metal4/context.h>
 
 typedef struct Mtl4BufferHandle {
@@ -26,14 +28,24 @@ typedef struct Mtl4PointerMapNode {
 	// If invalid, then the corrisponding buffer was deallocated. We remove nodes with invalid handles on visits.
 	Mtl4BufferHandle		handle;
 } Mtl4PointerMapNode;
+static_assert(sizeof(Mtl4PointerMapNode) == 48, "");
 
 typedef struct Mtl4PointerMap {
-	Mtl4PointerMapNode* root;
-} Mtl4PointerMap;
-extern Mtl4PointerMapNode gMtl4PointerMap;
+	CmnPage			nodesPage;
+	CmnPool			nodesPool;
 
-inline void mtl4AddressSpaceToNodes(uintptr_t basePointer, size_t length, uintptr_t** nodes, size_t* nodesCount) {
+	Mtl4PointerMapNode*	root;
+} Mtl4PointerMap;
+extern Mtl4PointerMap gMtl4PointerMap;
+
+inline void mtl4InitPointerMap(void) {
+	gMtl4PointerMap.nodesPage = cmnCreatePage(1 * 1024 * 1024, CMN_PAGE_WRITABLE | CMN_PAGE_READABLE, nullptr);
+	gMtl4PointerMap.nodesPool = cmnPageToPool(gMtl4PointerMap.nodesPage, 48);
+}
+
+inline void mtl4AddressSpaceToNodes(uintptr_t basePointer, size_t length, uintptr_t** nodes, uintptr_t** masks, size_t* nodesCount) {
 	*nodes = cmnArenaAlloc<uintptr_t>(&gMtl4Context.tempArena, 64, nullptr);
+	*masks = cmnArenaAlloc<uintptr_t>(&gMtl4Context.tempArena, 64, nullptr);
 	*nodesCount = 0;
 	// check for failure
 
@@ -52,6 +64,7 @@ inline void mtl4AddressSpaceToNodes(uintptr_t basePointer, size_t length, uintpt
 		}
 
 		(*nodes)[*nodesCount] = start;
+		(*masks)[*nodesCount] = (size - 1);
 		*nodesCount += 1;
 
 		start = start + size;
@@ -62,10 +75,12 @@ inline void mtl4RegisterBufferAddressSpace(Mtl4BufferHandle buffer, uintptr_t ba
 	// CmnArenaTempGuard arenaTemp(&gMtl4Context.tempArena);
 	
 	uintptr_t* nodes;
+	uintptr_t* masks;
 	size_t size;
-	mtl4AddressSpaceToNodes(basePointer, length, &nodes, &size);
+
+	mtl4AddressSpaceToNodes(basePointer, length, &nodes, &masks, &size);
 	for (size_t i = 0; i < size; i++) {
-		printf("N: %8lx\n", nodes[i]);
+		printf("N: %8lx\t%8lx\n", nodes[i], masks[i]);
 	}
 }
 
