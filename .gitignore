@@ -2,7 +2,7 @@
 
 **/*.spall
 
-**/build/out
+**/out
 **/build/test
 **/*.a
 **/*.o
