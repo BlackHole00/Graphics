@@ -1,6 +1,7 @@
 #include "device.h"
 
 #include <lib/metal4/context.h>
+#include <lib/metal4/pointer_map.h>
 
 bool mtl4CheckDeviceSuitability(id<MTLDevice> device) {
 	return device.hasUnifiedMemory &&
@@ -82,8 +83,12 @@ void mtl4EnumerateDevices(GpuDeviceInfo** devices, size_t* devices_count, GpuRes
 	return;
 }
 
-void mtl4SelectDevice(GpuDeviceId deviceId, GpuResult*) {
+void mtl4SelectDevice(GpuDeviceId deviceId, GpuResult* result) {
 	gMtl4Context.device = gMtl4Context.availableDevices.devices[deviceId];
 	gMtl4Context.selectedDeviceId = deviceId;
+
+	testPointerMap();
+
+	*result = GPU_SUCCESS;
 }
 

@@ -22,7 +22,7 @@ for (size_t _i = gGpuActiveLayers.count; _i > 0; _i--) {		\
 
 #define GPU_LAYERED_CALL_NO_PARAMS(_function, _result_ptr)			\
 do {										\
-	GpuResult _result;							\
+	GpuResult _result = GPU_SUCCESS;					\
 	for (size_t _i = gGpuActiveLayers.count; _i > 0; _i--) {		\
 		auto function = gGpuActiveLayers.layers[_i - 1]->_function;	\
 		if (function != nullptr) {					\
@@ -39,7 +39,7 @@ do {										\
 
 #define GPU_LAYERED_CALL(_function, _result_ptr, ...)				\
 do {										\
-	GpuResult _result;							\
+	GpuResult _result = GPU_SUCCESS;					\
 	for (size_t _i = gGpuActiveLayers.count; _i > 0; _i--) {		\
 		auto function = gGpuActiveLayers.layers[_i - 1]->_function;	\
 		if (function != nullptr) {					\
