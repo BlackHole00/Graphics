@@ -2,8 +2,8 @@
 
 **/*.spall
 
-**/out
-**/test
+**/build/out
+**/build/test
 **/*.a
 **/*.o
 **/*.metal.ir
