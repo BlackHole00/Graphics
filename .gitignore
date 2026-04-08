@@ -3,6 +3,7 @@
 **/*.spall
 
 **/out
+**/test
 **/*.a
 **/*.o
 **/*.metal.ir
