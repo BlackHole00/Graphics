@@ -7,13 +7,15 @@ Mtl4AllocationStorage gMtl4AllocationStorage;
 void mtl4PrepareAllocationStorage(GpuResult* result) {
 	CmnResult localResult;
 
-	gMtl4AllocationStorage.allocationMetadataPage = cmnCreatePage(1 * 1024 * 1024, CMN_PAGE_READABLE | CMN_PAGE_WRITABLE, &localResult);
+	// Preallocate for more than 512k buffers
+	gMtl4AllocationStorage.allocationMetadataPage = cmnCreatePage(24 * 1024 * 1024, CMN_PAGE_READABLE | CMN_PAGE_WRITABLE, &localResult);
 	if (localResult != CMN_SUCCESS) {
 		CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
 		goto on_error_cleanup;
 	}
 
-	gMtl4AllocationStorage.addressRangeMapPage = cmnCreatePage(1 * 1024 * 1024, CMN_PAGE_READABLE | CMN_PAGE_WRITABLE, &localResult);
+	// Preallocate for more than 512k buffers
+	gMtl4AllocationStorage.addressRangeMapPage = cmnCreatePage(16 * 1024 * 1024, CMN_PAGE_READABLE | CMN_PAGE_WRITABLE, &localResult);
 	if (localResult != CMN_SUCCESS) {
 		CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
 		goto on_error_cleanup;
@@ -46,16 +48,23 @@ on_error_cleanup:
 }
 
 
-void* mtl4MallocDefaultMemory(size_t size, size_t align, GpuResult* result) {
+void* mtl4MallocCpuAccessibleMemory(size_t size, size_t align, bool optimizeForReadback, GpuResult* result) {
 	(void)align;
 	CmnResult localResult;
 
 	Mtl4AllocationMetadata* metadata = nullptr;
 
+	MTLResourceOptions resourceOptions;
+	if (optimizeForReadback) {
+		resourceOptions = MTLStorageModeShared | MTLResourceCPUCacheModeDefaultCache | MTLResourceHazardTrackingModeUntracked;
+	} else {
+		resourceOptions = MTLStorageModeShared | MTLResourceCPUCacheModeWriteCombined | MTLResourceHazardTrackingModeUntracked;
+	}
+
 	// TODO: Overallocate to handle alignment
 	id<MTLBuffer> buffer = [gMtl4Context.device
 		newBufferWithLength: size
-		options: MTLStorageModeShared | MTLResourceCPUCacheModeWriteCombined | MTLResourceHazardTrackingModeUntracked
+		options: resourceOptions
 	];
 	if (buffer == nil) {
 		CMN_SET_RESULT(result, GPU_OUT_OF_GPU_MEMORY);
@@ -101,13 +110,13 @@ on_error_cleanup:
 void* mtl4Malloc(size_t size, size_t align, GpuMemory memory, GpuResult* result) {
 	switch (memory) {
 		case GPU_MEMORY_DEFAULT: {
-			return mtl4MallocDefaultMemory(size, align, result);
+			return mtl4MallocCpuAccessibleMemory(size, align, false, result);
 		}
 		case GPU_MEMORY_GPU: {
 			break;
 		}
 		case GPU_MEMORY_READBACK: {
-			break;
+			return mtl4MallocCpuAccessibleMemory(size, align, true, result);
 		}
 	}
 
