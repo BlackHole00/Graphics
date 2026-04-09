@@ -6,6 +6,7 @@
 #include "exponential_array.cpp"
 #include "pool.cpp"
 #include "handle_map.cpp"
+#include "btree.cpp"
 
 TestRecord gTests[] = {
 	{ "Can access page memory",					canAccessPageMemory			},
@@ -25,6 +26,14 @@ TestRecord gTests[] = {
 	{ "Check for handle map behaviour on generation overflow",	checkForHandleMapGenerationOverflowBehaviour },
 	{ "Check for handle map behaviour on index overflow",		checkForHandleMapIndexOverflowBehaviour	},
 	{ "Check for handle map behaviour on invalid handles",		checkForHandleMapInvalidHandleBehaviour	},
+
+	{ "Check B-tree creation and initial root state",		checkBTreeCreation			},
+	{ "Check insertion of keys and contains functionality",		checkBTreeInsertAndContains		},
+	{ "Check get functionality with found and default element",	checkBTreeGet				},
+	{ "Check removal of keys from leaf nodes",			checkBTreeRemoveLeaf			},
+	{ "Check removal of keys from non-leaf/internal nodes",		checkBTreeRemoveNonLeaf			},
+	{ "Check root split when inserting enough keys",		checkBTreeRootSplit			},
+	{ "Check predecessor and successor key retrieval",		checkBTreePredecessorSuccessor		},
 };
 
 int main(void) {

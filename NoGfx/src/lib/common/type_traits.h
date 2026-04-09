@@ -21,6 +21,16 @@ struct CmnTypeTraits {
 	}
 };
 
+template <typename T>
+bool cmnEq(const T& left, const T& right) {
+	return CmnTypeTraits<T>::eq(left, right);
+}
+
+template <typename T>
+CmnCmp cmnCmp(const T& left, const T& right) {
+	return CmnTypeTraits<T>::cmp(left, right);
+}
+
 #define CMN_DEFINE_DEFAULT_TYPETRAITS_FOR(_T)			\
 template <>							\
 struct CmnTypeTraits<_T> {					\
