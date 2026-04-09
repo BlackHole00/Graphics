@@ -2,6 +2,7 @@
 #define TST_TEST_H
 
 #include <stddef.h>
+#include <stdint.h>
 #include <setjmp.h>
 
 typedef enum TestStatus {
@@ -32,7 +33,7 @@ typedef struct TestingContext {
 } TestingContext;
 extern TestingContext gTestingContext;
 
-bool doTests(TestRecord* tests, size_t testCount);
+bool doTests(const char* suiteName, TestRecord* tests, size_t testCount);
 
 #define TEST_STRINGIFY(...) #__VA_ARGS__
 #define TEST_ASSERT(_test_ptr, ...) testAssertRaw(_test_ptr, __VA_ARGS__, TEST_STRINGIFY(__VA_ARGS__), __FILE__, __LINE__, __FUNCTION__)

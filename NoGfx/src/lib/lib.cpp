@@ -28,7 +28,9 @@ void gpuInit(const GpuInitDesc* desc, GpuResult* result) {
 }
 
 void gpuDeinit(void) {
-	GPU_LAYERED_CALL_NO_PARAMS(gpuDeinit);
+	GPU_LAYERED_CALL_NO_PARAMS_NO_RETURN(gpuDeinit);
+
+	gGpuActiveLayers = {};
 }
 
 void gpuEnumerateDevices(GpuDeviceInfo **devices, size_t *devices_count, GpuResult *result) {
@@ -41,6 +43,8 @@ void gpuSelectDevice(GpuDeviceId deviceId, GpuResult* result) {
 
 void* gpuMalloc(size_t bytes, size_t align, GpuMemory memory, GpuResult* result) {
 	GPU_LAYERED_CALL(gpuMalloc, bytes, align, memory, result);
+
+	return nullptr;
 }
 
 void  gpuFree(void* ptr) {
@@ -49,6 +53,8 @@ void  gpuFree(void* ptr) {
 
 void* gpuHostToDevicePointer(void* ptr, GpuResult* result) {
 	GPU_LAYERED_CALL(gpuHostToDevicePointer, ptr, result);
+
+	return nullptr;
 }
 
 

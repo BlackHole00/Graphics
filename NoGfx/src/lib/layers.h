@@ -26,29 +26,65 @@ typedef struct {
 } GpuActiveLayers;
 extern GpuActiveLayers gGpuActiveLayers;
 
-#define GPU_LAYERED_CALL_NO_PARAMS(_function)					\
-for (size_t _i = gGpuActiveLayers.validationLayerCount; _i > 0; _i--) {		\
-	auto function = gGpuActiveLayers.validationLayers[_i - 1]->_function;	\
-	if (function != nullptr) {						\
-		bool ok = function();						\
-		if (!ok) {							\
-			break;							\
-		}								\
-	}									\
-}										\
-return gGpuActiveLayers.baseLayer->_function()
+#define GPU_LAYERED_CALL_NO_PARAMS(_function)						\
+do {											\
+	bool _ok = true;								\
+	for (size_t _i = gGpuActiveLayers.validationLayerCount; _i > 0; _i--) {		\
+		auto function = gGpuActiveLayers.validationLayers[_i - 1]->_function;	\
+		if (function != nullptr) {						\
+			_ok = function();						\
+			if (!_ok) {							\
+				break;							\
+			}								\
+		}									\
+	}										\
+	if (_ok && gGpuActiveLayers.baseLayer != nullptr) {				\
+		auto function = gGpuActiveLayers.baseLayer->_function;			\
+		if (function != nullptr) {						\
+			return function();						\
+		}									\
+	}										\
+} while(false);
 
-#define GPU_LAYERED_CALL(_function, ...)					\
-for (size_t _i = gGpuActiveLayers.validationLayerCount; _i > 0; _i--) {		\
-	auto function = gGpuActiveLayers.validationLayers[_i - 1]->_function;	\
-	if (function != nullptr) {						\
-		bool ok = function(__VA_ARGS__);				\
-		if (!ok) {							\
-			break;							\
-		}								\
-	}									\
-}										\
-return gGpuActiveLayers.baseLayer->_function(__VA_ARGS__)
+#define GPU_LAYERED_CALL_NO_PARAMS_NO_RETURN(_function)					\
+do {											\
+	bool _ok = true;								\
+	for (size_t _i = gGpuActiveLayers.validationLayerCount; _i > 0; _i--) {		\
+		auto function = gGpuActiveLayers.validationLayers[_i - 1]->_function;	\
+		if (function != nullptr) {						\
+			_ok = function();						\
+			if (!_ok) {							\
+				break;							\
+			}								\
+		}									\
+	}										\
+	if (_ok && gGpuActiveLayers.baseLayer != nullptr) {				\
+		auto function = gGpuActiveLayers.baseLayer->_function;			\
+		if (function != nullptr) {						\
+			function();							\
+		}									\
+	}										\
+} while(false);
+
+#define GPU_LAYERED_CALL(_function, ...)						\
+do {											\
+	bool _ok = true;								\
+	for (size_t _i = gGpuActiveLayers.validationLayerCount; _i > 0; _i--) {		\
+		auto function = gGpuActiveLayers.validationLayers[_i - 1]->_function;	\
+		if (function != nullptr) {						\
+			_ok = function(__VA_ARGS__);					\
+			if (!_ok) {							\
+				break;							\
+			}								\
+		}									\
+	}										\
+	if (_ok && gGpuActiveLayers.baseLayer != nullptr) {				\
+		auto function = gGpuActiveLayers.baseLayer->_function;			\
+		if (function != nullptr) {						\
+			return function(__VA_ARGS__);					\
+		}									\
+	}										\
+} while(false);
 
 bool gpuPushLayer(const GpuLayer* layer);
 

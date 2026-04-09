@@ -5,7 +5,7 @@
 
 TestingContext gTestingContext;
 
-bool doTests(TestRecord* tests, size_t testCount) {
+bool doTests(const char* suiteName, TestRecord* tests, size_t testCount) {
 	gTestingContext.testCount = testCount;
 
 	gTestingContext.results = (Test*)malloc(sizeof(Test) * testCount);
@@ -13,6 +13,8 @@ bool doTests(TestRecord* tests, size_t testCount) {
 		gTestingContext.results[i].status = TEST_NOT_YET_RUN;
 		gTestingContext.results[i].record = &tests[i];
 	}
+
+	printf("Starting testsuite `%s`...\n", suiteName);
 
 	bool didFail = false;
 	for (size_t i = 0; i < testCount; i++) {
@@ -37,9 +39,9 @@ bool doTests(TestRecord* tests, size_t testCount) {
 	}
 
 	if (didFail) {
-		printf("Testsuite: FAIL.\n");
+		printf("Testsuite `%s`: FAIL.\n\n", suiteName);
 	} else {
-		printf("Testsuite: PASS.\n");
+		printf("Testsuite `%s`: PASS.\n\n", suiteName);
 	}
 
 	return didFail;

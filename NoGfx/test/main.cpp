@@ -8,7 +8,9 @@
 #include "handle_map.cpp"
 #include "btree.cpp"
 
-TestRecord gTests[] = {
+#include "gpu.cpp"
+
+TestRecord gCommonTests[] = {
 	{ "Can access page memory",					canAccessPageMemory			},
 
 	{ "Check for arena memory coherency",				checkForArenaMemoryCoherency		},
@@ -28,17 +30,33 @@ TestRecord gTests[] = {
 	{ "Check for handle map behaviour on invalid handles",		checkForHandleMapInvalidHandleBehaviour	},
 
 	{ "Check B-tree creation and initial root state",		checkBTreeCreation			},
-	{ "Check insertion of keys and contains functionality",		checkBTreeInsertAndContains		},
-	{ "Check get functionality with found and default element",	checkBTreeGet				},
-	{ "Check removal of keys from leaf nodes",			checkBTreeRemoveLeaf			},
-	{ "Check removal of keys from non-leaf/internal nodes",		checkBTreeRemoveNonLeaf			},
-	{ "Check root split when inserting enough keys",		checkBTreeRootSplit			},
-	{ "Check predecessor and successor key retrieval",		checkBTreePredecessorSuccessor		},
+	{ "Check B-tree insertion of keys and contains functionality",	checkBTreeInsertAndContains		},
+	{ "Check B-tree get functionality with found and default element", checkBTreeGet			},
+	{ "Check B-tree removal of keys from leaf nodes",		checkBTreeRemoveLeaf			},
+	{ "Check B-tree removal of keys from non-leaf/internal nodes",	checkBTreeRemoveNonLeaf			},
+	{ "Check B-tree root split when inserting enough keys",		checkBTreeRootSplit			},
+	{ "Check B-tree predecessor and successor key retrieval",	checkBTreePredecessorSuccessor		},
+};
+
+TestRecord gNoGfxTests[] = {
+	{ "Check GPU initialization and deinitialization",		checkGpuInitAndDeinit			},
+	{ "Check GPU invalid backend handling",				checkGpuInvalidBackend			},
+	{ "Check GPU device enumeration",				checkGpuEnumerateDevices		},
+	{ "Check GPU device selection",					checkGpuSelectDevice			},
+	{ "Check GPU invalid device selection",				checkGpuSelectInvalidDevice		},
+	{ "Check GPU double device selection handling",			checkGpuDoubleDeviceSelection		},
+	{ "Check GPU memory allocation and free",			checkGpuMallocAndFree			},
+	{ "Check GPU free with invalid pointer",			checkGpuFreeInvalidPointer		},
+	{ "Check GPU host to device pointer mapping",			checkGpuHostToDevicePointer		},
+	{ "Check GPU host to device pointer mapping with offset",	checkGpuHostToDevicePointerWithOffset	},
 };
 
 int main(void) {
-	size_t testCount = sizeof(gTests) / sizeof(*gTests);
-	doTests(gTests, testCount);
+	size_t commonTestCount = sizeof(gCommonTests) / sizeof(*gCommonTests);
+	doTests("Common utilities", gCommonTests, commonTestCount);
+
+	size_t noGfxTestCount = sizeof(gNoGfxTests) / sizeof(*gNoGfxTests);
+	doTests("No Graphics", gNoGfxTests, noGfxTestCount);
 
 	return 0;
 }

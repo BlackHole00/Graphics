@@ -61,5 +61,11 @@ void mtl4Deinit(void) {
 
 	free(gMtl4Context.globalBackingMemory);
 	free(gMtl4Context.tempBackingMemory);
+
+	cmnDestroyPage(gMtl4AllocationStorage.allocationMetadataPage);
+	cmnDestroyPage(gMtl4AllocationStorage.addressRangeMapPage);
+
+	gMtl4Context = {};
+	gMtl4AllocationStorage = {};
 }
 

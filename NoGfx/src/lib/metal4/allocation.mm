@@ -24,7 +24,7 @@ void mtl4PrepareAllocationStorage(GpuResult* result) {
 		sizeof(Mtl4AllocationMetadata));
 	gMtl4AllocationStorage.addressRangeMapNodesPool = cmnPageToPool(
 		gMtl4AllocationStorage.addressRangeMapPage,
-		sizeof(Mtl4AllocationMetadata));
+		sizeof(CmnBTreeNode<Mtl4AddressRange, Mtl4AllocationMetadata*>));
 
 	cmnCreateBTree(
 		&gMtl4AllocationStorage.addressRangeMap,
@@ -114,7 +114,7 @@ void* mtl4Malloc(size_t size, size_t align, GpuMemory memory, GpuResult* result)
 	return nullptr;
 }
 
-void  mtl4Free(void* ptr);
+void  mtl4Free(void* ptr) {}
 
 void* mtl4HostToDevicePointer(void* ptr, GpuResult* result) {
 	Mtl4AddressRange range;
