@@ -2,46 +2,53 @@
 
 #include <lib/layers.h>
 
-// TODO: Move to platform dependent code
 void gpuInit(const GpuInitDesc* desc, GpuResult* result) {
 	if (desc->extraLayerCount > GPU_MAX_LAYERS - 2) {
-		*result = GPU_TOO_MANY_LAYERS;
+		CMN_SET_RESULT(result, GPU_TOO_MANY_LAYERS);
 		return;
 	}
 
-	const GpuLayer* baseLayer	= gpuAcquireBaseLayerFor(desc->backend);
+	const GpuBaseLayer* baseLayer = gpuAcquireBaseLayerFor(desc->backend);
 	if (baseLayer == nullptr) {
-		*result = GPU_BACKEND_NOT_SUPPORTED;
+		CMN_SET_RESULT(result, GPU_BACKEND_NOT_SUPPORTED);
 		return;
 	}
-	gpuPushLayer(baseLayer);
+	gGpuActiveLayers.baseLayer = baseLayer;
 
 	if (desc->validationEnabled) {
 		const GpuLayer* validationLayer	= gpuAcquireValidationLayerFor(desc->backend);
 		if (validationLayer == nullptr) {
-			*result = GPU_BACKEND_NOT_SUPPORTED;
+			CMN_SET_RESULT(result, GPU_BACKEND_NOT_SUPPORTED);
 			return;
 		}
 		gpuPushLayer(validationLayer);
 	}
 
-	GPU_LAYERED_CALL_NO_PARAMS(layerInit, result);
-	if (*result != GPU_SUCCESS) {
-		return;
-	}
-
-	*result = GPU_SUCCESS;
+	GPU_LAYERED_CALL(layerInit, result);
 }
 
 void gpuDeinit(void) {
-	GPU_LAYERED_CALL_NO_RESULT(gpuDeinit);
+	GPU_LAYERED_CALL_NO_PARAMS(gpuDeinit);
 }
 
 void gpuEnumerateDevices(GpuDeviceInfo **devices, size_t *devices_count, GpuResult *result) {
-	GPU_LAYERED_CALL(gpuEnumerateDevices, result, devices, devices_count);
+	GPU_LAYERED_CALL(gpuEnumerateDevices, devices, devices_count, result);
 }
 
 void gpuSelectDevice(GpuDeviceId deviceId, GpuResult* result) {
-	GPU_LAYERED_CALL(gpuSelectDevice, result, deviceId);
+	GPU_LAYERED_CALL(gpuSelectDevice, deviceId, result);
 }
+
+void* gpuMalloc(size_t bytes, size_t align, GpuMemory memory, GpuResult* result) {
+	GPU_LAYERED_CALL(gpuMalloc, bytes, align, memory, result);
+}
+
+void  gpuFree(void* ptr) {
+	GPU_LAYERED_CALL(gpuFree, ptr);
+}
+
+void* gpuHostToDevicePointer(void* ptr, GpuResult* result) {
+	GPU_LAYERED_CALL(gpuHostToDevicePointer, ptr, result);
+}
+
 

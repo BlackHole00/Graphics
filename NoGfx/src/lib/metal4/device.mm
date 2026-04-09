@@ -1,7 +1,6 @@
 #include "device.h"
 
 #include <lib/metal4/context.h>
-#include <lib/metal4/pointer_map.h>
 
 bool mtl4CheckDeviceSuitability(id<MTLDevice> device) {
 	return device.hasUnifiedMemory &&
@@ -16,12 +15,12 @@ void mtl4PrepareAvailableDevicesList(GpuResult* result) {
 
 	GpuDeviceInfo* devicesInfo = cmnArenaAlloc<GpuDeviceInfo>(arena, mtlDevices.count, nullptr);
 	if (devicesInfo == nullptr) {
-		*result = GPU_OUT_OF_CPU_MEMORY;
+		CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
 		goto on_error_cleanup;
 	}
 	id<MTLDevice>* suitableMtlDevices; suitableMtlDevices = cmnArenaAlloc<id<MTLDevice>>(arena, mtlDevices.count, nullptr);
 	if (suitableMtlDevices == nullptr) {
-		*result = GPU_OUT_OF_CPU_MEMORY;
+		CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
 		goto on_error_cleanup;
 	}
 
@@ -38,7 +37,7 @@ void mtl4PrepareAvailableDevicesList(GpuResult* result) {
 		size_t deviceNameLength = [mtlDevice.name maximumLengthOfBytesUsingEncoding:NSUTF8StringEncoding];
 		deviceInfo->name = cmnArenaAlloc<char>(arena, deviceNameLength, 0, NULL);
 		if (deviceInfo->name == nullptr) {
-			*result = GPU_OUT_OF_CPU_MEMORY;
+			CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
 			goto on_error_cleanup;
 		}
 		[mtlDevice.name
@@ -64,7 +63,7 @@ void mtl4PrepareAvailableDevicesList(GpuResult* result) {
 
 	[mtlDevices release];
 
-	*result = GPU_SUCCESS;
+	CMN_SET_RESULT(result, GPU_SUCCESS);
 	return;
 
 on_error_cleanup:
@@ -79,7 +78,7 @@ void mtl4EnumerateDevices(GpuDeviceInfo** devices, size_t* devices_count, GpuRes
 	*devices = gMtl4Context.availableDevices.info;
 	*devices_count = gMtl4Context.availableDevices.count;
 
-	*result = GPU_SUCCESS;
+	CMN_SET_RESULT(result, GPU_SUCCESS);
 	return;
 }
 
@@ -87,8 +86,6 @@ void mtl4SelectDevice(GpuDeviceId deviceId, GpuResult* result) {
 	gMtl4Context.device = gMtl4Context.availableDevices.devices[deviceId];
 	gMtl4Context.selectedDeviceId = deviceId;
 
-	testPointerMap();
-
-	*result = GPU_SUCCESS;
+	CMN_SET_RESULT(result, GPU_SUCCESS);
 }
 

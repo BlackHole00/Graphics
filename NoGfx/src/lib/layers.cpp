@@ -1,14 +1,15 @@
 #include "layers.h"
+#include <atomic>
 
 GpuActiveLayers gGpuActiveLayers;
 
 bool gpuPushLayer(const GpuLayer* layer) {
-	if (gGpuActiveLayers.count >= GPU_MAX_LAYERS) {
+	if (gGpuActiveLayers.validationLayerCount >= GPU_MAX_LAYERS) {
 		return false;
 	}
 
-	gGpuActiveLayers.layers[gGpuActiveLayers.count] = layer;
-	gGpuActiveLayers.count++;
+	gGpuActiveLayers.validationLayers[gGpuActiveLayers.validationLayerCount] = layer;
+	gGpuActiveLayers.validationLayerCount++;
 
 	return true;
 }

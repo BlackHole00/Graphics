@@ -12,11 +12,15 @@ typedef enum CmnCmp {
 
 template <typename T>
 struct CmnTypeTraits {
-	static bool eq(const T&, const T&) {
+	static bool eq(const T& left, const T& right) {
+		(void)left; (void)right;
+
 		static_assert(false, "Using type traits of an unknown type. Please implement CmnTypeTraits<T> for your custom data type.");
 	}
 
-	static CmnCmp cmp(const T&, const T&) {
+	static CmnCmp cmp(const T& left, const T& right) {
+		(void)left; (void)right;
+
 		static_assert(false, "Using type traits of an unknown type. Please implement CmnTypeTraits<T> for your custom data type.");
 	}
 };

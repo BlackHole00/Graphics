@@ -125,11 +125,11 @@ void cmnBTreeInsertNotNull(
 template <typename K, typename V>
 CmnBTreeNode<K, V>* cmnBTreeSearchNode(CmnBTreeNode<K, V>* node, const K& key, size_t* indexInNode) {
 	size_t i = 0;
-	while (i < node->keyCount && cmnCmp(key, node->keys[i]) == CMN_MORE) {
+	while (i < node->keyCount && cmnCmp(node->keys[i], key) == CMN_LESS) {
 		i++;
 	}
 
-	if (i < node->keyCount && cmnCmp(key, node->keys[i]) == CMN_EQUALS) {
+	if (i < node->keyCount && cmnCmp(node->keys[i], key) == CMN_EQUALS) {
 		*indexInNode = i;
 		return node;
 	}
@@ -276,11 +276,11 @@ void cmnBTreeRemoveFromLeaf(CmnBTreeNode<K, V>* node, size_t index) {
 template <typename K, typename V>
 void cmnBTreeRemove(CmnBTree<K, V>* tree, CmnBTreeNode<K, V>* node, const K& key) {
 	size_t i = 0;
-	while (i < node->keyCount && cmnCmp(key, node->keys[i]) == CMN_MORE) {
+	while (i < node->keyCount && cmnCmp(node->keys[i], key) == CMN_LESS) {
 		i++;
 	}
 
-	if (i < node->keyCount && cmnCmp(key, node->keys[i]) == CMN_EQUALS) {
+	if (i < node->keyCount && cmnCmp(node->keys[i], key) == CMN_EQUALS) {
 		if (node->isLeaf) {
 			cmnBTreeRemoveFromLeaf(node, i);
 		} else {
@@ -378,138 +378,5 @@ void cmnRemove(CmnBTree<K, V>* tree, const K& key) {
 	}
 }
 
-// template <typename K, typename V>
-// void cmnBTreeSplit(CmnBTree<K, V>* tree, CmnBTreeNode<K, V>* node, CmnBTreeNode<K, V>* prevNode, size_t indexOfNode, CmnResult* result) {
-// 	CmnResult localResult;
-
-// 	assert(node->keyCount == 15);
-
-// 	CmnBTreeNode<K, V>* newNode = cmnPoolAlloc<CmnBTreeNode<K, V>>(tree->nodesPool, &localResult);
-// 	if (localResult != CMN_SUCCESS) {
-// 		CMN_SET_RESULT(result, localResult);
-// 		return;
-// 	}
-
-// 	K medianKey = node->keys[7];
-// 	V medianElement = node->elements[7];
-
-// 	if (prevNode == nullptr) {
-// 		CmnBTreeNode<K, V>* newRoot = cmnPoolAlloc<CmnBTreeNode<K, V>>(tree->nodesPool, &localResult);
-// 		if (localResult != CMN_SUCCESS) {
-// 			CMN_SET_RESULT(result, localResult);
-// 			return;
-// 		}
-
-// 		newRoot->keyCount	= 1;
-// 		newRoot->keys[0]	= medianKey;
-// 		newRoot->elements[0]	= medianElement;
-// 		newRoot->nodes[0]	= node;
-// 		newRoot->nodes[1]	= newNode;
-
-// 		tree->root	= newRoot;
-// 	} else {
-// 		cmnInsertAtIndex(prevNode->keys, prevNode->keys, indexOfNode, medianKey);
-// 		cmnInsertAtIndex(prevNode->elements, prevNode->elements, indexOfNode, medianElement);
-// 		cmnInsertAtIndex(prevNode->nodes, prevNode->keyCount + 1, indexOfNode + 1, newNode);
-
-// 		prevNode->keyCount++;
-// 		assert(prevNode->keyCount < 15);
-// 	}
-
-// 	// NOTE: Ensure destructive data manipulation AFTER the possible allocations failures.
-// 	node->keyCount = 7;
-// 	newNode->keyCount = 7;
-
-// 	for (uint8_t i = 0; i < 7; i++) {
-// 		newNode->keys[i] = node->keys[8+i];
-// 		newNode->elements[i] = node->elements[8+i];
-// 	}
-
-// 	if (!node->isLeaf) {
-// 		for (uint8_t i = 0; i < 8; i++) {
-// 			newNode->nodes[i] = node->nodes[7+i];
-// 		}
-// 	}
-
-// 	CMN_SET_RESULT(result, CMN_SUCCESS);
-// }
-
-// template <typename K, typename V>
-// void cmnInsert(CmnBTree<K, V>* tree, const K& key, const V& element, CmnResult* result) {
-// 	CmnResult localResult;
-
-// 	if (tree->root->keyCount == 15) {
-// 		cmnBTreeSplit(tree, tree->root, nullptr, 0, &localResult);
-// 		if (localResult != CMN_SUCCESS) {
-// 			CMN_SET_RESULT(result, localResult);
-// 			return;
-// 		}
-// 	}
-
-// 	CmnBTreeNode<K, V>* node = tree->root;
-// 	while (!node->isLeaf) {
-// 		size_t i = 0;
-// 		while (i < node->keyCount && cmnCmp(key, node->keys[i]) == CMN_MORE) {
-// 			i++;
-// 		}
-
-// 		if (node->nodes[i]->keyCount == 15) {
-// 			cmnBTreeSplit(tree, node->nodes[i], node, i, &localResult);
-// 			if (localResult != CMN_SUCCESS) {
-// 				CMN_SET_RESULT(result, localResult);
-// 				return;
-// 			}
-
-// 			if (mcnCmp(key, node->keys[i]) == CMN_MORE) {
-// 				i++;
-// 			}
-// 		}
-
-// 		node = node->nodes[i];
-// 	}
-
-// 	size_t i = 0;
-// 	while (i < node->keyCount && cmnCmp(key, node->keys[i]) == CMN_MORE) {
-// 		i++;
-// 	}
-
-// 	cmnInsertAtIndex(node->keys, node->keyCount, i, key);
-// 	cmnInsertAtIndex(node->elements, node->keyCount, i, element);
-// 	node->keyCount++;
-
-// 	CMN_SET_RESULT(result, CMN_SUCCESS);
-// }
-
-// template <typename K, typename V>
-// void cmnBTreeRemove(CmnBTree<K, V>* tree, CmnBTreeNode<K, V>* node, const K& key) {
-	
-// }
-
-// template <typename K, typename V>
-// void cmnRemove(CmnBTree<K, V>* tree, const K& key, CmnResult* result) {}
-
-// template <typename K, typename V>
-// void cmnBTreeMerge(CmnBTree<K, V>* tree, CmnBTreeNode<K, V>* node, size_t index) {
-// 	assert(node->keyCount > index);
-// 	assert(node->nodes[index]->length == 7);
-// 	assert(node->nodes[index + 1]->length == 7);
-
-// 	CmnBTreeNode<K, V>* newNode = node->nodes[index];
-// 	CmnBTreeNode<K, V>* oldNode = node->nodes[index + 1];
-
-// 	newNode->keyCount = 14;
-// 	for (size_t i = 0; i < 7; i++) {
-// 		newNode->keys[7+i] = oldNode->keys[i];
-// 		newNode->elements[7+i] = oldNode->elements[i];
-// 	}
-// 	for (size_t i = 0; i < 8; i++) {
-// 		newNode->nodes[]
-// 	}
-
-// 	cmnPoolFree(tree->nodesPool, oldNode);
-// }
-
-// template <typename K, typename V>
-// cmnRemove(CmnBTree<K, V>* tree) {}
-
 #endif // CMN_BTREE_H
+

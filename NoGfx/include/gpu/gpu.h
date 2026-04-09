@@ -31,9 +31,15 @@ typedef enum GpuBackend {
 } GpuBackend;
 
 typedef enum GpuDeviceType {
-	GPU_INTEGRATED,
+	GPU_INTEGRATED = 0,
 	GPU_DEDICATED,
 } GpuDeviceType;
+
+typedef enum GpuMemory {
+	GPU_MEMORY_DEFAULT = 0,
+	GPU_MEMORY_GPU,
+	GPU_MEMORY_READBACK,
+} GpuMemory;
 
 typedef size_t GpuDeviceId;
 
@@ -45,12 +51,17 @@ typedef struct GpuDeviceInfo {
 	// TODO: device capabilities, limits, etc...
 } GpuDeviceInfo;
 
-typedef struct GpuLayer {
-	void (*layerInit)(GpuResult* result);
-	void (*gpuDeinit)(void);
 
-	void (*gpuEnumerateDevices)(GpuDeviceInfo** devices, size_t* devices_count, GpuResult* result);
-	void (*gpuSelectDevice)(GpuDeviceId deviceId, GpuResult* result);
+typedef struct GpuLayer {
+	bool (*layerInit)(GpuResult* result);
+	bool (*gpuDeinit)(void);
+
+	bool (*gpuEnumerateDevices)(GpuDeviceInfo** devices, size_t* devices_count, GpuResult* result);
+	bool (*gpuSelectDevice)(GpuDeviceId deviceId, GpuResult* result);
+
+	bool (*gpuMalloc)(size_t bytes, size_t align, GpuMemory memory, GpuResult* result);
+	bool (*gpuFree)(void* ptr);
+	bool (*gpuHostToDevicePointer)(void* ptr, GpuResult* result);
 } GpuLayer;
 
 typedef struct GpuInitDesc {
@@ -65,6 +76,10 @@ void gpuDeinit(void);
 
 void gpuEnumerateDevices(GpuDeviceInfo** devices, size_t* devices_count, GpuResult* result);
 void gpuSelectDevice(GpuDeviceId deviceId, GpuResult* result);
+
+void* gpuMalloc(size_t bytes, size_t align, GpuMemory memory, GpuResult* result);
+void  gpuFree(void* ptr);
+void* gpuHostToDevicePointer(void* ptr, GpuResult* result);
 
 #ifdef __cplusplus
 } // extern "C"

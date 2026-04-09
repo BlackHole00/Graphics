@@ -2,25 +2,28 @@
 
 #include <lib/metal4/context.h>
 
-void mtl4ValidateEnumerateDevices(GpuDeviceInfo** devices, size_t* devices_count, GpuResult* result) {
+bool mtl4ValidateEnumerateDevices(GpuDeviceInfo** devices, size_t* devices_count, GpuResult* result) {
 	if (devices == nullptr || devices_count == nullptr) {
-		*result = GPU_INVALID_PARAMETERS;
+		CMN_SET_RESULT(result, GPU_INVALID_PARAMETERS);
+		return false;
 	}
 
-	*result = GPU_SUCCESS;
+	CMN_SET_RESULT(result, GPU_SUCCESS);
+	return true;
 }
 
-void mtl4ValidateSelectDevice(GpuDeviceId deviceId, GpuResult* result) {
+bool mtl4ValidateSelectDevice(GpuDeviceId deviceId, GpuResult* result) {
 	if (deviceId >= gMtl4Context.availableDevices.count) {
-		*result = GPU_INVALID_DEVICE;
-		return;
+		CMN_SET_RESULT(result, GPU_INVALID_DEVICE);
+		return false;
 	}
 
 	if (gMtl4Context.device != nullptr) {
-		*result = GPU_DEVICE_ALREADY_SELECTED;
-		return;
+		CMN_SET_RESULT(result, GPU_DEVICE_ALREADY_SELECTED);
+		return false;
 	}
 
-	*result = GPU_SUCCESS;
+	CMN_SET_RESULT(result, GPU_SUCCESS);
+	return true;
 }
 

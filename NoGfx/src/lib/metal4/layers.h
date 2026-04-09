@@ -1,9 +1,9 @@
 #ifndef MTL4_LAYERS_H
 #define MTL4_LAYERS_H
 
-#include <gpu/gpu.h>
+#include <lib/layers.h>
 
-extern GpuLayer gMtl4BaseLayer;
+extern GpuBaseLayer gMtl4BaseLayer;
 extern GpuLayer gMtl4ValidationLayer;
 
 #endif // MTL4_LAYERS_H

@@ -4,7 +4,7 @@
 
 #include <lib/metal4/layers.h>
 
-GpuLayer* gpuAcquireBaseLayerFor(GpuBackend backend) {
+GpuBaseLayer* gpuAcquireBaseLayerFor(GpuBackend backend) {
 	switch (backend) {
 		case GPU_METAL_4: {
 			return &gMtl4BaseLayer;

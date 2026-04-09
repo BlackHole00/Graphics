@@ -11,8 +11,8 @@
 #include <lib/layers.cpp>
 #include <lib/layers_darwin.cpp>
 
-#include <lib/metal4/device.mm>
 #include <lib/metal4/layers.cpp>
-#include <lib/metal4/context.cpp>
+#include <lib/metal4/device.mm>
+#include <lib/metal4/context.mm>
 #include <lib/metal4/validation.cpp>
 

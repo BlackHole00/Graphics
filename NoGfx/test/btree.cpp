@@ -148,3 +148,4 @@ void checkBTreePredecessorSuccessor(Test* test) {
 	TEST_ASSERT(test, predKey < tree.root->keys[0]);
 	TEST_ASSERT(test, succKey > tree.root->keys[0]);
 }
+
