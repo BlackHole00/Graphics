@@ -38,6 +38,10 @@ CmnPage cmnCreatePage(size_t size, CmnPagePerms permissions, CmnResult* result) 
 }
 
 void cmnDestroyPage(CmnPage page) {
+	if (page.baseAddress == nullptr) {
+		return;
+	}
+
 	munmap(page.baseAddress, page.size);
 }
 

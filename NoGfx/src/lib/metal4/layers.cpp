@@ -2,7 +2,7 @@
 
 #include <lib/metal4/context.h>
 #include <lib/metal4/device.h>
-#include <lib/metal4/buffer.h>
+#include <lib/metal4/allocation.h>
 #include <lib/metal4/validation.h>
 
 GpuBaseLayer gMtl4BaseLayer = {
@@ -10,9 +10,9 @@ GpuBaseLayer gMtl4BaseLayer = {
 	/*gpuDeinit=*/			mtl4Deinit,
 	/*gpuEnumerateDevices=*/	mtl4EnumerateDevices,
 	/*gpuSelectDevice=*/		mtl4SelectDevice,
-	/*gpuMalloc=*/			nullptr,
-	/*gpuFree=*/ 			nullptr,
-	/*gpuHostToDevicePointer=*/	nullptr,
+	/*gpuMalloc=*/			mtl4Malloc,
+	/*gpuFree=*/ 			mtl4Free,
+	/*gpuHostToDevicePointer=*/	mtl4HostToDevicePointer,
 };
 
 GpuLayer gMtl4ValidationLayer = {

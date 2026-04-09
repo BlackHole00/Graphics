@@ -111,7 +111,7 @@ void cmnBTreeInsertNotNull(
 				return;
 			}
 
-			if (key > node->keys[i]) {
+			if (cmnCmp(node->keys[i], key) == CMN_LESS) {
 				i += 1;
 			}
 		}
