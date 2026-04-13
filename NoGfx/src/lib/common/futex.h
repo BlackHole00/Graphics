@@ -1,5 +1,5 @@
-#ifndef CMN_MUTEX_H
-#define CMN_MUTEX_H
+#ifndef CMN_FUTEX_H
+#define CMN_FUTEX_H
 
 #include <lib/common/common.h>
 
@@ -13,5 +13,5 @@ bool cmnFutexWaitWithTimeout(CmnFutex* futex, uint32_t expected, uint64_t ns);
 
 #include "futex_darwin.inc"
 
-#endif // CMN_MUTEX_H
+#endif // CMN_FUTEX_H
 

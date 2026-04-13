@@ -1,6 +1,7 @@
 #include "test.h"
 
 #include <stdlib.h>
+#include <lib/common/arena.h>
 #include <lib/common/handle_map.h>
 
 void checkForHandleMapDataCoherency(Test* test) {
@@ -12,9 +13,10 @@ void checkForHandleMapDataCoherency(Test* test) {
 	}
 
 	CmnArena arena = cmnCreateArena(memory, 1024 * sizeof(int32_t), true);
+	CmnAllocator arenaAllocator = cmnArenaAllocator(&arena);
 
 	CmnHandleMap<int32_t> map;
-	cmnCreateHandleMap(&map, &arena, 0, &result);
+	cmnCreateHandleMap(&map, arenaAllocator, 0, &result);
 	TEST_ASSERT(test, result == CMN_SUCCESS);
 
 	CmnHandle handles[128];
@@ -41,9 +43,10 @@ void checkForHandleMapBucketReusage(Test* test) {
 	}
 
 	CmnArena arena = cmnCreateArena(memory, 1024 * sizeof(int32_t), true);
+	CmnAllocator arenaAllocator = cmnArenaAllocator(&arena);
 
 	CmnHandleMap<int32_t> map;
-	cmnCreateHandleMap(&map, &arena, 0, &result);
+	cmnCreateHandleMap(&map, arenaAllocator, 0, &result);
 	TEST_ASSERT(test, result == CMN_SUCCESS);
 
 	CmnHandle first = cmnInsert(&map, 0, &result);
@@ -67,9 +70,10 @@ void checkForHandleMapGenerationOverflowBehaviour(Test* test) {
 	}
 
 	CmnArena arena = cmnCreateArena(memory, 1024 * sizeof(int32_t), true);
+	CmnAllocator arenaAllocator = cmnArenaAllocator(&arena);
 
 	CmnHandleMap<int32_t> map;
-	cmnCreateHandleMap(&map, &arena, 0, &result);
+	cmnCreateHandleMap(&map, arenaAllocator, 0, &result);
 	TEST_ASSERT(test, result == CMN_SUCCESS);
 
 	// Simulate a lot of allocations and deallocations
@@ -88,9 +92,10 @@ void checkForHandleMapIndexOverflowBehaviour(Test* test) {
 	}
 
 	CmnArena arena = cmnCreateArena(memory, 1024 * sizeof(int32_t), true);
+	CmnAllocator arenaAllocator = cmnArenaAllocator(&arena);
 
 	CmnHandleMap<int32_t> map;
-	cmnCreateHandleMap(&map, &arena, 0, &result);
+	cmnCreateHandleMap(&map, arenaAllocator, 0, &result);
 	TEST_ASSERT(test, result == CMN_SUCCESS);
 
 	// Simulate a lot of allocations
@@ -110,9 +115,10 @@ void checkForHandleMapInvalidHandleBehaviour(Test* test) {
 	}
 
 	CmnArena arena = cmnCreateArena(memory, 1024 * sizeof(int32_t), true);
+	CmnAllocator arenaAllocator = cmnArenaAllocator(&arena);
 
 	CmnHandleMap<int32_t> map;
-	cmnCreateHandleMap(&map, &arena, 42, &result);
+	cmnCreateHandleMap(&map, arenaAllocator, 42, &result);
 	TEST_ASSERT(test, result == CMN_SUCCESS);
 
 	bool wasHandleValid;

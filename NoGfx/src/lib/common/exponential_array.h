@@ -2,7 +2,7 @@
 #define CMN_EXPONENTIALARRAY_H
 
 #include <lib/common/common.h>
-#include <lib/common/arena.h>
+#include <lib/common/allocator.h>
 
 #include <strings.h>
 #include <assert.h>
@@ -20,7 +20,7 @@ template <typename T, size_t N>
 struct CmnExponentialArray;
 
 
-template <typename T, size_t N> void cmnCreateExponentialArray(CmnExponentialArray<T, N>* array, CmnArena* arena, CmnResult* result);
+template <typename T, size_t N> void cmnCreateExponentialArray(CmnExponentialArray<T, N>* array, CmnAllocator backingAllocator, CmnResult* result);
 template <typename T, size_t N> bool cmnResize(CmnExponentialArray<T, N>* array, size_t length, CmnResult* result);
 template <typename T, size_t N> void cmnSet(CmnExponentialArray<T, N>* array, size_t index, const T& value);
 template <typename T, size_t N>   T& cmnGet(CmnExponentialArray<T, N>* array, size_t index);
@@ -31,7 +31,7 @@ inline void cmnDecomposeExponentialArrayIndex(size_t index, size_t* bucketIndex,
 
 template <typename T, size_t N = 15>
 struct CmnExponentialArray {
-	CmnArena* backingArena;
+	CmnAllocator	backingAllocator;
 
 	T* buckets[N];
 	size_t length;

@@ -5,7 +5,9 @@
 #endif
 
 #include <lib/common/page_posix.cpp>
+#include <lib/common/arena.cpp>
 #include <lib/common/pool.cpp>
+#include <lib/common/mutex.cpp>
 
 #include <lib/lib.cpp>
 #include <lib/layers.cpp>

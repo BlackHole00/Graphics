@@ -6,6 +6,7 @@ Mtl4AllocationStorage gMtl4AllocationStorage;
 
 void mtl4PrepareAllocationStorage(GpuResult* result) {
 	CmnResult localResult;
+	CmnAllocator addressRangeMapNodesAllocator;
 
 	// Preallocate for more than 512k buffers
 	gMtl4AllocationStorage.allocationMetadataPage = cmnCreatePage(24 * 1024 * 1024, CMN_PAGE_READABLE | CMN_PAGE_WRITABLE, &localResult);
@@ -28,10 +29,12 @@ void mtl4PrepareAllocationStorage(GpuResult* result) {
 		gMtl4AllocationStorage.addressRangeMapPage,
 		sizeof(CmnBTreeNode<Mtl4AddressRange, Mtl4AllocationMetadata*>));
 
+	addressRangeMapNodesAllocator = cmnPoolAllocator(&gMtl4AllocationStorage.addressRangeMapNodesPool);
+
 	cmnCreateBTree(
 		&gMtl4AllocationStorage.addressRangeMap,
 		(Mtl4AllocationMetadata*)nullptr,
-		&gMtl4AllocationStorage.addressRangeMapNodesPool,
+		addressRangeMapNodesAllocator,
 		&localResult
 	);
 	if (localResult != CMN_SUCCESS) {

@@ -1,6 +1,7 @@
 #include "test.h"
 
 #include <stdlib.h>
+#include <lib/common/arena.h>
 #include <lib/common/exponential_array.h>
 
 void checkForExponentialArrayDataCoherency(Test* test) {
@@ -12,9 +13,10 @@ void checkForExponentialArrayDataCoherency(Test* test) {
 	}
 
 	CmnArena arena = cmnCreateArena(memory, 1024 * sizeof(int32_t), true);
+	CmnAllocator arenaAllocator = cmnArenaAllocator(&arena);
 
 	CmnExponentialArray<int32_t> arr;
-	cmnCreateExponentialArray(&arr, &arena, &result);
+	cmnCreateExponentialArray(&arr, arenaAllocator, &result);
 	TEST_ASSERT(test, result == CMN_SUCCESS);
 
 	for (int32_t i = 0; i < 256; i++) {
@@ -36,9 +38,10 @@ void checkForExponentialArrayMemoryCoherency(Test* test) {
 	}
 
 	CmnArena arena = cmnCreateArena(memory, 1024 * sizeof(int32_t), true);
+	CmnAllocator arenaAllocator = cmnArenaAllocator(&arena);
 
 	CmnExponentialArray<int32_t> arr;
-	cmnCreateExponentialArray(&arr, &arena, &result);
+	cmnCreateExponentialArray(&arr, arenaAllocator, &result);
 	TEST_ASSERT(test, result == CMN_SUCCESS);
 
 	for (int32_t i = 0; i < 256; i++) {

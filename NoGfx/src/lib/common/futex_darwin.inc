@@ -9,13 +9,37 @@
 #include <lib/common/atomic.h>
 
 inline void cmnFutexBroadcast(CmnFutex* futex) {
-	int res = os_sync_wake_by_address_all(futex, 4, OS_SYNC_WAKE_BY_ADDRESS_NONE);
-	assert(res >= 0 && "os_sync_wait_on_address_with_timeout error.");
+	for (;;) {
+		int res = os_sync_wake_by_address_all(futex, 4, OS_SYNC_WAKE_BY_ADDRESS_NONE);
+		if (res >= 0) {
+			return;
+		}
+
+		if (errno == EINTR || errno == EFAULT) {
+			continue;
+		} else if (errno == ENOENT) {
+			return;
+		} else {
+			assert(false && "os_sync_wake_by_address_all error.");
+		}
+	}
 }
 
 inline void cmnFutexSignal(CmnFutex* futex) {
-	int res = os_sync_wake_by_address_any(futex, 4, OS_SYNC_WAKE_BY_ADDRESS_NONE);
-	assert(res >= 0 && "os_sync_wait_on_address_with_timeout error.");
+	for (;;) {
+		int res = os_sync_wake_by_address_any(futex, 4, OS_SYNC_WAKE_BY_ADDRESS_NONE);
+		if (res >= 0) {
+			return;
+		}
+
+		if (errno == EINTR || errno == EFAULT) {
+			continue;
+		} else if (errno == ENOENT) {
+			return;
+		} else {
+			assert(false && "os_sync_wake_by_address_any error.");
+		}
+	}
 }
 
 inline void cmnFutexWait(CmnFutex* futex, uint32_t expected) {
@@ -30,25 +54,26 @@ inline void cmnFutexWait(CmnFutex* futex, uint32_t expected) {
 			4,
 			OS_SYNC_WAIT_ON_ADDRESS_NONE
 		);
-
-		if (res < 0 && (errno == EINTR || errno == EFAULT)) {
-			continue;
-		} else if (res >= 0) {
+		if (res >= 0) {
 			return;
+		}
+
+		if (errno == EINTR || errno == EFAULT) {
+			continue;
 		} else {
-			assert(false && "os_sync_wait_on_address_with_timeout error.");
+			assert(false && "os_sync_wait_on_address error.");
 		}
 	}
 }
 
 inline bool cmnFutexWaitWithTimeout(CmnFutex* futex, uint32_t expected, uint64_t ns) {
-	if (ns <= 0) {
-		return false;
-	}
-
 	for (;;) {
 		if (cmnAtomicLoad(futex, CMN_ACQUIRE) != expected) {
-			break;
+			return true;
+		}
+
+		if (ns <= 0) {
+			return false;
 		}
 
 		int res = os_sync_wait_on_address_with_timeout(
@@ -59,19 +84,18 @@ inline bool cmnFutexWaitWithTimeout(CmnFutex* futex, uint32_t expected, uint64_t
 			OS_CLOCK_MACH_ABSOLUTE_TIME,
 			ns
 		);
-
-		if (res < 0 && (errno == EINTR || errno == EFAULT)) {
-			continue;
-		} else if (res < 0 && errno == ETIMEDOUT) {
-			return false;
-		} else if (res >= 0) {
+		if (res >= 0) {
 			return true;
+		}
+
+		if (errno == EINTR || errno == EFAULT) {
+			continue;
+		} else if (errno == ETIMEDOUT) {
+			return false;
 		} else {
 			assert(false && "os_sync_wait_on_address_with_timeout error.");
 		}
 	}
-
-	return false;
 }
 
 #endif

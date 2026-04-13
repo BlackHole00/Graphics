@@ -1,3 +1,4 @@
+#include "allocator.h"
 #include "pool.h"
 
 static CmnPoolBlockHeader* cmnPoolHeaderAt(CmnPool* pool, size_t index) {
@@ -82,5 +83,47 @@ void cmnPoolFree(CmnPool* pool, void* address) {
 	header->nextFreeBlock = cmnPoolIndexOfBlockAt(pool, pool->firstFree);
 
 	pool->firstFree = header;
+}
+
+
+static void* cmnPoolAllocatorAlloc(void* poolData, size_t size, size_t, CmnResult* result) {
+	CmnPool* pool = (CmnPool*)poolData;
+	if (size > pool->blockSize) {
+		CMN_SET_RESULT(result, CMN_UNSUPPORTED_OPERATION);
+		return nullptr;
+	}
+
+	return cmnPoolAllocRaw(pool, result);
+}
+
+static void* cmnPoolAllocatorRealloc(void*, void*, size_t, size_t, size_t, CmnResult* result) {
+	CMN_SET_RESULT(result, CMN_UNSUPPORTED_OPERATION);
+	return nullptr;
+}
+
+static void cmnPoolAllocatorFree(void* poolData, void* address, CmnResult* result) {
+	CmnPool* pool = (CmnPool*)poolData;
+
+	cmnPoolFree(pool, address);
+	CMN_SET_RESULT(result, CMN_SUCCESS);
+}
+
+static void cmnPoolAllocatorFreeAll(void*, CmnResult* result) {
+	CMN_SET_RESULT(result, CMN_UNSUPPORTED_OPERATION);
+}
+
+
+static CmnAllocatorVTable gCmnPoolAllocatorVTable = {
+	/*alloc=*/	cmnPoolAllocatorAlloc,
+	/*realloc=*/	cmnPoolAllocatorRealloc,
+	/*free=*/	cmnPoolAllocatorFree,
+	/*freeAll=*/	cmnPoolAllocatorFreeAll,
+};
+
+CmnAllocator cmnPoolAllocator(CmnPool* pool) {
+	return CmnAllocator {
+		/*vtable=*/	&gCmnPoolAllocatorVTable,
+		/*data=*/	pool,
+	};
 }
 

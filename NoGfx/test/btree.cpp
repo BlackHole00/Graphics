@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <lib/common/common.h>
 #include <lib/common/btree.h>
+#include <lib/common/pool.h>
 
 void checkBTreeCreation(Test* test) {
 	uint8_t* backingMemory = (uint8_t*)malloc(1024 * sizeof(uint8_t));
@@ -11,9 +12,10 @@ void checkBTreeCreation(Test* test) {
 	}
 
 	CmnPool pool = cmnCreatePool(backingMemory, 1024, sizeof(CmnBTreeNode<int32_t, int32_t>), 16);
+	CmnAllocator poolAllocator = cmnPoolAllocator(&pool);
 
 	CmnBTree<int32_t, int32_t> tree;
-	cmnCreateBTree(&tree, 0, &pool, nullptr);
+	cmnCreateBTree(&tree, 0, poolAllocator, nullptr);
 
 	TEST_ASSERT(test, tree.root != nullptr);
 	TEST_ASSERT(test, tree.root->keyCount == 0);
@@ -27,8 +29,9 @@ void checkBTreeInsertAndContains(Test* test) {
 	}
 
 	CmnPool pool = cmnCreatePool(backingMemory, 2048, sizeof(CmnBTreeNode<int32_t, int32_t>), 16);
+	CmnAllocator poolAllocator = cmnPoolAllocator(&pool);
 	CmnBTree<int32_t, int32_t> tree;
-	cmnCreateBTree(&tree, -1, &pool, nullptr);
+	cmnCreateBTree(&tree, -1, poolAllocator, nullptr);
 
 	cmnInsert(&tree, 10, 100, nullptr);
 	cmnInsert(&tree, 20, 200, nullptr);
@@ -47,8 +50,9 @@ void checkBTreeGet(Test* test) {
 	}
 
 	CmnPool pool = cmnCreatePool(backingMemory, 2048, sizeof(CmnBTreeNode<int32_t, int32_t>), 16);
+	CmnAllocator poolAllocator = cmnPoolAllocator(&pool);
 	CmnBTree<int32_t, int32_t> tree;
-	cmnCreateBTree(&tree, -1, &pool, nullptr);
+	cmnCreateBTree(&tree, -1, poolAllocator, nullptr);
 
 	cmnInsert(&tree, 1, 10, nullptr);
 	cmnInsert(&tree, 2, 20, nullptr);
@@ -68,8 +72,9 @@ void checkBTreeRemoveLeaf(Test* test) {
 	}
 
 	CmnPool pool = cmnCreatePool(backingMemory, 2048, sizeof(CmnBTreeNode<int32_t, int32_t>), 16);
+	CmnAllocator poolAllocator = cmnPoolAllocator(&pool);
 	CmnBTree<int32_t, int32_t> tree;
-	cmnCreateBTree(&tree, -1, &pool, nullptr);
+	cmnCreateBTree(&tree, -1, poolAllocator, nullptr);
 
 	cmnInsert(&tree, 1, 10, nullptr);
 	cmnInsert(&tree, 2, 20, nullptr);
@@ -88,8 +93,9 @@ void checkBTreeRemoveNonLeaf(Test* test) {
 	}
 
 	CmnPool pool = cmnCreatePool(backingMemory, 4096, sizeof(CmnBTreeNode<int32_t, int32_t>), 16);
+	CmnAllocator poolAllocator = cmnPoolAllocator(&pool);
 	CmnBTree<int32_t, int32_t> tree;
-	cmnCreateBTree(&tree, -1, &pool, nullptr);
+	cmnCreateBTree(&tree, -1, poolAllocator, nullptr);
 
 	// Insert enough keys to force a split
 	for (int i = 1; i <= 20; i++) {
@@ -113,8 +119,9 @@ void checkBTreeRootSplit(Test* test) {
 	}
 
 	CmnPool pool = cmnCreatePool(backingMemory, 8192, sizeof(CmnBTreeNode<int32_t, int32_t>), 16);
+	CmnAllocator poolAllocator = cmnPoolAllocator(&pool);
 	CmnBTree<int32_t, int32_t> tree;
-	cmnCreateBTree(&tree, -1, &pool, nullptr);
+	cmnCreateBTree(&tree, -1, poolAllocator, nullptr);
 
 	// Insert enough keys to force multiple splits
 	for (int i = 1; i <= 50; i++) {
@@ -132,8 +139,9 @@ void checkBTreePredecessorSuccessor(Test* test) {
 	}
 
 	CmnPool pool = cmnCreatePool(backingMemory, 4096, sizeof(CmnBTreeNode<int32_t, int32_t>), 16);
+	CmnAllocator poolAllocator = cmnPoolAllocator(&pool);
 	CmnBTree<int32_t, int32_t> tree;
-	cmnCreateBTree(&tree, -1, &pool, nullptr);
+	cmnCreateBTree(&tree, -1, poolAllocator, nullptr);
 
 	for (int i = 1; i <= 20; i++) {
 		cmnInsert(&tree, i, i * 10, nullptr);

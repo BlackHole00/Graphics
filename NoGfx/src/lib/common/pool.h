@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <lib/common/common.h>
+#include <lib/common/allocator.h>
 
 typedef struct CmnPoolBlockHeader {
 	bool		initialized	: 1;
@@ -24,6 +25,7 @@ CmnPool cmnCreatePool(uint8_t* backingMemory, size_t backingMemorySize, size_t b
 void* cmnPoolAllocRaw(CmnPool* pool, CmnResult* result);
 template<typename T> T* cmnPoolAlloc(CmnPool* pool, CmnResult* result);
 void cmnPoolFree(CmnPool* pool, void* address);
+CmnAllocator cmnPoolAllocator(CmnPool* pool);
 
 template<typename T>
 T* cmnPoolAlloc(CmnPool* pool, CmnResult* result) {

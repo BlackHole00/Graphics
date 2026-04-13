@@ -15,7 +15,7 @@ static const int gCmnMemoryOrderToGnu[] = {
 };
 
 template <typename T>
-T cmnAtomicLoad(volatile T* ptr, CmnMemoryOrder order) {
+T cmnAtomicLoad(T* ptr, CmnMemoryOrder order) {
 	T ret;
 	__ATOMIC_SEQ_CST;
 	__atomic_load(ptr, &ret, gCmnMemoryOrderToGnu[order]);
@@ -23,68 +23,92 @@ T cmnAtomicLoad(volatile T* ptr, CmnMemoryOrder order) {
 }
 
 template <typename T>
-void cmnAtomicStore(volatile T* ptr, T value, CmnMemoryOrder order) {
+void cmnAtomicStore(T* ptr, T value, CmnMemoryOrder order) {
 	__atomic_store(ptr, &value, gCmnMemoryOrderToGnu[order]);
 }
 
 template <typename T>
-T cmnAtomicExchange(volatile T* ptr, T value, CmnMemoryOrder order) {
+T cmnAtomicExchange(T* ptr, T value, CmnMemoryOrder order) {
 	T ret;
 	__atomic_exchange(ptr, &value, &ret, gCmnMemoryOrderToGnu[order]);
 	return ret;
 }
 
 template <typename T>
-bool cmnAtomicCompareExchangeStrong(volatile T* ptr, T expected, T value, CmnMemoryOrder order) {
+bool cmnAtomicCompareExchangeStrong(T* ptr, T expected, T value, CmnMemoryOrder successOrder, CmnMemoryOrder failureOrder) {
 	return __atomic_compare_exchange(
 		ptr,
 		&expected,
 		&value,
 		false, // strong
-		gCmnMemoryOrderToGnu[order],
-		gCmnMemoryOrderToGnu[order]
+		gCmnMemoryOrderToGnu[successOrder],
+		gCmnMemoryOrderToGnu[failureOrder]
 	);
 }
 
 template <typename T>
-bool cmnAtomicCompareExchangeWeak(volatile T* ptr, T expected, T value, CmnMemoryOrder order) {
+bool cmnAtomicCompareExchangeWeak(T* ptr, T expected, T value, CmnMemoryOrder successOrder, CmnMemoryOrder failureOrder) {
 	return __atomic_compare_exchange(
 		ptr,
 		&expected,
 		&value,
 		true, // weak
-		gCmnMemoryOrderToGnu[order],
-		gCmnMemoryOrderToGnu[order]
+		gCmnMemoryOrderToGnu[successOrder],
+		gCmnMemoryOrderToGnu[failureOrder]
 	);
 }
 
 template <typename T>
-void cmnAtomicAdd(volatile T* ptr, T value, CmnMemoryOrder order) {
+bool cmnAtomicCompareExchangeStrong(T* ptr, T* expected, T value, CmnMemoryOrder successOrder, CmnMemoryOrder failureOrder) {
+	return __atomic_compare_exchange(
+		ptr,
+		expected,
+		&value,
+		false, // strong
+		gCmnMemoryOrderToGnu[successOrder],
+		gCmnMemoryOrderToGnu[failureOrder]
+	);
+}
+
+template <typename T>
+bool cmnAtomicCompareExchangeWeak(T* ptr, T* expected, T value, CmnMemoryOrder successOrder, CmnMemoryOrder failureOrder) {
+	return __atomic_compare_exchange(
+		ptr,
+		expected,
+		&value,
+		true, // weak
+		gCmnMemoryOrderToGnu[successOrder],
+		gCmnMemoryOrderToGnu[failureOrder]
+	);
+}
+
+template <typename T>
+void cmnAtomicAdd(T* ptr, T value, CmnMemoryOrder order) {
 	__atomic_fetch_add(ptr, value, gCmnMemoryOrderToGnu[order]);
 }
 
 template <typename T>
-void cmnAtomicSub(volatile T* ptr, T value, CmnMemoryOrder order) {
+void cmnAtomicSub(T* ptr, T value, CmnMemoryOrder order) {
 	__atomic_fetch_sub(ptr, value, gCmnMemoryOrderToGnu[order]);
 }
 
 template <typename T>
-void cmnAtomicAnd(volatile T* ptr, T value, CmnMemoryOrder order) {
+void cmnAtomicAnd(T* ptr, T value, CmnMemoryOrder order) {
 	__atomic_fetch_and(ptr, value, gCmnMemoryOrderToGnu[order]);
 }
 
 template <typename T>
-void cmnAtomicNand(volatile T* ptr, T value, CmnMemoryOrder order) {
+void cmnAtomicNand(T* ptr, T value, CmnMemoryOrder order) {
 	__atomic_fetch_nand(ptr, value, gCmnMemoryOrderToGnu[order]);
 }
 
 template <typename T>
-void cmnAtomicOr(volatile T* ptr, T value, CmnMemoryOrder order) {
+void cmnAtomicOr(T* ptr, T value, CmnMemoryOrder order) {
 	__atomic_fetch_or(ptr, value, gCmnMemoryOrderToGnu[order]);
 }
 
 template <typename T>
-void cmnAtomicXor(volatile T* ptr, T value, CmnMemoryOrder order) {
+void cmnAtomicXor(T* ptr, T value, CmnMemoryOrder order) {
 	__atomic_fetch_xor(ptr, value, gCmnMemoryOrderToGnu[order]);
 }
 

@@ -7,6 +7,9 @@ typedef enum CmnResult {
 	CMN_OUT_OF_MEMORY,
 	CMN_VIRTUAL_MEMORY_ALLOCATION_FAILED,
 	CMN_OUT_OF_RESOURCE_SLOTS,
+
+	CMN_INVALID_PARAMETERS,
+	CMN_UNSUPPORTED_OPERATION,
 } CmnResult;
 
 #define CMN_SET_RESULT(_res_ptr, _val) if (_res_ptr != nullptr) { *_res_ptr = _val; }

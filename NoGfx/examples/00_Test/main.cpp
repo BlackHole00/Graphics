@@ -1,33 +1,62 @@
 #include <stdio.h>
+#include <thread>
+#include <vector>
+#include <atomic>
+#include <cassert>
+#include <random>
 
-#include <stdlib.h>
-#include <lib/common/exponential_array.h>
+#include <lib/common/mutex.h>
 
-static_assert(sizeof(size_t) == 8, "");
+static CmnMutex mutex = {};
+static uint64_t a = 0;
 
-int main(void) {
-	uint8_t* memory = (uint8_t*)malloc(1024 * 10);
+static constexpr size_t THREADS = 256;
+static constexpr size_t ITERATIONS = 2 * 1024 * 1024;
 
-	CmnArena arena = cmnCreateArena(memory, 1024 * 10);
+// per-thread randomness to break scheduling patterns
+void incrementer(uint64_t seed) {
+	std::mt19937_64 rng(seed);
+	std::uniform_int_distribution<int> dist(0, 7);
 
-	CmnExponentialArray<int> arr;
-	cmnCreateExponentialArray(&arr, &arena);
+	for (size_t i = 0; i < ITERATIONS; i++) {
 
-	for (int i = 0; i < 256; i++) {
-		size_t a, b;
-		cmnDecomposeExponentialArrayIndex(i, &a, &b);
-		printf("%d\t%d\t%d\n", i, a, b);
+		// randomize contention timing
+		for (int j = 0; j < dist(rng); j++) {
+			std::this_thread::yield();
+		}
 
-		cmnAppend(&arr, i);
+		cmnMutexLock(&mutex);
+
+		uint64_t tmp = a;
+		tmp++;
+		a = tmp;
+
+		// occasionally validate invariant inside critical section
+		if ((tmp % (512 * 1024)) == 0) {
+			printf("progress: %llu\n", tmp);
+		}
+
+		cmnMutexUnlock(&mutex);
+	}
+}
+
+int main() {
+	std::vector<std::thread> threads;
+	threads.reserve(THREADS);
+
+	for (size_t i = 0; i < THREADS; i++) {
+		threads.emplace_back(incrementer, i * 1337);
 	}
 
-	for (int i = 0; i < 256; i++) {
-		assert(arr[i] == i);
+	for (auto &t : threads) {
+		t.join();
 	}
 
-	arr[10] = 11;
-	assert(arr[10] = 11);
+	uint64_t expected = THREADS * ITERATIONS;
+
+	printf("final: %llu expected: %llu\n", a, expected);
+
+	assert(a == expected);
 
 	return 0;
 }
-

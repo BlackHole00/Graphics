@@ -2,6 +2,7 @@
 #define CMN_COMMONARENA_H
 
 #include <lib/common/common.h>
+#include <lib/common/allocator.h>
 
 typedef struct {
 	uint8_t*	backing;
@@ -24,6 +25,8 @@ template <typename T> T* cmnArenaAlloc(CmnArena* arena, CmnResult* result) {
 	return cmnArenaAlloc<T>(arena, 1, 0, result);
 }
 void cmnArenaFreeAll(CmnArena* arena);
+
+CmnAllocator cmnArenaAllocator(CmnArena* arena);
 
 CmnArenaState cmnBeginArenaTemp(CmnArena* arena);
 void cmnEndArenaTemp(CmnArenaState state);

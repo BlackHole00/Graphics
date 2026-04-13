@@ -1,11 +1,11 @@
 template <typename T, size_t N>
-void cmnCreateExponentialArray(CmnExponentialArray<T, N>* array, CmnArena* arena, CmnResult* result) {
-	array->backingArena	= arena;
+void cmnCreateExponentialArray(CmnExponentialArray<T, N>* array, CmnAllocator backingAllocator, CmnResult* result) {
+	array->backingAllocator	= backingAllocator;
 	memset(array->buckets, 0, sizeof(array->buckets));
 	array->length		= 0;
 	array->last_filled_bucket = 0;
 
-	array->buckets[0]	= cmnArenaAlloc<T>(array->backingArena, CMN_EXPONENTIALARRAY_BASE_BUCKET_LEN, result);
+	array->buckets[0]	= cmnAlloc<T>(array->backingAllocator, CMN_EXPONENTIALARRAY_BASE_BUCKET_LEN, result);
 }
 
 template <typename T, size_t N>
@@ -47,8 +47,8 @@ bool cmnResize(CmnExponentialArray<T, N>* array, size_t length, CmnResult* resul
 			continue;
 		}
 
-		array->buckets[i] = cmnArenaAlloc<T>(
-			array->backingArena,
+		array->buckets[i] = cmnAlloc<T>(
+			array->backingAllocator,
 			1 << (CMN_EXPONENTIALARRAY_BASE_BUCKET_LEN_BITS + i - 1),
 			result
 		);
