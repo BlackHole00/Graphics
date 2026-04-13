@@ -16,6 +16,11 @@ typedef struct GpuBaseLayer {
 	void* (*gpuMalloc)(size_t bytes, size_t align, GpuMemory memory, GpuResult* result);
 	void  (*gpuFree)(void* ptr);
 	void* (*gpuHostToDevicePointer)(void* ptr, GpuResult* result);
+
+	GpuTextureSizeAlign (*gpuTextureSizeAlign)(const GpuTextureDesc* desc, GpuResult* result);
+	GpuTexture (*gpuCreateTexture)(const GpuTextureDesc* desc, void* ptrGpu, GpuResult* result);
+	GpuTextureDescriptor (*gpuTextureViewDescriptor)(GpuTexture texture, const GpuViewDesc* desc, GpuResult* result);
+	GpuTextureDescriptor (*gpuRWTextureViewDescriptor)(GpuTexture texture, const GpuViewDesc* desc, GpuResult* result);
 } GpuBaseLayer;
 
 typedef struct {

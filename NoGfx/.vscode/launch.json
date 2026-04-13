@@ -18,7 +18,7 @@
             "name": "00_Test",
             "program": "${workspaceFolder}/examples/00_Test/out",
             "args": [],
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}/examples/00_Test"
         },
         {
             "type": "lldb",
@@ -26,7 +26,15 @@
             "name": "01_Initialization",
             "program": "${workspaceFolder}/examples/01_Initialization/out",
             "args": [],
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}/examples/01_Initialization"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "02_Buffers_And_Textures",
+            "program": "${workspaceFolder}/examples/02_Buffers_And_Textures/out",
+            "args": [],
+            "cwd": "${workspaceFolder}/examples/02_Buffers_And_Textures"
         }
     ]
 }

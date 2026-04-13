@@ -58,4 +58,27 @@ void* gpuHostToDevicePointer(void* ptr, GpuResult* result) {
 	return nullptr;
 }
 
+GpuTextureSizeAlign gpuTextureSizeAlign(const GpuTextureDesc* desc, GpuResult* result) {
+	GPU_LAYERED_CALL(gpuTextureSizeAlign, desc, result);
+
+	return {};
+}
+
+GpuTexture gpuCreateTexture(const GpuTextureDesc* desc, void* ptrGpu, GpuResult* result) {
+	GPU_LAYERED_CALL(gpuCreateTexture, desc, ptrGpu, result);
+
+	return 0;
+}
+
+GpuTextureDescriptor gpuTextureViewDescriptor(GpuTexture texture, const GpuViewDesc* desc, GpuResult* result) {
+	GPU_LAYERED_CALL(gpuTextureViewDescriptor, texture, desc, result);
+
+	return {};
+}
+
+GpuTextureDescriptor gpuRWTextureViewDescriptor(GpuTexture texture, const GpuViewDesc* desc, GpuResult* result) {
+	GPU_LAYERED_CALL(gpuRWTextureViewDescriptor, texture, desc, result);
+
+	return {};
+}
 

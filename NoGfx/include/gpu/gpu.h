@@ -6,6 +6,7 @@ extern "C" {
 #endif // __cplusplus
 
 #include <stddef.h>
+#include <stdint.h>
 #include <stdbool.h>
 
 typedef enum GpuResult {
@@ -21,6 +22,7 @@ typedef enum GpuResult {
 	GPU_INVALID_PARAMETERS,
 	GPU_NO_SUCH_ALLOCATION_FOUND,
 	GPU_ALLOCATION_MEMORY_IS_GPU,
+	GPU_ALLOCATION_MEMORY_IS_CPU,
 
 	GPU_GENERAL_ERROR,
 } GpuResult;
@@ -43,7 +45,54 @@ typedef enum GpuMemory {
 	GPU_MEMORY_READBACK,
 } GpuMemory;
 
+typedef enum GpuTextureType {
+	GPU_TEXTURE_1D = 0,
+	GPU_TEXTURE_2D,
+	GPU_TEXTURE_3D,
+	GPU_TEXTURE_CUBE,
+	GPU_TEXTURE_2D_ARRAY,
+	GPU_TEXTURE_CUBE_ARRAY,
+} GpuTextureType;
+
+typedef enum GpuFormat {
+	GPU_FORMAT_NONE = 0,
+	GPU_FORMAT_R8_UNORM,
+	GPU_FORMAT_RG8_UNORM,
+	GPU_FORMAT_RGBA8_UNORM,
+	GPU_FORMAT_RGBA8_SRGB,
+	GPU_FORMAT_BGRA8_UNORM,
+	GPU_FORMAT_BGRA8_SRGB,
+	GPU_FORMAT_R16_FLOAT,
+	GPU_FORMAT_RG16_FLOAT,
+	GPU_FORMAT_RGBA16_FLOAT,
+	GPU_FORMAT_RGBA16_UNORM,
+	GPU_FORMAT_R16_UNORM,
+	GPU_FORMAT_RG16_UNORM,
+	GPU_FORMAT_R32_FLOAT,
+	GPU_FORMAT_RG32_FLOAT,
+	GPU_FORMAT_RGBA32_FLOAT,
+	GPU_FORMAT_RG11B10_FLOAT,
+	GPU_FORMAT_RGB10_A2_UNORM,
+	GPU_FORMAT_RGB10_A2_UINT,
+	GPU_FORMAT_D32_FLOAT,
+	GPU_FORMAT_D24_UNORM_S8_UINT,
+	GPU_FORMAT_D32_FLOAT_S8_UINT,
+	GPU_FORMAT_D16_UNORM,
+	GPU_FORMAT_BC1_RGBA_UNORM,
+	GPU_FORMAT_BC1_RGBA_SRGB,
+	GPU_FORMAT_BC4_UNORM,
+	GPU_FORMAT_BC5_UNORM,
+} GpuFormat;
+
+typedef enum GpuUsage {
+	GPU_USAGE_SAMPLED = 0,
+	GPU_USAGE_STORAGE,
+	GPU_USAGE_COLOR_ATTACHMENT,
+	GPU_USAGE_DEPTH_STENCIL_ATTACHMENT,
+} GpuUsage;
+
 typedef size_t GpuDeviceId;
+typedef uint64_t GpuTexture;
 
 typedef struct GpuDeviceInfo {
 	GpuDeviceId identifier;
@@ -53,6 +102,32 @@ typedef struct GpuDeviceInfo {
 	// TODO: device capabilities, limits, etc...
 } GpuDeviceInfo;
 
+typedef struct GpuTextureDesc { 
+	GpuTextureType type;
+	uint32_t dimensions[3];
+	uint32_t mipCount;
+	uint32_t layerCount;
+	uint32_t sampleCount;
+	GpuFormat format; 
+	GpuUsage usage;
+} GpuTextureDesc;
+
+typedef struct GpuTextureSizeAlign {
+	size_t size;
+	size_t align;
+} GpuTextureSizeAlign;
+
+typedef struct GpuTextureDescriptor {
+	uint64_t data[4];
+} GpuTextureDescriptor;
+
+typedef struct GpuViewDesc {
+	GpuFormat format;
+	uint8_t baseMip;
+	uint8_t mipCount;
+	uint16_t baseLayer;
+	uint16_t layerCount;
+} GpuViewDesc;
 
 typedef struct GpuLayer {
 	bool (*layerInit)(GpuResult* result);
@@ -64,6 +139,11 @@ typedef struct GpuLayer {
 	bool (*gpuMalloc)(size_t bytes, size_t align, GpuMemory memory, GpuResult* result);
 	bool (*gpuFree)(void* ptr);
 	bool (*gpuHostToDevicePointer)(void* ptr, GpuResult* result);
+
+	bool (*gpuTextureSizeAlign)(const GpuTextureDesc* desc, GpuResult* result);
+	bool (*gpuCreateTexture)(const GpuTextureDesc* desc, void* ptrGpu, GpuResult* result);
+	bool (*gpuTextureViewDescriptor)(GpuTexture texture, const GpuViewDesc* desc, GpuResult* result);
+	bool (*gpuRWTextureViewDescriptor)(GpuTexture texture, const GpuViewDesc* desc, GpuResult* result);
 } GpuLayer;
 
 typedef struct GpuInitDesc {
@@ -82,6 +162,11 @@ void gpuSelectDevice(GpuDeviceId deviceId, GpuResult* result);
 void* gpuMalloc(size_t bytes, size_t align, GpuMemory memory, GpuResult* result);
 void  gpuFree(void* ptr);
 void* gpuHostToDevicePointer(void* ptr, GpuResult* result);
+
+GpuTextureSizeAlign gpuTextureSizeAlign(const GpuTextureDesc* desc, GpuResult* result);
+GpuTexture gpuCreateTexture(const GpuTextureDesc* desc, void* ptrGpu, GpuResult* result);
+GpuTextureDescriptor gpuTextureViewDescriptor(GpuTexture texture, const GpuViewDesc* desc, GpuResult* result);
+GpuTextureDescriptor gpuRWTextureViewDescriptor(GpuTexture texture, const GpuViewDesc* desc, GpuResult* result);
 
 #ifdef __cplusplus
 } // extern "C"

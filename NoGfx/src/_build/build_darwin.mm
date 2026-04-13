@@ -4,6 +4,8 @@
 	#error NoGfx requires a compiler supporting Objective-C++ when targeting macOs.
 #endif
 
+#include "personality.cpp"
+
 #include <lib/common/page_posix.cpp>
 #include <lib/common/arena.cpp>
 #include <lib/common/pool.cpp>
@@ -18,5 +20,6 @@
 #include <lib/metal4/context.mm>
 #include <lib/metal4/device.mm>
 #include <lib/metal4/allocation.mm>
+#include <lib/metal4/textures.mm>
 #include <lib/metal4/validation.cpp>
 

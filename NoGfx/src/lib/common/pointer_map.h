@@ -55,7 +55,9 @@ void cmnCreatePointerMap(CmnPointerMap<T>* map, size_t initialCapacity, T defaul
 
 template <typename T>
 void cmnDestroyPointerMap(CmnPointerMap<T>* map) {
-	cmnFree(map->allocator, map->buckets);
+	if (map->allocator.vtable != nullptr) {
+		cmnFree(map->allocator, map->buckets);
+	}
 
 	*map = {};
 }

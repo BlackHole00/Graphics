@@ -5,6 +5,7 @@
 #include <lib/common/type_traits.h>
 #include <lib/metal4/device.h>
 #include <lib/metal4/allocation.h>
+#include <lib/metal4/textures.h>
 
 // 128 KB
 #define MTL4_GLOBAL_MEMORY 128 * 1024
@@ -38,7 +39,13 @@ void mtl4Init(GpuResult* result) {
 		goto on_error_cleanup;
 	}
 
-	mtl4PrepareAllocationStorage(&localResult);
+	mtl4InitAllocationStorage(&localResult);
+	if (localResult != GPU_SUCCESS) {
+		CMN_SET_RESULT(result, localResult);
+		goto on_error_cleanup;
+	}
+
+	mtl4InitTextureStorage(&localResult);
 	if (localResult != GPU_SUCCESS) {
 		CMN_SET_RESULT(result, localResult);
 		goto on_error_cleanup;
@@ -48,13 +55,14 @@ void mtl4Init(GpuResult* result) {
 	return;
 
 on_error_cleanup:
-	free(gMtl4Context.globalBackingMemory);
-	free(gMtl4Context.tempBackingMemory);
-
+	mtl4Deinit();
 	return;
 }
 
 void mtl4Deinit(void) {
+	mtl4FiniTextureStorage();
+	mtl4FiniAllocationStorage();
+
 	if (gMtl4Context.device != nullptr) {
 		[gMtl4Context.device release];
 	}
@@ -62,11 +70,6 @@ void mtl4Deinit(void) {
 	free(gMtl4Context.globalBackingMemory);
 	free(gMtl4Context.tempBackingMemory);
 
-	cmnDestroyPage(gMtl4AllocationStorage.allocationMetadataPage);
-	cmnDestroyPage(gMtl4AllocationStorage.addressRangeMapPage);
-	cmnDestroyPointerMap(&gMtl4AllocationStorage.allocationMap	);
-
 	gMtl4Context = {};
-	gMtl4AllocationStorage = {};
 }
 

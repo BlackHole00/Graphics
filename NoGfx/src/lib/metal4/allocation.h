@@ -57,11 +57,15 @@ typedef struct Mtl4AllocationStorage {
 } Mtl4AllocationStorage;
 extern Mtl4AllocationStorage gMtl4AllocationStorage;
 
-void mtl4PrepareAllocationStorage(GpuResult* result);
+void mtl4InitAllocationStorage(GpuResult* result);
+void mtl4FiniAllocationStorage(void);
 
 void* mtl4Malloc(size_t size, size_t align, GpuMemory memory, GpuResult* result);
 void  mtl4Free(void* ptr);
 void* mtl4HostToDevicePointer(void* ptr, GpuResult* result);
+
+// NOTE: Thread unsafe: requires locking gMtl4AllocationStorage.allocationMutex
+Mtl4AllocationMetadata* mtl4GetAllocationMetadataOf(void* ptr, bool attemptRangeBasedLookup);
 
 #endif
 
