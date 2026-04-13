@@ -47,10 +47,13 @@ CmnPool cmnCreatePool(uint8_t* backingMemory, size_t backingMemorySize, size_t b
 		/*blockCount=*/	blockCount,
 		/*blockSize=*/	blockSize,
 		/*firstFree=*/	(CmnPoolBlockHeader*)backingMemory,
+		/*mutex=*/	CMN_MUTEX_UNLOCKED,
 	};
 }
 
 void* cmnPoolAllocRaw(CmnPool* pool, CmnResult* result) {
+	CmnScopedMutex guard(&pool->mutex);
+
 	if (pool->firstFree == nullptr) {
 		CMN_SET_RESULT(result, CMN_OUT_OF_MEMORY);
 		return nullptr;
@@ -73,6 +76,8 @@ void* cmnPoolAllocRaw(CmnPool* pool, CmnResult* result) {
 }
 
 void cmnPoolFree(CmnPool* pool, void* address) {
+	CmnScopedMutex guard(&pool->mutex);
+
 	size_t blockIdx = cmnPoolIndexOfBlockAt(pool, address);
 	if (blockIdx >= pool->blockCount) {
 		return;

@@ -9,6 +9,7 @@ inline CmnArena cmnCreateArena(uint8_t* backingMemory, size_t backingMemorySize,
 		/*backing=*/		backingMemory,
 		/*backingSize=*/	backingMemorySize,
 		/*used=*/		0,
+		/*mutex=*/		CMN_MUTEX_UNLOCKED,
 	};
 }
 
@@ -18,6 +19,8 @@ T* cmnArenaAlloc(CmnArena* arena, size_t count, size_t align, CmnResult* result)
 	if (align == 0) {
 		align = alignof(T);
 	}
+
+	CmnScopedMutex guard(&arena->mutex);
 
 	size_t current = arena->used;
 	uintptr_t base = (uintptr_t)(arena->backing + current);
@@ -39,11 +42,15 @@ T* cmnArenaAlloc(CmnArena* arena, size_t count, size_t align, CmnResult* result)
 }
 
 inline void cmnArenaFreeAll(CmnArena* arena) {
+	CmnScopedMutex guard(&arena->mutex);
+
 	memset(arena->backing, 0, arena->used);
 	arena->used = 0;
 }
 
 inline CmnArenaState cmnBeginArenaTemp(CmnArena* arena) {
+	CmnScopedMutex guard(&arena->mutex);
+
 	return {
 		/*arena=*/arena,
 		/*originalUsed=*/arena->used,
@@ -51,6 +58,8 @@ inline CmnArenaState cmnBeginArenaTemp(CmnArena* arena) {
 }
 
 inline void cmnEndArenaTemp(CmnArenaState state) {
+	CmnScopedMutex guard(&state.arena->mutex);
+
 	memset(state.arena->backing + state.originalUsed, 0, state.arena->used - state.originalUsed);
 	state.arena->used = state.originalUsed;
 }

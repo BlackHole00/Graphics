@@ -6,6 +6,7 @@
 #include <string.h>
 #include <lib/common/common.h>
 #include <lib/common/allocator.h>
+#include <lib/common/mutex.h>
 
 typedef struct CmnPoolBlockHeader {
 	bool		initialized	: 1;
@@ -19,6 +20,8 @@ typedef struct CmnPool {
 	size_t			blockSize;
 
 	CmnPoolBlockHeader*	firstFree;
+
+	CmnMutex		mutex;
 } CmnPool;
 
 CmnPool cmnCreatePool(uint8_t* backingMemory, size_t backingMemorySize, size_t blockSize, size_t prePreparedBlocks);

@@ -3,11 +3,14 @@
 
 #include <lib/common/common.h>
 #include <lib/common/allocator.h>
+#include <lib/common/atomic.h>
+#include <lib/common/mutex.h>
 
 typedef struct {
 	uint8_t*	backing;
 	size_t		backingSize;
 	size_t		used;
+	CmnMutex	mutex;
 } CmnArena;
 
 typedef struct {

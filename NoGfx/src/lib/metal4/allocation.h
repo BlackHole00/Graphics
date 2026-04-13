@@ -7,6 +7,7 @@
 #include <lib/common/page.h>
 #include <lib/common/btree.h>
 #include <lib/common/pointer_map.h>
+#include <lib/common/mutex.h>
 
 
 typedef struct Mtl4AddressRange {
@@ -51,6 +52,8 @@ typedef struct Mtl4AllocationStorage {
 
 	CmnBTree<Mtl4AddressRange, Mtl4AllocationMetadata*> addressRangeMap;
 	CmnPointerMap<Mtl4AllocationMetadata*> allocationMap;
+	
+	CmnMutex	allocationMutex;
 } Mtl4AllocationStorage;
 extern Mtl4AllocationStorage gMtl4AllocationStorage;
 

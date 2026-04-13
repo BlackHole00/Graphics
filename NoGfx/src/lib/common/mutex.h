@@ -5,7 +5,7 @@
 #include <lib/common/atomic.h>
 
 typedef enum CmnMutexState {
-	CMN_MUTEX_UNLOCKED,
+	CMN_MUTEX_UNLOCKED = 0,
 	CMN_MUTEX_LOCKED,
 	CMN_MUTEX_WAITING,
 } CmnMutexState;
