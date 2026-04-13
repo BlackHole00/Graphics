@@ -8,6 +8,7 @@
 #include <lib/common/arena.cpp>
 #include <lib/common/pool.cpp>
 #include <lib/common/mutex.cpp>
+#include <lib/common/heap_allocator.cpp>
 
 #include <lib/lib.cpp>
 #include <lib/layers.cpp>

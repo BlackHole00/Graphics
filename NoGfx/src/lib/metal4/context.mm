@@ -64,6 +64,7 @@ void mtl4Deinit(void) {
 
 	cmnDestroyPage(gMtl4AllocationStorage.allocationMetadataPage);
 	cmnDestroyPage(gMtl4AllocationStorage.addressRangeMapPage);
+	cmnDestroyPointerMap(&gMtl4AllocationStorage.allocationMap	);
 
 	gMtl4Context = {};
 	gMtl4AllocationStorage = {};

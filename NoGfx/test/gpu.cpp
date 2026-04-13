@@ -157,6 +157,66 @@ void checkGpuMallocAndFree(Test* test) {
 	gpuDeinit();
 }
 
+void checkGpuMallocAndFreeGpuMemory(Test* test) {
+	GpuInitDesc desc = {};
+	desc.backend = selectBackendForCurrentPlatform();
+	desc.validationEnabled = true;
+
+	GpuResult result;
+	gpuInit(&desc, &result);
+	TEST_ASSERT(test, result == GPU_SUCCESS);
+
+	GpuDeviceInfo* devices = nullptr;
+	size_t count = 0;
+	gpuEnumerateDevices(&devices, &count, &result);
+	if (count == 0) {
+		return;
+	}
+
+	gpuSelectDevice(devices[0].identifier, &result);
+
+	void* ptr = gpuMalloc(1024, 16, GPU_MEMORY_GPU, &result);
+
+	TEST_ASSERT(test, result == GPU_SUCCESS);
+	TEST_ASSERT(test, ptr != nullptr);
+
+	gpuFree(ptr);
+
+	gpuDeinit();
+}
+
+void checkGpuHostToDevicePointerOnGpuMemory(Test* test) {
+	GpuInitDesc desc = {};
+	desc.backend = selectBackendForCurrentPlatform();
+	desc.validationEnabled = true;
+
+	GpuResult result;
+	gpuInit(&desc, &result);
+	TEST_ASSERT(test, result == GPU_SUCCESS);
+
+	GpuDeviceInfo* devices = nullptr;
+	size_t count = 0;
+	gpuEnumerateDevices(&devices, &count, &result);
+	if (count == 0) {
+		return;
+	}
+
+	gpuSelectDevice(devices[0].identifier, &result);
+
+	void* ptr = gpuMalloc(256, 16, GPU_MEMORY_GPU, &result);
+	TEST_ASSERT(test, result == GPU_SUCCESS);
+	TEST_ASSERT(test, ptr != nullptr);
+
+	void* devicePtr = gpuHostToDevicePointer(ptr, &result);
+
+	TEST_ASSERT(test, result == GPU_ALLOCATION_MEMORY_IS_GPU);
+	TEST_ASSERT(test, devicePtr == nullptr);
+
+	gpuFree(ptr);
+
+	gpuDeinit();
+}
+
 void checkGpuFreeInvalidPointer(Test* test) {
 	(void)test;
 

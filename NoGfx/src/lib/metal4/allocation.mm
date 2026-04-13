@@ -1,5 +1,6 @@
 #include "allocation.h"
 
+#include <lib/common/heap_allocator.h>
 #include <lib/metal4/context.h>
 
 Mtl4AllocationStorage gMtl4AllocationStorage;
@@ -42,14 +43,47 @@ void mtl4PrepareAllocationStorage(GpuResult* result) {
 		goto on_error_cleanup;
 	}
 
+	cmnCreatePointerMap(&gMtl4AllocationStorage.allocationMap, 1024, {}, cmnHeapAllocator(), &localResult);
+	if (localResult != CMN_SUCCESS) {
+		CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
+		goto on_error_cleanup;
+	}
+
 	CMN_SET_RESULT(result, GPU_SUCCESS);
 	return;
 
 on_error_cleanup:
 	cmnDestroyPage(gMtl4AllocationStorage.allocationMetadataPage	);
 	cmnDestroyPage(gMtl4AllocationStorage.addressRangeMapPage	);
+	cmnDestroyPointerMap(&gMtl4AllocationStorage.allocationMap	);
 }
 
+Mtl4AllocationMetadata* mtl4GetAllocationMetadataOf(void* ptr, bool attemptRangeBasedLookup) {
+	bool didFindElement;
+	Mtl4AllocationMetadata* metadata;
+
+	// NOTE: Attempt fast lookup. Will find the address if no offset has beed applied to the pointer.
+	metadata = cmnGet(&gMtl4AllocationStorage.allocationMap, (uintptr_t)ptr, &didFindElement);
+	if (didFindElement) {
+		return metadata;
+	}
+
+	if (!attemptRangeBasedLookup) {
+		return nullptr;
+	}
+	
+	// NOTE: Slow lookup
+	Mtl4AddressRange range;
+	range.start = (uintptr_t)ptr;
+	range.length = 0;
+
+	metadata = cmnGet(&gMtl4AllocationStorage.addressRangeMap, range, &didFindElement);
+	if (didFindElement) {
+		return metadata;
+	}
+
+	return nullptr;
+}
 
 void* mtl4MallocCpuAccessibleMemory(size_t size, size_t align, bool optimizeForReadback, GpuResult* result) {
 	(void)align;
@@ -85,7 +119,7 @@ void* mtl4MallocCpuAccessibleMemory(size_t size, size_t align, bool optimizeForR
 
 	metadata->buffer	= buffer;
 	metadata->size		= size;
-	metadata->memory	= GPU_MEMORY_GPU;
+	metadata->memory	= optimizeForReadback ? GPU_MEMORY_READBACK : GPU_MEMORY_DEFAULT;
 	metadata->cpuAddress	= [buffer contents];
 	metadata->gpuAddress	= (void*)[buffer gpuAddress];
 
@@ -93,6 +127,12 @@ void* mtl4MallocCpuAccessibleMemory(size_t size, size_t align, bool optimizeForR
 	range.start	= (uintptr_t)metadata->cpuAddress;
 	range.length	= size;
 	cmnInsert(&gMtl4AllocationStorage.addressRangeMap, range, metadata, &localResult);
+	if (localResult != CMN_SUCCESS) {
+		CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
+		goto on_error_cleanup;
+	}
+
+	cmnInsert(&gMtl4AllocationStorage.allocationMap, (uintptr_t)metadata->cpuAddress, metadata, &localResult);
 	if (localResult != CMN_SUCCESS) {
 		CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
 		goto on_error_cleanup;
@@ -110,35 +150,92 @@ on_error_cleanup:
 	return nullptr;
 }
 
+void* mtl4MallocGpuOnlyMemory(size_t size, size_t align, GpuResult* result) {
+	(void)align;
+	CmnResult localResult;
+
+	id<MTLBuffer> buffer = [gMtl4Context.device
+	 	newBufferWithLength:size
+	 	options:MTLResourceStorageModePrivate];
+	if (buffer == nil) {
+		CMN_SET_RESULT(result, GPU_OUT_OF_GPU_MEMORY);
+		return nullptr;
+	}
+
+	Mtl4AllocationMetadata* metadata = cmnPoolAlloc<Mtl4AllocationMetadata>(
+		&gMtl4AllocationStorage.allocationMetadataPool,
+		&localResult
+	);
+	if (localResult != CMN_SUCCESS) {
+		CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
+		goto on_error_cleanup;
+	}
+
+	metadata->buffer = buffer;
+	metadata->memory = GPU_MEMORY_GPU;
+	metadata->gpuAddress = (void*)[buffer gpuAddress];
+	metadata->size = size;
+
+	cmnInsert(&gMtl4AllocationStorage.allocationMap, (uintptr_t)metadata->gpuAddress, metadata, &localResult);
+	if (localResult != CMN_SUCCESS) {
+		CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
+		goto on_error_cleanup;
+	}
+
+	return metadata->gpuAddress;
+
+on_error_cleanup:
+	if (buffer != nil) {
+		[buffer release];
+	}
+	cmnPoolFree(&gMtl4AllocationStorage.allocationMetadataPool, metadata);
+
+	return nullptr;
+}
+
 void* mtl4Malloc(size_t size, size_t align, GpuMemory memory, GpuResult* result) {
 	switch (memory) {
 		case GPU_MEMORY_DEFAULT: {
 			return mtl4MallocCpuAccessibleMemory(size, align, false, result);
 		}
-		case GPU_MEMORY_GPU: {
-			break;
-		}
 		case GPU_MEMORY_READBACK: {
 			return mtl4MallocCpuAccessibleMemory(size, align, true, result);
+		}
+		case GPU_MEMORY_GPU: {
+			return mtl4MallocGpuOnlyMemory(size, align, result);
 		}
 	}
 
 	return nullptr;
 }
 
-void  mtl4Free(void* ptr) {}
+void  mtl4Free(void* ptr) {
+	Mtl4AllocationMetadata* metadata = mtl4GetAllocationMetadataOf(ptr, false);
+	if (metadata == nullptr) {
+		return;
+	}
 
-void* mtl4HostToDevicePointer(void* ptr, GpuResult* result) {
 	Mtl4AddressRange range;
 	range.start = (uintptr_t)ptr;
 	range.length = 0;
 
-	bool didFindElement;
-	Mtl4AllocationMetadata* metadata = cmnGet(&gMtl4AllocationStorage.addressRangeMap, range, &didFindElement);
-	if (!didFindElement) {
+	cmnRemove(&gMtl4AllocationStorage.addressRangeMap, range);
+	cmnRemove(&gMtl4AllocationStorage.allocationMap, (uintptr_t)ptr);
+}
+
+void* mtl4HostToDevicePointer(void* ptr, GpuResult* result) {
+	Mtl4AllocationMetadata* metadata = mtl4GetAllocationMetadataOf(ptr, true);
+	if (metadata == nullptr) {
 		CMN_SET_RESULT(result, GPU_NO_SUCH_ALLOCATION_FOUND);
 		return nullptr;
 	}
+
+	if (metadata->memory == GPU_MEMORY_GPU) {
+		CMN_SET_RESULT(result, GPU_ALLOCATION_MEMORY_IS_GPU);
+		return nullptr;
+	}
+
+	CMN_SET_RESULT(result, GPU_SUCCESS);
 
 	uintptr_t offsetFromBase = (uintptr_t)ptr - (uintptr_t)metadata->cpuAddress;
 	uintptr_t gpuAddress = (uintptr_t)metadata->gpuAddress + offsetFromBase;

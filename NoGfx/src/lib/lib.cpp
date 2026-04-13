@@ -1,8 +1,6 @@
 #include <cassert>
 #include <gpu/gpu.h>
 
-#include <lib/common/atomic.h>
-#include <lib/common/futex.h>
 #include <lib/layers.h>
 
 void gpuInit(const GpuInitDesc* desc, GpuResult* result) {
@@ -26,15 +24,6 @@ void gpuInit(const GpuInitDesc* desc, GpuResult* result) {
 		}
 		gpuPushLayer(validationLayer);
 	}
-
-	int a;
-	cmnAtomicStore(&a, 10);
-	cmnAtomicCompareExchangeStrong(&a, 10, 20);
-	assert(cmnAtomicExchange(&a, 30) == 20);
-	assert(cmnAtomicLoad(&a) == 30);
-
-	CmnFutex futex = 0;
-	cmnFutexWaitWithTimeout(&futex, 0, 1000000000);
 
 	GPU_LAYERED_CALL(layerInit, result);
 }

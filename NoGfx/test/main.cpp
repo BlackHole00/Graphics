@@ -3,6 +3,7 @@
 
 #include "page.cpp"
 #include "arena.cpp"
+#include "pointer_map.cpp"
 #include "exponential_array.cpp"
 #include "pool.cpp"
 #include "handle_map.cpp"
@@ -36,6 +37,12 @@ TestRecord gCommonTests[] = {
 	{ "Check B-tree removal of keys from non-leaf/internal nodes",	checkBTreeRemoveNonLeaf			},
 	{ "Check B-tree root split when inserting enough keys",		checkBTreeRootSplit			},
 	{ "Check B-tree predecessor and successor key retrieval",	checkBTreePredecessorSuccessor		},
+
+	{ "Check pointer map creation and initial state",		checkPointerMapCreation			},
+	{ "Check pointer map insert and contains",			checkPointerMapInsertAndContains	},
+	{ "Check pointer map get with found and default",		checkPointerMapGet			},
+	{ "Check pointer map removal of keys",				checkPointerMapRemove			},
+	{ "Check pointer map reserve and rehash",			checkPointerMapReserveAndRehash		},
 };
 
 TestRecord gNoGfxTests[] = {
@@ -46,8 +53,10 @@ TestRecord gNoGfxTests[] = {
 	{ "Check GPU invalid device selection",				checkGpuSelectInvalidDevice		},
 	{ "Check GPU double device selection handling",			checkGpuDoubleDeviceSelection		},
 	{ "Check GPU memory allocation and free",			checkGpuMallocAndFree			},
+	{ "Check GPU memory allocation and free for GPU-only memory",	checkGpuMallocAndFreeGpuMemory		},
 	{ "Check GPU free with invalid pointer",			checkGpuFreeInvalidPointer		},
 	{ "Check GPU host to device pointer mapping",			checkGpuHostToDevicePointer		},
+	{ "Check GPU host to device pointer fails for GPU-only memory",	checkGpuHostToDevicePointerOnGpuMemory	},
 	{ "Check GPU host to device pointer mapping with offset",	checkGpuHostToDevicePointerWithOffset	},
 };
 
