@@ -20,8 +20,8 @@ GpuLayer gMtl4ValidationLayer = {
 	/*gpuDeinit=*/			nullptr,
 	/*gpuEnumerateDevices=*/	mtl4ValidateEnumerateDevices,
 	/*gpuSelectDevice=*/		mtl4ValidateSelectDevice,
-	/*gpuMalloc=*/			nullptr,
+	/*gpuMalloc=*/			mtl4ValidateGpuMalloc,
 	/*gpuFree=*/ 			nullptr,
-	/*gpuHostToDevicePointer=*/	nullptr,
+	/*gpuHostToDevicePointer=*/	mtl4ValidateGpuHostToDevicePointer,
 };
 

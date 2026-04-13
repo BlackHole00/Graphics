@@ -27,3 +27,30 @@ bool mtl4ValidateSelectDevice(GpuDeviceId deviceId, GpuResult* result) {
 	return true;
 }
 
+bool mtl4ValidateGpuMalloc(size_t bytes, size_t align, GpuMemory memory, GpuResult* result) {
+	(void)align;
+
+	if (bytes == 0) {
+		CMN_SET_RESULT(result, GPU_INVALID_PARAMETERS);
+		return false;
+	}
+
+	if (memory > GPU_MEMORY_READBACK) {
+		CMN_SET_RESULT(result, GPU_INVALID_PARAMETERS);
+		return false;
+	}
+
+	CMN_SET_RESULT(result, GPU_SUCCESS);
+	return true;
+}
+
+bool mtl4ValidateGpuHostToDevicePointer(void* ptr, GpuResult* result) {
+	if (ptr == nullptr) {
+		CMN_SET_RESULT(result, GPU_INVALID_PARAMETERS);
+		return false;
+	}
+	
+	CMN_SET_RESULT(result, GPU_SUCCESS);
+	return true;
+}
+

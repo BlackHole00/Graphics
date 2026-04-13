@@ -221,6 +221,10 @@ void* mtl4Malloc(size_t size, size_t align, GpuMemory memory, GpuResult* result)
 }
 
 void  mtl4Free(void* ptr) {
+	if (ptr == nullptr) {
+		return;
+	}
+
 	CmnScopedMutex guard(&gMtl4AllocationStorage.allocationMutex);
 
 	Mtl4AllocationMetadata* metadata = mtl4GetAllocationMetadataOf(ptr, false);
