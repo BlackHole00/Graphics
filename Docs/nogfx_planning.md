@@ -7,7 +7,8 @@ Implementare l'api NoGfx in una libreria utilizzabile dal linguaggio di programm
 - Sarà possibile compilare la libreria da sorgenti se necessario. 
 
 L'overhead imposto da tale libreria deve essere il più basso possibile:
-- Si cerca un overhead non superiore al 5% rispetto al codice Metal equivalente. In riferimento, MoltenVk,in un caso d'uso generico introduce un overhead di circa il 10%, ma deve emulare un'API molto più grande (Vulkan). // TODO: Find reference, non mi fido troppo di Chatty
+- Si cerca un overhead non superiore al 5% rispetto al codice Metal equivalente. In riferimento, MoltenVk,in un caso d'uso generico introduce un overhead di circa il 10%, ma deve emulare un'API molto più grande (Vulkan).
+<!-- TODO: Find reference, non mi fido troppo di Chatty -->
 - Verranno valutati sia i casi gpu-bound, che cpu-bound per la valutazione della performance
 
 La libreria deve funzionare su hardware Apple dotato di processore Apple Silicon:
@@ -39,8 +40,8 @@ Questa soluzione porta vantaggi in termini di separazione tra codice di gestione
 A lato implementativo, un layer si presenterà come una grade vtable.
 ```c
 typedef struct GpuLayer {
-  void* (*gpuMalloc)(size_t bytes, size_t align, MEMORY memory);
-  void (*gpuFree)(void* ptr);
+  bool (*gpuMalloc)(size_t bytes, size_t align, MEMORY memory, GpuResult* result);
+  bool (*gpuFree)(void* ptr);
   // ...
 } GpuLayer;
 ```
@@ -84,7 +85,7 @@ typedef enum GPU_DEVICE_TYPE {
 };
 
 typedef struct GpuInitDesc {
-  BACKEND backend;
+  GPU_BACKEND backend;
   bool validationEnabled;
   GpuLayer* extraLayers;
   size_t extraLayerCount;
@@ -169,11 +170,12 @@ Metal utilizza invece un approccio differente. Ogni allocazione viene trattata c
 
 Sorge quindi un'incongruenza tra api. L'implementazione di `gpuMalloc` risulterebbe triviale, tuttavia non è possibile dire lo stesso di `gpuHostToDevicePointer`, siccome questa funzione deve poter accettare qualsiasi puntatore, anche quindi con un offset rispetto all'allocazione originaria.
 
-Si è pensato quindi ad una soluzione in doppio passaggio:
-  - 1: Lookup lineare per la risoluzione di puntatori senza offset all'allocazione problematica. Verrà usata una mappa del tipo `map[void*]MTLBuffer`. Se la mappa non contiene un associazione con il puntatore richiesto, allora sarà necessario effettuare il secondo passaggio
-  - 2: Ricerca del puntatore con l'offset in uno storage di allocazioni. Si prevede di usare un albero binario basato sui bit del puntatore. L'albero avrà altezza $h <= 48$, in quanto, come amd64, anche in arm64 solo i 48 bit meno significativi vengono utilizzati per codificare il puntatore attuale (diversamente da amd64, i primi 16 bit vengono usati per contenere metadati, che possono essere ignorati). Ci si aspetta quindi una complessità $O(h) = O(48) = O(1)$. La soluzione a due passaggi è necessaria in quanto la ricerca nell'albero ha costante moltiplicativa molto più alta. (TODO: Accennare alla possibilità di analizzare la percentuale di chiamate a `gpuHostDeviceMemory` per determinare se il primo passaggio ha effettivamente senso).
+<!-- Si è pensato quindi ad una soluzione in doppio passaggio: -->
+  <!-- - 1: Lookup lineare per la risoluzione di puntatori senza offset all'allocazione problematica. Verrà usata una mappa del tipo `map[void*]MTLBuffer`. Se la mappa non contiene un associazione con il puntatore richiesto, allora sarà necessario effettuare il secondo passaggio -->
+  <!-- - 2: Ricerca del puntatore con l'offset in uno storage di allocazioni. Si prevede di usare un albero binario basato sui bit del puntatore. L'albero avrà altezza $h <= 48$, in quanto, come amd64, anche in arm64 solo i 48 bit meno significativi vengono utilizzati per codificare il puntatore attuale (diversamente da amd64, i primi 16 bit vengono usati per contenere metadati, che possono essere ignorati). Ci si aspetta quindi una complessità $O(h) = O(48) = O(1)$. La soluzione a due passaggi è necessaria in quanto la ricerca nell'albero ha costante moltiplicativa molto più alta. (TODO: Accennare alla possibilità di analizzare la percentuale di chiamate a `gpuHostDeviceMemory` per determinare se il primo passaggio ha effettivamente senso). -->
+  <!-- - 2: Ricerca del puntatore con l'offset in uno storage di allocazioni. Si prevede di usare un albero binario basato sui bit del puntatore. L'albero avrà altezza $h <= 48$, in quanto, come amd64, anche in arm64 solo i 48 bit meno significativi vengono utilizzati per codificare il puntatore attuale (diversamente da amd64, i primi 16 bit vengono usati per contenere metadati, che possono essere ignorati). Ci si aspetta quindi una complessità $O(h) = O(48) = O(1)$. La soluzione a due passaggi è necessaria in quanto la ricerca nell'albero ha costante moltiplicativa molto più alta. (TODO: Accennare alla possibilità di analizzare la percentuale di chiamate a `gpuHostDeviceMemory` per determinare se il primo passaggio ha effettivamente senso). -->
 
-È possibile riutilizzare la mappa `map[void*]MTLBuffer` per l'implementazione della funzione `gpuFree`.
+<!-- È possibile riutilizzare la mappa `map[void*]MTLBuffer` per l'implementazione della funzione `gpuFree`. -->
 
 Si nota infine che, per come specificato nell'originario articolo, un buffer `MEMORY_DEFAULT` non dovrebbe permettere operazioni di lettura. Non vi è alcun modo di fare in modo che il _cpu mapped virtual address_ sia accessibile solo in scrittura. La lettura infatti funzionerebbe senza problemi (sebbene la tipologia di buffer `MTLResourceCPUCacheModeWriteCombined` comporti overhead).
 
@@ -185,6 +187,52 @@ Il corrispettivo più adatto all'implementazione di questo tipo di buffer è un 
 #### MEMORY_READBACK Buffers
 Questi tipi di buffer sono estremamente simili ai buffer di tipologia `MEMORY_DEFAULT`.
 Il corrispettivo è un `MTLBuffer` con resource option `MTLStorageModeShared | MTLResourceCPUCacheModeDefaultCache | MTLResourceHazardTrackingModeUntracked`. L'opzione `MTLResourceCPUCacheModeDefaultCache` garantisce una tipologia di gestione della cache più lenta, ma ottimale per la lettura dal buffer.
+
+
+### Textures
+
+#### Allocazione
+Le texture, nell'api NoGraphics, vengono create a partire da un _gpu address_, specificando quindi esplicitamente la locazione di memoria dove allocare la texture.  
+Fortunatamente Metal fornisce il metodo `- (MTLTexture) newTextureWithDescriptor` nella classe `MTLBuffer`. L'implementazione della funzione `gpuCreateTexture` risulta quindi immediata, richiedendo solamente la traduzione da _gpu address_ a `MTLBuffer` ed offset in esso.
+
+Notiamo inoltre che Metal è alquanto _restrittivo_ quando si parla di creazione di texture, attraverso `MTLBuffer`: diversi tipi di texture richiedono diverse grandezze ed alignment. Fortunatamente NoGraphics prevede la funzione `gpuTextureSizeAlign`, che, dato una specifica descrizione della texture, ritorna i requisiti in termini di spazio ed alignment richiesto.  
+Per quanto riguarda l'implementazione di tale funzione è quindi necessario meticolosamente confrontare la descrizione fornita dall'utente con la funzionalità offerte dal `MTLDevice`, utilizzando quindi metodi come `minimumLinearTextureAlignmentForPixelFormat`.
+
+Notiamo che nulla vieta che in un singolo buffer siano allocate più texture, anche allo stesso offset in esso. Fortunatamente Metal supporta questo tipo di allocazioni sovrapposte senza problemi.
+
+#### Deallocazione
+Per quanto riguarda la deallocazione, la situazione è più problematica: una texture non viene direttamente deallocata, ma l'api prevede la deallocazione del buffer contenitore, attraverso una semplice `gpuFree`.
+
+Questo comportamento non si mappa bene con Metal, che utilizza una API object oriented con reference counting. Infatti se vi effettuasse l'operazione `release` al buffer contenitore, quest'ultimo non verrebbe veramente deallocato, in quanto esitono texture che fanno riferimento ad esso.  
+Per ogni texture, notiamo inoltre, possono essere definite più _viste_ su di essa, le quali vanno _rilasciate_, insieme alla texture vera e propria per permettere la deallocazione del buffer.
+
+Segue, che per ogni buffer è necessario ricordarsi le texture associate ad esso, e per ogni texture è necessario ricordarsi le _viste_ associata ad essa. La deallocazione richiede l'effettuazione dell'operazione _release_ su tutti quegli oggetti.
+
+#### Texture Descriptors e Texture Heap
+Ogni vista sulle texture è identificabile dalla scheda grafica (nelle shaders) attraverso un identificativo chiamato _texture descriptor_, di 32 byte. Quest'ultimo, in un mondo ideale, fornirebbe alla scheda grafica tutte le informazioni necessarie per identificare la memoria delle texture, la modalità di lettura dei texel ed il formato dell'informazione.  
+Metal 4 tuttavia non espone direttamente i _texture descriptor_, optando invece per fornire all'utente solamente un `MTLResourceID` (8 byte), con il quale il driver ed il runtime MSL sono in grado di accedere al _texture descriptor_.  
+Questo id, è purtroppo globale all'intera applicazione. Idealmente un _texture descriptor_ dovrebbe essere locale ad un heap di appartenenza. Ad ogni draw-call sarebbe necessario associare un solo _texture heap_. Questo dettaglio implementativo non è tuttavia riproducibile in Metal 4.
+
+<!-- Questa differenza, unita ad un diverso modo di specifica delle risorse utilizzate per ogni operazione, permette a Metal di essere leggermente più flessibile. -->
+
+Sebbene non sia totalmente ottimale, è possibile immettere all'interno dei _texture descriptor_ il `MTLResourceID`, sprecando quindi 24 byte, che devono rimanere di padding.  
+Il _texture heap_ rimane un buffer di _texture descriptor_, che in realtà non sono veri descriptor nativi, ma solo puntatori ad essi gestiti dal runtime metal, il quali li trasformerà in veri descriptor.  
+Passiamo da un ideale modello con singola indirezione `textureHeap[index]` ad un modello con doppia indirezione, una delle quali implicita: `managedRealHeap[uint64_t(userTextureHeap[index])]`.
+
+Le funzioni `gpuTextureViewDescriptor` e `gpuTextureViewDescriptorRW`, ritornanti il _texture descriptor_, risultano quindi immediate.
+
+<!-- In _NoGraphics_, la funzione `gpuSetActiveTextureHeap` accetta un array (accessibile dal cpu-side) di _texture descriptor_, al fine di preparare le texture all'utilizzo. Possiamo sfruttare questa funzione per ottimizzare la libreria, specificando, attraverso un `MTLResidencySet`, le texture che indentiamo usare, minimizzando l'overhead del driver. È necessario tuttavia conoscere la `MTLTexture` corrispondente al _texture descriptor_ fornito. -->  
+<!-- La soluzione trovata è quella di utilizzare 8 dei molti byte liberi del _texture descriptor_, facendo riferimento all'oggetto `MTLTexture` corrispondente. -->
+
+Il _texture heap_ (realmente un semplice buffer) deve poter essere manipolato anche a lato gpu (attraverso shader compute). Questa funzionalità, col modello implementativo proposto, non presenta problematiche.
+
+#### Shader side e selezione del texture heap attivo
+Il _texture heap_ deve essere disponibile a tutte le shader compatibili con _No Graphics_. La soluzione è quella di, ad ogni dispatch, bindare il _texture heap_ implicitamente, utilizzando il valore specificato dall'utente attraverso la funzione `gpuSetActiveTextureHeap`.
+
+Ogni shader quindi presenterà un bindpoint extra del tipo `device uint64x4* gpuTextureHeap`. L'utente allora per ottenere una texture da un _texture descriptor_, al quale può facilmente accedere, userà funzioni del tipo `GpuTexture` o `GpuTextureRW`, le quali lo trasformeranno in una `metal::texture*<*>`.  
+Notiamo che questa trasformazione, in realtà, è un semplice cast, in quanto una texture metal non è altro che un altro indice a 64 bit.
+
+<!-- TODO: Migliora la spiagazione a lato shader ed integra con l'utilizzo di slang. -->
 
 # Progettazione dell'implementazione
 <!-- Si è deciso di usare C, nel particolare C89 (anche conosciuto come ANSI C), in quanto la codebase deve restare compatibile sia con ObjectiveC (per interop con Metal), sia con C++ (per un'eventuale futuro interop con DirectX). -->  
@@ -219,6 +267,6 @@ Altre api, come OpenGL, DirectX 11 e precedenti, WebGL e WebGpu risultano troppo
 <!-- TODO: analizzare anche il caso Metal 3, siccome MacOs Tahoe non è ancora molto diffuso -->
 
 # Glossario
-amd64 = x86_64  
+amd64 = x86_64
 arm64 = aarch64
 
