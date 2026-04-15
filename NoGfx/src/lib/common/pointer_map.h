@@ -155,8 +155,8 @@ void cmnReserve(CmnPointerMap<T>* map, size_t capacity, CmnResult* result) {
 	@param key The key to insert.
 	@param value The value to associate with the key.
 	@param[out] result The result of the operation.
+	@retval CMN_SUCCESS The insertion completed successfully.
 	@retval CMN_OUT_OF_MEMORY Internal growth failed while reserving additional capacity.
-	@remark On success this function does not modify `result`.
 	@relates CmnPointerMap
 */
 template <typename T>
@@ -189,6 +189,7 @@ void cmnInsert(CmnPointerMap<T>* map, uintptr_t key, const T& value, CmnResult* 
 	map->buckets[hash].key = key;
 	map->buckets[hash].value = value;
 
+	CMN_SET_RESULT(result, CMN_SUCCESS);
 	map->length++;
 }
 

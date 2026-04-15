@@ -86,8 +86,8 @@ uint32_t cmnHandleMapGetNextFreeBucket(CmnHandleMap<T>* map, CmnResult* result);
 	@param[out] result The result of the operation.
 
 	@return The generated handle.
+	@retval CMN_SUCCESS The insertion succeeded.
 	@retval CMN_OUT_OF_MEMORY Backing storage growth failed.
-	@remark On success this function does not modify `result`.
 	@relates CmnHandleMap
 */
 template <typename T>

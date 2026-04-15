@@ -87,6 +87,7 @@ CmnHandle cmnInsert(CmnHandleMap<T>* map, const T& element, CmnResult* result) {
 	bucket->isInUse = true;
 	bucket->element = element;
 
+	CMN_SET_RESULT(result, CMN_SUCCESS);
 	return CmnHandle{
 		/*index=*/	freeBucketIndex,
 		/*generation=*/	bucket->generation,

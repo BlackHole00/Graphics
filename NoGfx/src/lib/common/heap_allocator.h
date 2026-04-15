@@ -5,8 +5,7 @@
 #include <lib/common/allocator.h>
 
 /**
-	Heap-backed allocation function compatible with CmnAllocatorVTable.
-	The allocator state pointer parameter is unused.
+  Allocates memory from the default system heap.
 
 	@param size Size in bytes to allocate.
 	@param align Requested alignment.
@@ -19,8 +18,7 @@
 void* cmnHeapAlloc(size_t size, size_t align, CmnResult* result);
 
 /**
-	Heap-backed reallocation function compatible with CmnAllocatorVTable.
-	The allocator state pointer parameter is unused.
+  Reallocates memory from the default system heap.
 
 	@param address Previous allocation address.
 	@param oldSize Previous allocation size in bytes.
@@ -35,8 +33,7 @@ void* cmnHeapAlloc(size_t size, size_t align, CmnResult* result);
 void* cmnHeapRealloc(void* address, size_t oldSize, size_t newSize, size_t align, CmnResult* result);
 
 /**
-	Heap-backed free function compatible with CmnAllocatorVTable.
-	The allocator state pointer parameter is unused.
+  Frees memory allocated from the default system heap.
 
 	@param data Address to free.
 	@param[out] result The result of the operation.
