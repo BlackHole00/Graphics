@@ -7,6 +7,7 @@
 #include "personality.cpp"
 
 #include <lib/common/page_posix.cpp>
+#include <lib/common/futex_darwin.cpp>
 #include <lib/common/arena.cpp>
 #include <lib/common/pool.cpp>
 #include <lib/common/mutex.cpp>

@@ -4,7 +4,6 @@
 #include <lib/common/common.h>
 
 /**
-  @typedef CmnFutex
 	Futex integer type used for low-level thread synchronization.
 */
 typedef struct CmnFutex {
@@ -52,8 +51,6 @@ void cmnFutexWait(CmnFutex* futex, uint32_t expected);
 	@relates CmnFutex
 */
 bool cmnFutexWaitWithTimeout(CmnFutex* futex, uint32_t expected, uint64_t ns);
-
-#include "futex_darwin.inc"
 
 #endif // CMN_FUTEX_H
 

@@ -1,4 +1,4 @@
-#include <lib/common/platform.h>
+#include "futex.h"
 
 #ifdef CMN_PLATFORM_DARWIN
 
@@ -8,7 +8,7 @@
 
 #include <lib/common/atomic.h>
 
-inline void cmnFutexBroadcast(CmnFutex* futex) {
+void cmnFutexBroadcast(CmnFutex* futex) {
 	for (;;) {
 		int res = os_sync_wake_by_address_all(&futex->value, 4, OS_SYNC_WAKE_BY_ADDRESS_NONE);
 		if (res >= 0) {
@@ -25,7 +25,7 @@ inline void cmnFutexBroadcast(CmnFutex* futex) {
 	}
 }
 
-inline void cmnFutexSignal(CmnFutex* futex) {
+void cmnFutexSignal(CmnFutex* futex) {
 	for (;;) {
 		int res = os_sync_wake_by_address_any(&futex->value, 4, OS_SYNC_WAKE_BY_ADDRESS_NONE);
 		if (res >= 0) {
@@ -42,7 +42,7 @@ inline void cmnFutexSignal(CmnFutex* futex) {
 	}
 }
 
-inline void cmnFutexWait(CmnFutex* futex, uint32_t expected) {
+void cmnFutexWait(CmnFutex* futex, uint32_t expected) {
 	for (;;) {
 		if (cmnAtomicLoad(&futex->value, CMN_ACQUIRE) != expected) {
 			break;
@@ -66,7 +66,7 @@ inline void cmnFutexWait(CmnFutex* futex, uint32_t expected) {
 	}
 }
 
-inline bool cmnFutexWaitWithTimeout(CmnFutex* futex, uint32_t expected, uint64_t ns) {
+bool cmnFutexWaitWithTimeout(CmnFutex* futex, uint32_t expected, uint64_t ns) {
 	for (;;) {
 		if (cmnAtomicLoad(&futex->value, CMN_ACQUIRE) != expected) {
 			return true;
@@ -99,4 +99,3 @@ inline bool cmnFutexWaitWithTimeout(CmnFutex* futex, uint32_t expected, uint64_t
 }
 
 #endif
-

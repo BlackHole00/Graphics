@@ -30,6 +30,7 @@ typedef struct CmnMutex {
 	@param mutex The mutex to lock.
 	@param initialState The state observed by the caller.
 	@relates CmnMutex
+	@remarks For internal use only. The user should call `cmnMutexLock` instead.
 */
 void cmnMutexLockSlow(CmnMutex* mutex, CmnMutexState initialState);
 
@@ -38,6 +39,7 @@ void cmnMutexLockSlow(CmnMutex* mutex, CmnMutexState initialState);
 
 	@param mutex The mutex to unlock.
 	@relates CmnMutex
+	@remarks For internal use only. The user should call `cmnMutexUnlock` instead.
 */
 void cmnMutexUnlockSlow(CmnMutex* mutex);
 
