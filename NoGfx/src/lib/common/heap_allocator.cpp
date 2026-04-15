@@ -1,9 +1,9 @@
-#include "allocator.h"
+#include "heap_allocator.h"
 
 #include <stdlib.h>
 #include <string.h>
 
-void* cmnHeapAlloc(void*, size_t size, size_t align, CmnResult* result) {
+void* cmnHeapAlloc(size_t size, size_t align, CmnResult* result) {
 	void* data;
 	if (align == 0) {
 		data = malloc(size);
@@ -22,7 +22,7 @@ void* cmnHeapAlloc(void*, size_t size, size_t align, CmnResult* result) {
 	return data;
 }
 
-void* cmnHeapRealloc(void*, void* address, size_t oldSize, size_t newSize, size_t align, CmnResult* result) {
+void* cmnHeapRealloc(void* address, size_t oldSize, size_t newSize, size_t align, CmnResult* result) {
 	size_t contentSize = (oldSize < newSize) ? oldSize : newSize;
 	void* newAddress;
 
@@ -48,20 +48,32 @@ void* cmnHeapRealloc(void*, void* address, size_t oldSize, size_t newSize, size_
 	return newAddress;
 }
 
-void cmnHeapFree(void*, void* data, CmnResult* result) {
+void cmnHeapFree(void* data, CmnResult* result) {
 	free(data);
 	CMN_SET_RESULT(result, CMN_SUCCESS);
 }
 
-static void cmnHeapFreeAll(void*, CmnResult* result) {
+static void* cmnHeapAllocatorAlloc(void*, size_t size, size_t align, CmnResult* result) {
+	return cmnHeapAlloc(size, align, result);
+}
+
+static void* cmnHeapAllocatorRealloc(void*, void* address, size_t oldSize, size_t newSize, size_t align, CmnResult* result) {
+	return cmnHeapRealloc(address, oldSize, newSize, align, result);
+}
+
+static void cmnHeapAllocatorFree(void*, void* address, CmnResult* result) {
+	cmnHeapFree(address, result);
+}
+
+static void cmnHeapAllocatorFreeAll(void*, CmnResult* result) {
 	CMN_SET_RESULT(result, CMN_UNSUPPORTED_OPERATION);
 }
 
 static CmnAllocatorVTable gCmnHeapAllocatorVTable = {
-	/*alloc=*/	cmnHeapAlloc,
-	/*realloc=*/	cmnHeapRealloc,
-	/*free=*/	cmnHeapFree,
-	/*freeAll=*/	cmnHeapFreeAll,
+	/*alloc=*/	cmnHeapAllocatorAlloc,
+	/*realloc=*/	cmnHeapAllocatorRealloc,
+	/*free=*/	cmnHeapAllocatorFree,
+	/*freeAll=*/	cmnHeapAllocatorFreeAll,
 };
 
 static CmnAllocator gCmnHeapAllocator = {

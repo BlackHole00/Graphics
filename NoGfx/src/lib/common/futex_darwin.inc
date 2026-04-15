@@ -10,7 +10,7 @@
 
 inline void cmnFutexBroadcast(CmnFutex* futex) {
 	for (;;) {
-		int res = os_sync_wake_by_address_all(futex, 4, OS_SYNC_WAKE_BY_ADDRESS_NONE);
+		int res = os_sync_wake_by_address_all(&futex->value, 4, OS_SYNC_WAKE_BY_ADDRESS_NONE);
 		if (res >= 0) {
 			return;
 		}
@@ -27,7 +27,7 @@ inline void cmnFutexBroadcast(CmnFutex* futex) {
 
 inline void cmnFutexSignal(CmnFutex* futex) {
 	for (;;) {
-		int res = os_sync_wake_by_address_any(futex, 4, OS_SYNC_WAKE_BY_ADDRESS_NONE);
+		int res = os_sync_wake_by_address_any(&futex->value, 4, OS_SYNC_WAKE_BY_ADDRESS_NONE);
 		if (res >= 0) {
 			return;
 		}
@@ -44,12 +44,12 @@ inline void cmnFutexSignal(CmnFutex* futex) {
 
 inline void cmnFutexWait(CmnFutex* futex, uint32_t expected) {
 	for (;;) {
-		if (cmnAtomicLoad(futex, CMN_ACQUIRE) != expected) {
+		if (cmnAtomicLoad(&futex->value, CMN_ACQUIRE) != expected) {
 			break;
 		}
 
 		int res = os_sync_wait_on_address(
-			futex,
+			&futex->value,
 			expected,
 			4,
 			OS_SYNC_WAIT_ON_ADDRESS_NONE
@@ -68,7 +68,7 @@ inline void cmnFutexWait(CmnFutex* futex, uint32_t expected) {
 
 inline bool cmnFutexWaitWithTimeout(CmnFutex* futex, uint32_t expected, uint64_t ns) {
 	for (;;) {
-		if (cmnAtomicLoad(futex, CMN_ACQUIRE) != expected) {
+		if (cmnAtomicLoad(&futex->value, CMN_ACQUIRE) != expected) {
 			return true;
 		}
 
@@ -77,7 +77,7 @@ inline bool cmnFutexWaitWithTimeout(CmnFutex* futex, uint32_t expected, uint64_t
 		}
 
 		int res = os_sync_wait_on_address_with_timeout(
-			futex,
+			&futex->value,
 			expected,
 			4,
 			OS_SYNC_WAIT_ON_ADDRESS_NONE,

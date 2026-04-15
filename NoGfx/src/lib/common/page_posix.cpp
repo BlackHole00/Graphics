@@ -43,6 +43,8 @@ void cmnDestroyPage(CmnPage page) {
 	}
 
 	munmap(page.baseAddress, page.size);
+
+	page = {};
 }
 
 #endif

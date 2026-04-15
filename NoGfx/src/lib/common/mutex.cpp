@@ -8,14 +8,14 @@ void cmnMutexLockSlow(CmnMutex* mutex, CmnMutexState initialState) {
 			//	`CMN_MUTEX_WAITING`. It is worth noting that, if no thread in the futex-wait loop
 			//	returns to the spin-wait loop, only one thread at the time can have initialState ==
 			//	`CMN_MUTEX_WAITING`, thus minimizing the futex signals.
-			CmnMutexState currentState = CMN_MUTEX_UNLOCKED;
-			bool didLock = cmnAtomicCompareExchangeWeak(mutex, &currentState, initialState, CMN_ACQUIRE, CMN_ACQUIRE);
+			uint32_t currentState = (uint32_t)CMN_MUTEX_UNLOCKED;
+			bool didLock = cmnAtomicCompareExchangeWeak(&mutex->futex.value, &currentState, (uint32_t)initialState, CMN_ACQUIRE, CMN_ACQUIRE);
 			if (didLock) {
 				return;
 			}
 
 			// If someone is waiting with a futex, we all should wait with a futex
-			if (currentState == CMN_MUTEX_WAITING) {
+			if ((CmnMutexState)currentState == CMN_MUTEX_WAITING) {
 				break;
 			}
 
@@ -28,7 +28,7 @@ void cmnMutexLockSlow(CmnMutex* mutex, CmnMutexState initialState) {
 
 		// NOTE: If we are here, then the spin wait could not get a lock. Let's then wait with the futex.
 		for (;;) {
-			CmnMutexState currentState = cmnAtomicExchange(mutex, CMN_MUTEX_WAITING, CMN_ACQUIRE);
+			CmnMutexState currentState = (CmnMutexState)cmnAtomicExchange(&mutex->futex.value, (uint32_t)CMN_MUTEX_WAITING, CMN_ACQUIRE);
 			if (currentState == CMN_MUTEX_UNLOCKED) {
 				return;
 			} else if (currentState == CMN_MUTEX_LOCKED) {
@@ -42,13 +42,13 @@ void cmnMutexLockSlow(CmnMutex* mutex, CmnMutexState initialState) {
 
 			// NOTE: In the contention situation explained in the previous note occurs, the mutex state
 			//	could be CMN_MUTEX_LOCKED, thus skipping a futex wait.
-			cmnFutexWait((CmnFutex*)mutex, CMN_MUTEX_WAITING);
+			cmnFutexWait(&mutex->futex, CMN_MUTEX_WAITING);
 		}
 	}
 }
 
 void cmnMutexUnlockSlow(CmnMutex* mutex) {
-	cmnFutexSignal((CmnFutex*)mutex);
+	cmnFutexSignal(&mutex->futex);
 }
 
 

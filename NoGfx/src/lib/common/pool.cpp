@@ -47,7 +47,7 @@ CmnPool cmnCreatePool(uint8_t* backingMemory, size_t backingMemorySize, size_t b
 		/*blockCount=*/	blockCount,
 		/*blockSize=*/	blockSize,
 		/*firstFree=*/	(CmnPoolBlockHeader*)backingMemory,
-		/*mutex=*/	CMN_MUTEX_UNLOCKED,
+		/*mutex=*/	{},
 	};
 }
 

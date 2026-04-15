@@ -10,3 +10,6 @@
 **/*.metallib
 **/*.dSYM
 
+NoGfx/docs/**
+!NoGfx/docs/.gitkeep
+

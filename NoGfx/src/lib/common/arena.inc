@@ -8,8 +8,8 @@ inline CmnArena cmnCreateArena(uint8_t* backingMemory, size_t backingMemorySize,
 	return {
 		/*backing=*/		backingMemory,
 		/*backingSize=*/	backingMemorySize,
-		/*used=*/		0,
-		/*mutex=*/		CMN_MUTEX_UNLOCKED,
+		/*used=*/			0,
+		/*mutex=*/			{},
 	};
 }
 
