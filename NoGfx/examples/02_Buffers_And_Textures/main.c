@@ -108,11 +108,13 @@ int main(void) {
 	memcpy(gpuTempData.cpu, data, x * y * channels);
 
 	GpuTextureDesc textureDescriptor = {};
-	textureDescriptor.type = GPU_TEXTURE_2D;
+	textureDescriptor.type = GPU_TEXTURE_3D;
 	textureDescriptor.format = GPU_FORMAT_RGBA8_UNORM;
 	textureDescriptor.usage = GPU_USAGE_SAMPLED;
 	textureDescriptor.dimensions[0] = x;
 	textureDescriptor.dimensions[1] = y;
+	textureDescriptor.dimensions[2] = 1;
+	textureDescriptor.layerCount = 1;
 	textureDescriptor.mipCount = 1;
 	textureDescriptor.sampleCount = 1;
 

@@ -18,6 +18,17 @@ typedef struct CmnHandle {
 } CmnHandle;
 
 /**
+	Checks if a handle is zero.
+
+	@param handle The handle to check.
+
+	@return True when the handle is zero, false otherwise.
+*/
+inline bool cmnIsZero(CmnHandle handle) {
+	return handle.index == 0 && handle.generation == 0;
+}
+
+/**
 	Storage bucket used internally by CmnHandleMap.
 	@see CmnHandleMap
 */
