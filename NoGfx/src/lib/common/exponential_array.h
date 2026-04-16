@@ -85,6 +85,25 @@ template <typename T, size_t N>   T& cmnGet(CmnExponentialArray<T, N>* array, si
 template <typename T, size_t N> bool cmnAppend(CmnExponentialArray<T, N>* array, const T& value, CmnResult* result);
 
 /**
+	Gets a reference to the last logical element in the array.
+
+	@param array The target array.
+	@param[out] hadElements Optional flag receiving whether the array contained at least one element.
+
+	@return Reference to the last element.
+	@relates CmnExponentialArray
+*/
+template <typename T, size_t N> T& cmnLast(CmnExponentialArray<T, N>* array, bool* hadElements);
+
+/**
+	Removes the last logical element from the array.
+
+	@param array The target array.
+	@relates CmnExponentialArray
+*/
+template <typename T, size_t N> void cmnPop(CmnExponentialArray<T, N>* array);
+
+/**
 	Decomposes a linear index into bucket and element indices.
 
 	@param index The linear index.

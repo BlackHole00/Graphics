@@ -85,6 +85,32 @@ T& cmnGet(CmnExponentialArray<T, N>* array, size_t index) {
 	return array->buckets[bucketIndex][elementIndex];
 }
 
+template <typename T, size_t N>
+T& cmnLast(CmnExponentialArray<T, N>* array, bool* hadElements) {
+	if (array->length == 0) {
+		if (hadElements != nullptr) {
+			hadElements = false;
+		}
+
+		return array->defaultElement;
+	}
+	
+	if (hadElements != nullptr) {
+		hadElements = true;
+	}
+
+	return (*array)[array->length - 1];
+}
+
+template <typename T, size_t N>
+void cmnPop(CmnExponentialArray<T, N>* array) {
+	if (array->length == 0) {
+		return;
+	}
+
+	array->length--;
+}
+
 inline void cmnDecomposeExponentialArrayIndex(size_t index, size_t* bucketIndex, size_t* elementIndex) {
 	size_t start = CMN_EXPONENTIALARRAY_BASE_BUCKET_LEN_BITS;
 
@@ -103,5 +129,4 @@ inline void cmnDecomposeExponentialArrayIndex(size_t index, size_t* bucketIndex,
 		*elementIndex = index & ((1ULL << bucketBits) - 1);
 	}
 }
-
 
