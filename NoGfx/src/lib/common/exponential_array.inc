@@ -86,18 +86,8 @@ T& cmnGet(CmnExponentialArray<T, N>* array, size_t index) {
 }
 
 template <typename T, size_t N>
-T& cmnLast(CmnExponentialArray<T, N>* array, bool* hadElements) {
-	if (array->length == 0) {
-		if (hadElements != nullptr) {
-			hadElements = false;
-		}
-
-		return array->defaultElement;
-	}
-	
-	if (hadElements != nullptr) {
-		hadElements = true;
-	}
+T& cmnLast(CmnExponentialArray<T, N>* array) {
+	assert(array->length > 0);
 
 	return (*array)[array->length - 1];
 }

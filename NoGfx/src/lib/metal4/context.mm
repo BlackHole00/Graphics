@@ -63,8 +63,13 @@ void mtl4Deinit(void) {
 	mtl4FiniTextureStorage();
 	mtl4FiniAllocationStorage();
 
-	if (gMtl4Context.device != nullptr) {
-		[gMtl4Context.device release];
+	if (gMtl4Context.availableDevices.devices != nullptr) {
+		for (size_t i = 0; i < gMtl4Context.availableDevices.count; i++) {
+			id<MTLDevice> device = gMtl4Context.availableDevices.devices[i];
+			if (device != nil) {
+				[device release];
+			}
+		}
 	}
 
 	free(gMtl4Context.globalBackingMemory);

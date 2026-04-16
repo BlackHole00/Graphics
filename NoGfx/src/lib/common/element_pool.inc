@@ -24,10 +24,12 @@ size_t cmnInsert(CmnElementPool<T>* pool, const T& element, CmnResult* result) {
 	CmnResult localResult;
 
 	if (pool->freeList.length > 0) {
-		size_t index = cmnLast(&pool->freeList, nullptr);
+		size_t index = cmnLast(&pool->freeList);
 		cmnPop(&pool->freeList);
 
 		pool->elements[index] = element;
+		pool->length++;
+
 		CMN_SET_RESULT(result, CMN_SUCCESS);
 		return index;
 	}
@@ -37,6 +39,8 @@ size_t cmnInsert(CmnElementPool<T>* pool, const T& element, CmnResult* result) {
 		CMN_SET_RESULT(result, localResult);
 		return SIZE_T_MAX;
 	}
+
+	pool->length++;
 
 	CMN_SET_RESULT(result, CMN_SUCCESS);
 	return pool->elements.length - 1;

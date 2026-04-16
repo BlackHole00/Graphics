@@ -52,7 +52,8 @@ void mtl4PrepareAvailableDevicesList(GpuResult* result) {
 		// TODO: Apple describes the M-series GPUs as high power, even if they are integrated :*(
 		deviceInfo->type = mtlDevice.isLowPower ? GPU_INTEGRATED : GPU_DEDICATED;
 
-		suitableMtlDevices[deviceId] = mtlDevice;
+		// Keep an owned reference so the device remains valid after the temporary NSArray is released.
+		suitableMtlDevices[deviceId] = [mtlDevice retain];
 
 		deviceId++;
 	}
@@ -83,6 +84,7 @@ void mtl4EnumerateDevices(GpuDeviceInfo** devices, size_t* devices_count, GpuRes
 }
 
 void mtl4SelectDevice(GpuDeviceId deviceId, GpuResult* result) {
+	// This is a non-owning pointer. Ownership is held by availableDevices.devices.
 	gMtl4Context.device = gMtl4Context.availableDevices.devices[deviceId];
 	gMtl4Context.selectedDeviceId = deviceId;
 
