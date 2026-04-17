@@ -81,22 +81,6 @@ size_t gMtl4GpuFormatPixelSize[] = {
 	/*GPU_FORMAT_BC5_UNORM=*/		16,	// Block size for 4x4 pixels
 };
 
-static bool mtl4IsBlockCompressedFormat(GpuFormat format) {
-	switch (format) {
-		case GPU_FORMAT_BC1_RGBA_UNORM:
-		case GPU_FORMAT_BC1_RGBA_SRGB:
-		case GPU_FORMAT_BC4_UNORM:
-		case GPU_FORMAT_BC5_UNORM:
-			return true;
-		default:
-			return false;
-	}
-}
-
-static uint32_t mtl4DivCeilU32(uint32_t value, uint32_t divisor) {
-	return (value + divisor - 1) / divisor;
-}
-
 void mtl4InitTextureStorage(GpuResult* result) {
 	CmnResult localResult;
 
@@ -138,158 +122,181 @@ void mtl4FiniTextureStorage(void) {
 	gMtl4TextureStorage = {};
 }
 
-// id<MTLTexture> mtl4AllocateLinearTexture(id<MTLBuffer> referenceBuffer, size_t offsetInBuffer, const GpuTextureDesc * desc) {
-	
-// }
-
 GpuTexture mtl4CreateTexture(const GpuTextureDesc* desc, void* ptrGpu, GpuResult* result) {
-// 	CmnResult localResult;
-// 	GpuResult localGpuResult;
+	CmnResult localResult;
+	GpuResult localGpuResult;
 
-// 	id<MTLBuffer> referenceBuffer;
-// 	size_t offsetInBuffer;
+	if (mtl4IsCpuAddress(ptrGpu)) {
+		return GPU_ALLOCATION_MEMORY_IS_CPU;
+	}
 
-// 	{
-// 		CmnScopedMutex guard(&gMtl4AllocationStorage.mutex);
 
-// 		Mtl4AllocationMetadata* metadata = mtl4GetAllocationMetadataOf(ptrGpu, true);
-// 		if (metadata == nullptr) {
-// 			CMN_SET_RESULT(result, GPU_NO_SUCH_ALLOCATION_FOUND);
-// 			return 0;
-// 		}
+	size_t backingSize = 0;
+	size_t backingAlign = 0;
+	id<MTLHeap> backingHeap = nil;
 
-// 		// TODO: Find a better way to do this
-// 		if (
-// 			((uintptr_t)ptrGpu < (uintptr_t)metadata->gpuAddress) ||
-// 			((uintptr_t)ptrGpu >= (uintptr_t)metadata->gpuAddress + metadata->size)
-// 		) {
-// 			CMN_SET_RESULT(result, GPU_ALLOCATION_MEMORY_IS_CPU);
-// 			return 0;
-// 		}
+	{
+		CmnScopedMutex guard(&gMtl4AllocationStorage.mutex);
+		
+		Mtl4AllocationMetadata* metadata = mtl4GetAllocationMetadataOf(ptrGpu, true);
+		if (metadata == nullptr) {
+			CMN_SET_RESULT(result, GPU_NO_SUCH_ALLOCATION_FOUND);
+			return 0;
+		}
 
-// 		offsetInBuffer = (uintptr_t)ptrGpu - (uintptr_t)metadata->gpuAddress;
-// 		referenceBuffer = metadata->buffer;
-// 	}
+		if (metadata->memory != GPU_MEMORY_GPU) {
+			CMN_SET_RESULT(result, GPU_ALLOCATION_MEMORY_IS_CPU);
+			return 0;
+		}
 
-// 	MTLTextureDescriptor* textureDescriptor = mtl4GpuTextureDescToMtl(desc, referenceBuffer.resourceOptions);
+		backingSize	= metadata->size;
+		backingAlign	= metadata->align;
+		backingHeap	= metadata->associatedTextureHeap;
 
-// 	id<MTLTexture> texture = [referenceBuffer newTextureWithDescriptor:textureDescriptor
-// 		offset:offsetInBuffer
-// 		bytesPerRow:gMtl4GpuFormatPixelSize[desc->format] * desc->dimensions[0]];
-// 	if (texture == nil) {
-// 		CMN_SET_RESULT(result, GPU_OUT_OF_GPU_MEMORY);
-// 		return 0;
-// 	}
+		if (backingHeap != nil) {
+			[backingHeap retain];
+		}
+	}
 
-// 	Mtl4TextureMetadata metadata;
-// 	metadata.texture = texture;
-// 	metadata.descriptor.data[0] = [texture gpuResourceID]._impl;
+	MTLTextureDescriptor* textureDescriptor = mtl4GpuTextureDescToMtl(
+		desc,
+		MTLResourceStorageModePrivate | MTLResourceHazardTrackingModeUntracked
+	);
+	id<MTLTexture> texture;
 
-// 	CmnHandle handle = {};
+	if (backingHeap == nil) {
+		
+		GpuTextureSizeAlign expectedSizeAlign = mtl4TextureSizeAlign(desc, nullptr);
+		if (expectedSizeAlign.align == backingAlign && expectedSizeAlign.size == backingSize) {
+			// The buffer has been made to contain only the texture;
 
-// 	{
-// 		CmnScopedMutex guard(&gMtl4TextureStorage.mutex);
+			texture = [gMtl4Context.device newTextureWithDescriptor:textureDescriptor];
+			if (texture == nil) {
+				CMN_SET_RESULT(result, GPU_OUT_OF_GPU_MEMORY);
+				return 0;
+			}
+		} else if (expectedSizeAlign.align <= backingAlign && expectedSizeAlign.size < backingSize) {
+			// The buffer must contain a new heap, for multiple textures
+			MTLHeapDescriptor* heapDescriptor = [MTLHeapDescriptor new];
+			heapDescriptor.resourceOptions = MTLResourceStorageModePrivate | MTLResourceHazardTrackingModeUntracked;
+			heapDescriptor.size = backingSize;
 
-// 		handle = cmnInsert(&gMtl4TextureStorage.textures, metadata, &localResult);
-// 		if (localResult != CMN_SUCCESS) {
-// 			CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
-// 			goto on_error_cleanup;
-// 		}
-// 	}
+			backingHeap = [gMtl4Context.device newHeapWithDescriptor:heapDescriptor];
+			if (backingHeap == nil) {
+				CMN_SET_RESULT(result, GPU_OUT_OF_GPU_MEMORY);
+				return 0;
+			}
 
-// 	{
-// 		CmnScopedMutex guard(&gMtl4AllocationStorage.mutex);
+			texture = [backingHeap newTextureWithDescriptor:textureDescriptor];
+			if (texture == nil) {
+				[backingHeap release];
 
-// 		Mtl4AllocationMetadata* metadata = mtl4GetAllocationMetadataOf(ptrGpu, true);
-// 		if (metadata == nullptr) {
-// 			// This can happen if the backing memory gets freed from a different thread.
+				CMN_SET_RESULT(result, GPU_OUT_OF_GPU_MEMORY);
+				return 0;
+			}
 
-// 			CMN_SET_RESULT(result, GPU_NO_SUCH_ALLOCATION_FOUND);
-// 			goto on_error_cleanup;
-// 		}
-
-// 		mtl4AssociateTextureToAllocation(metadata, handle, &localGpuResult);
-// 		if (localGpuResult != GPU_SUCCESS) {
-// 			CMN_SET_RESULT(result, localGpuResult);
-// 			goto on_error_cleanup;
-// 		}
-// 	}
-
-// 	[textureDescriptor release];
-// 	return *(GpuTexture*)&handle;
-
-// on_error_cleanup:
-// 	cmnRemove(&gMtl4TextureStorage.textures, handle);
-// 	[texture release];
-// 	[textureDescriptor release];
+			{
+				CmnScopedMutex guard(&gMtl4AllocationStorage.mutex);
 	
-// 	return 0;
+				Mtl4AllocationMetadata* metadata = mtl4GetAllocationMetadataOf(ptrGpu, true);
+				if (metadata == nullptr) {
+					[texture release];
+					[backingHeap release];
+
+					CMN_SET_RESULT(result, GPU_NO_SUCH_ALLOCATION_FOUND);
+					return 0;
+				}
+
+				metadata->associatedTextureHeap = [backingHeap retain];
+			}
+		} else {
+			// The buffer is not big enough
+
+			CMN_SET_RESULT(result, GPU_OUT_OF_GPU_MEMORY);
+			return 0;
+		}
+
+	} else {
+		texture = [backingHeap newTextureWithDescriptor:textureDescriptor];
+		if (texture == nil) {
+			CMN_SET_RESULT(result, GPU_OUT_OF_GPU_MEMORY);
+			return 0;
+		}
+	}
+
+	Mtl4TextureMetadata textureMetadata;
+	textureMetadata.texture = texture;
+	memcpy(&textureMetadata.descriptor, desc, sizeof(GpuTextureDesc));
+
+	Mtl4Texture textureId;
+
+	{
+		CmnScopedMutex guard(&gMtl4TextureStorage.mutex);
+
+		textureId = cmnInsert(&gMtl4TextureStorage.textures, textureMetadata, &localResult);
+		if (localResult != CMN_SUCCESS) {
+			[texture release];
+
+			CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
+			return 0;
+		}
+	}
+
+	{
+		CmnScopedMutex guard(&gMtl4AllocationStorage.mutex);
+
+		Mtl4AllocationMetadata* metadata = mtl4GetAllocationMetadataOf(ptrGpu, true);
+		if (metadata == nullptr) {
+			CMN_SET_RESULT(result, GPU_NO_SUCH_ALLOCATION_FOUND);
+			return 0;
+		}
+
+		mtl4AssociateTextureToAllocation(metadata, textureId, &localGpuResult);
+		if (localGpuResult != GPU_SUCCESS) {
+			[texture release];
+			cmnRemove(&gMtl4TextureStorage.textures, textureId);
+			
+			CMN_SET_RESULT(result, localGpuResult);
+			return 0;
+		}
+	}
+
+	if (backingHeap != nil) {
+		[backingHeap release];
+	}
+
+	[textureDescriptor release];
+
+	CMN_SET_RESULT(result, GPU_SUCCESS);
+	return *(GpuTexture*)&textureId;
 }
 
 GpuTextureSizeAlign mtl4TextureSizeAlign(const GpuTextureDesc* desc, GpuResult* result) {
-// 	MTLPixelFormat format = gMtl4GpuToMtlFormat[desc->format];
+	(void)result;
 
-// 	size_t align = [gMtl4Context.device minimumTextureBufferAlignmentForPixelFormat: format];
+	MTLTextureDescriptor* textureDescriptor = mtl4GpuTextureDescToMtl(
+		desc,
+		MTLResourceStorageModePrivate | MTLResourceHazardTrackingModeUntracked
+	);
 
-// 	uint32_t mipWidth = desc->dimensions[0];
-// 	uint32_t mipHeight = (desc->type == GPU_TEXTURE_1D) ? 1 : desc->dimensions[1];
-// 	uint32_t mipDepth = (desc->type == GPU_TEXTURE_3D) ? desc->dimensions[2] : 1;
+	MTLSizeAndAlign sizeNAlign = [gMtl4Context.device heapTextureSizeAndAlignWithDescriptor:textureDescriptor];
 
-// 	size_t layerMultiplier = 1;
-// 	if (desc->type == GPU_TEXTURE_CUBE) {
-// 		layerMultiplier = 6;
-// 	} else if (desc->type == GPU_TEXTURE_2D_ARRAY) {
-// 		layerMultiplier = desc->layerCount;
-// 	} else if (desc->type == GPU_TEXTURE_CUBE_ARRAY) {
-// 		layerMultiplier = 6 * (size_t)desc->layerCount;
-// 	}
-
-// 	bool isCompressed = mtl4IsBlockCompressedFormat(desc->format);
-// 	size_t unitSize = gMtl4GpuFormatPixelSize[desc->format];
-
-// 	size_t size = 0;
-// 	for (uint32_t mip = 0; mip < desc->mipCount; mip++) {
-// 		size_t levelUnits;
-
-// 		if (isCompressed) {
-// 			uint32_t blocksX = mtl4DivCeilU32(mipWidth, 4);
-// 			uint32_t blocksY = mtl4DivCeilU32(mipHeight, 4);
-// 			levelUnits = (size_t)blocksX * blocksY * mipDepth;
-// 		} else {
-// 			levelUnits = (size_t)mipWidth * mipHeight * mipDepth;
-// 		}
-
-// 		size_t levelSize = unitSize * levelUnits;
-// 		if (desc->sampleCount > 1 && (desc->type == GPU_TEXTURE_2D || desc->type == GPU_TEXTURE_2D_ARRAY)) {
-// 			levelSize *= desc->sampleCount;
-// 		}
-
-// 		size += levelSize;
-
-// 		if (mipWidth > 1) {
-// 			mipWidth >>= 1;
-// 		}
-// 		if (mipHeight > 1) {
-// 			mipHeight >>= 1;
-// 		}
-// 		if (mipDepth > 1) {
-// 			mipDepth >>= 1;
-// 		}
-// 	}
-
-// 	size *= layerMultiplier;
-
-// 	CMN_SET_RESULT(result, GPU_SUCCESS);
-// 	return {
-// 		/*size=*/	size,
-// 		/*align=*/	align,
-// 	};
+	[textureDescriptor release];
+	return {
+		/*size=*/	sizeNAlign.size,
+		/*align=*/	sizeNAlign.align,
+	};
 }
 
-GpuTextureDescriptor mtl4TextureViewDescriptor(GpuTexture texture, const GpuViewDesc* desc, GpuResult* result) {}
-GpuTextureDescriptor mtl4RWTextureViewDescriptor(GpuTexture texture, const GpuViewDesc* desc, GpuResult* result) {}
+GpuTextureDescriptor mtl4TextureViewDescriptor(GpuTexture texture, const GpuViewDesc* desc, GpuResult* result) {
+	return {};
+}
+GpuTextureDescriptor mtl4RWTextureViewDescriptor(GpuTexture texture, const GpuViewDesc* desc, GpuResult* result) {
+	return {};
+}
 
-void mtl4DestroyTexture(Mtl4Texture texture) {}
+void mtl4DestroyTexture(Mtl4Texture texture) {
+}
 
 MTLTextureDescriptor* mtl4GpuTextureDescToMtl(const GpuTextureDesc* desc, MTLResourceOptions resourceOptions) {
 	MTLTextureDescriptor* textureDescriptor = [MTLTextureDescriptor new];

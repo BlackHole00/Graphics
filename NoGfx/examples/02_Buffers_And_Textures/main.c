@@ -118,7 +118,8 @@ int main(void) {
 	textureDescriptor.mipCount = 1;
 	textureDescriptor.sampleCount = 1;
 
-	void* gpuTextureBuffer = gpuMalloc(x * y * channels, 16, GPU_MEMORY_GPU, NULL);
+	GpuTextureSizeAlign sizeAlign = gpuTextureSizeAlign(&textureDescriptor, NULL);
+	void* gpuTextureBuffer = gpuMalloc(sizeAlign.size + 1024, sizeAlign.align, GPU_MEMORY_GPU, NULL);
 	gpuCreateTexture(&textureDescriptor, gpuTextureBuffer, NULL);
 
 	/* TODO: Update the texture data with the buffer in the bump allocator */

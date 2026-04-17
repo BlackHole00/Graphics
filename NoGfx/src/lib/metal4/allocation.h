@@ -51,6 +51,7 @@ typedef struct Mtl4AllocationMetadata {
 	void*		cpuAddress;
 	Mtl4GpuAddress	gpuAddress;
 
+	id<MTLHeap>	associatedTextureHeap;
 	Mtl4AllocationTextures*	relatedTextures;
 } Mtl4AllocationMetadata;
 

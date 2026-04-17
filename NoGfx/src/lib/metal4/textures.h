@@ -33,6 +33,8 @@ typedef struct Mtl4TextureStorage {
 
 	CmnHandleMap<Mtl4TextureMetadata>	textures;
 	CmnMutex				mutex;
+
+	id<MTLHeap>	texturesHeap;
 } Mtl4TextureStorage;
 extern Mtl4TextureStorage gMtl4TextureStorage;
 

@@ -368,15 +368,14 @@ Mtl4AllocationMetadata* mtl4GetAllocationMetadataOfGpuPtr(Mtl4GpuAddress address
 void* mtl4HostToDevicePointer(void* ptr, GpuResult* result) {
 	CmnScopedMutex guard(&gMtl4AllocationStorage.mutex);
 
-	Mtl4AllocationMetadata* metadata = mtl4GetAllocationMetadataOf(ptr, true);
-
-	if (metadata == nullptr) {
-		CMN_SET_RESULT(result, GPU_NO_SUCH_ALLOCATION_FOUND);
+	if (mtl4IsGpuAddress(ptr)) {
+		CMN_SET_RESULT(result, GPU_ALLOCATION_MEMORY_IS_GPU);
 		return nullptr;
 	}
 
-	if (metadata->memory == GPU_MEMORY_GPU) {
-		CMN_SET_RESULT(result, GPU_ALLOCATION_MEMORY_IS_GPU);
+	Mtl4AllocationMetadata* metadata = mtl4GetAllocationMetadataOf(ptr, true);
+	if (metadata == nullptr) {
+		CMN_SET_RESULT(result, GPU_NO_SUCH_ALLOCATION_FOUND);
 		return nullptr;
 	}
 
