@@ -191,9 +191,6 @@ bool mtl4ValidateGpuCreateTexture(const GpuTextureDesc* desc, void* ptrGpu, GpuR
 		return false;
 	}
 
-	GpuTextureSizeAlign expectedSizeAlign = mtl4TextureSizeAlign(desc, nullptr);
-	size_t offsetFromBase = mtl4GpuAddressOffsetFromBase(ptrGpu);
-
 	{
 		CmnScopedMutex guard(&gMtl4AllocationStorage.mutex);
 

@@ -220,7 +220,7 @@ GpuTexture mtl4CreateTexture(const GpuTextureDesc* desc, void* ptrGpu, GpuResult
 		}
 	}
 
-	Mtl4TextureMetadata textureMetadata;
+	Mtl4TextureMetadata textureMetadata = {};
 	textureMetadata.texture = texture;
 	memcpy(&textureMetadata.descriptor, desc, sizeof(GpuTextureDesc));
 

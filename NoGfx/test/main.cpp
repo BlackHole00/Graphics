@@ -58,6 +58,15 @@ TestRecord gNoGfxTests[] = {
 	{ "Check GPU host to device pointer mapping",			checkGpuHostToDevicePointer		},
 	{ "Check GPU host to device pointer fails for GPU-only memory",	checkGpuHostToDevicePointerOnGpuMemory	},
 	{ "Check GPU host to device pointer mapping with offset",	checkGpuHostToDevicePointerWithOffset	},
+	{ "Check GPU texture size and alignment calculation", 		checkGpuTextureSizeAlign			},
+	{ "Check GPU texture size and alignment invalid descriptor", 	checkGpuTextureSizeAlignInvalidDesc		},
+	{ "Check GPU texture creation", 				checkGpuCreateTexture			},
+	{ "Check GPU texture creation on CPU allocation", 		checkGpuCreateTextureOnCpuAllocation		},
+	{ "Check GPU texture creation invalid descriptor", 		checkGpuCreateTextureInvalidDesc		},
+	{ "Check GPU texture view descriptor creation", 		checkGpuTextureViewDescriptor		},
+	{ "Check GPU RW texture view descriptor creation", 		checkGpuRWTextureViewDescriptor		},
+	{ "Check GPU texture view descriptor invalid texture", 	checkGpuTextureViewDescriptorInvalidTexture	},
+	{ "Check GPU texture view descriptor invalid descriptor", 	checkGpuTextureViewDescriptorInvalidDesc	},
 };
 
 int main(void) {
