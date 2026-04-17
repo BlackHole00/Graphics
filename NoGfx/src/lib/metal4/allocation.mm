@@ -163,10 +163,9 @@ void* mtl4MallocDirectMemory(size_t size, size_t align, GpuMemory memory, GpuRes
 		metadata->size			= size;
 		metadata->align			= align;
 		metadata->memory		= memory;
-		metadata->cpuAddress		= cpuAddress;
-		metadata->gpuAddress.guard	= 1;
-		metadata->gpuAddress.offset	= 0;
-		metadata->gpuAddress.allocationIdentifier = gpuAllocationIndex;
+		metadata->assignedGpuAddress.guard	= 1;
+		metadata->assignedGpuAddress.offset	= 0;
+		metadata->assignedGpuAddress.allocationIdentifier = gpuAllocationIndex;
 
 		gMtl4AllocationStorage.gpuAllocationPool[gpuAllocationIndex] = metadata;
 
@@ -236,7 +235,7 @@ void* mtl4MallocVirtualMemory(size_t size, size_t align, GpuResult* result) {
 		address.guard			= true;
 		address.offset			= 0;
 
-		metadata->gpuAddress	= address;
+		metadata->assignedGpuAddress	= address;
 	}
 
 	CMN_SET_RESULT(result, GPU_SUCCESS);
@@ -271,7 +270,7 @@ void  mtl4Free(void* ptr) {
 	{
 		CmnScopedMutex guard(&gMtl4AllocationStorage.mutex);
 
-		Mtl4AllocationMetadata* metadata = mtl4GetAllocationMetadataOf(ptr, false);
+		Mtl4AllocationMetadata* metadata = mtl4AllocationMetadataOf(ptr, false);
 		if (metadata == nullptr) {
 			return;
 		}
@@ -284,7 +283,7 @@ void  mtl4Free(void* ptr) {
 
 		cmnRemove(&gMtl4AllocationStorage.cpuAddressRangeMap, range);
 		cmnRemove(&gMtl4AllocationStorage.cpuAllocationMap, (uintptr_t)ptr);
-		cmnRemove(&gMtl4AllocationStorage.gpuAllocationPool, metadata->gpuAddress.allocationIdentifier);
+		cmnRemove(&gMtl4AllocationStorage.gpuAllocationPool, metadata->assignedGpuAddress.allocationIdentifier);
 
 		if (metadata->buffer != nil) {
 			[metadata->buffer release];
@@ -305,7 +304,7 @@ uintptr_t mtl4GpuAddressToActual(void* gpuPtr) {
 
 	Mtl4GpuAddress address = mtl4PtrToGpuAddress(gpuPtr);
 
-	Mtl4AllocationMetadata* metadata = mtl4GetAllocationMetadataOfGpuPtr(gpuPtr);
+	Mtl4AllocationMetadata* metadata = mtl4AllocationMetadataOfGpuPtr(gpuPtr);
 	if (metadata == nullptr) {
 		return 0;
 	}
@@ -317,17 +316,17 @@ uintptr_t mtl4GpuAddressToActual(void* gpuPtr) {
 	return metadata->buffer.gpuAddress + address.offset;
 }
 
-Mtl4AllocationMetadata* mtl4GetAllocationMetadataOf(void* ptr, bool attemptRangeBasedLookup) {
+Mtl4AllocationMetadata* mtl4AllocationMetadataOf(void* ptr, bool attemptRangeBasedLookup) {
 	if (mtl4IsCpuAddress(ptr)) {
-		return mtl4GetAllocationMetadataOfCpuPtr(ptr, attemptRangeBasedLookup);
+		return mtl4AllocationMetadataOfCpuPtr(ptr, attemptRangeBasedLookup);
 	} else {
-		return mtl4GetAllocationMetadataOfGpuPtr(ptr);
+		return mtl4AllocationMetadataOfGpuPtr(ptr);
 	}
 
 	return nullptr;
 }
 
-Mtl4AllocationMetadata* mtl4GetAllocationMetadataOfCpuPtr(void* ptr, bool attemptRangeBasedLookup) {
+Mtl4AllocationMetadata* mtl4AllocationMetadataOfCpuPtr(void* ptr, bool attemptRangeBasedLookup) {
 	assert(mtl4IsCpuAddress(ptr));
 
 	bool didFindElement;
@@ -356,7 +355,7 @@ Mtl4AllocationMetadata* mtl4GetAllocationMetadataOfCpuPtr(void* ptr, bool attemp
 	return nullptr;
 }
 
-Mtl4AllocationMetadata* mtl4GetAllocationMetadataOfGpuPtr(Mtl4GpuAddress address) {
+Mtl4AllocationMetadata* mtl4AllocationMetadataOfGpuPtr(Mtl4GpuAddress address) {
 	if (address.guard == 0) {
 		return nullptr;
 	}
@@ -373,7 +372,7 @@ void* mtl4HostToDevicePointer(void* ptr, GpuResult* result) {
 		return nullptr;
 	}
 
-	Mtl4AllocationMetadata* metadata = mtl4GetAllocationMetadataOf(ptr, true);
+	Mtl4AllocationMetadata* metadata = mtl4AllocationMetadataOf(ptr, true);
 	if (metadata == nullptr) {
 		CMN_SET_RESULT(result, GPU_NO_SUCH_ALLOCATION_FOUND);
 		return nullptr;
@@ -381,9 +380,10 @@ void* mtl4HostToDevicePointer(void* ptr, GpuResult* result) {
 
 	CMN_SET_RESULT(result, GPU_SUCCESS);
 
-	uintptr_t offsetFromBase = (uintptr_t)ptr - (uintptr_t)metadata->cpuAddress;
+	uintptr_t baseAddress = (uintptr_t)mtl4CpuAddressOf(metadata);
+	uintptr_t offsetFromBase = (uintptr_t)ptr - baseAddress;
 
-	Mtl4GpuAddress address = metadata->gpuAddress;
+	Mtl4GpuAddress address = metadata->assignedGpuAddress;
 	address.offset = offsetFromBase;
 	return mtl4GpuAddressToPtr(address);
 }
@@ -449,7 +449,7 @@ void mtl4FreeAssociatedTextures(Mtl4AllocationTextures* textureBucket) {
 void mtl4EnsureBackingBufferIsAllocated(Mtl4GpuAddress address, GpuResult* result) {
 	CmnScopedMutex guard(&gMtl4AllocationStorage.mutex);
 
-	Mtl4AllocationMetadata* metadata = mtl4GetAllocationMetadataOfGpuPtr(address);
+	Mtl4AllocationMetadata* metadata = mtl4AllocationMetadataOfGpuPtr(address);
 
 	if (metadata->buffer == nil) {
 		CMN_SET_RESULT(result, GPU_SUCCESS);

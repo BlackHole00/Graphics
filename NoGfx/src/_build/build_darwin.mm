@@ -11,6 +11,7 @@
 #include <lib/common/arena.cpp>
 #include <lib/common/pool.cpp>
 #include <lib/common/mutex.cpp>
+#include <lib/common/memory.cpp>
 #include <lib/common/heap_allocator.cpp>
 
 #include <lib/lib.cpp>

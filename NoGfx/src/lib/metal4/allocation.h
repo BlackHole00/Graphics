@@ -40,16 +40,35 @@ typedef struct Mtl4AllocationTextures {
 } Mtl4AllocationTextures;
 static_assert(sizeof(Mtl4AllocationTextures) == 64, "The allocation metadata pool should be able to contain this struct.");
 
+typedef enum Mtl4InternalAllocationUsage {
+	// The allocation references directly a `MTLBuffer`. Its memory type is _GPU_MEMORY_DEFAULT_ or _GPU_MEMORY_READBACK_.
+	MTL4_ALLOCATION_DIRECT			= 1,
+	// The allocation is _GPU_MEMORY_GPU_. No actual memory will be committed until first usage, thus the allocation is _virtual_.
+	MTL4_ALLOCATION_VIRTUAL			= 2,
+	
+	// The allocation has a real backing `MTLBuffer`.
+	MTL4_ALLOCATION_COMMITTED		= 4,
+
+	// The allocation has been used for a single texture. The allocation does not have any other free memory.
+	MTL4_ALLOCATION_FOR_SINGLE_TEXTURE	= 8,
+
+	// The allocation is correlated with a texture heap, thus can contain multiple textures, given there is space in the heap.
+	MTL4_ALLOCATION_FOR_TEXTURE_HEAP	= 16,
+} Mtl4InternalAllocationUsage;
+typedef uint32_t Mtl4InternalAllocationUsages;
+
 typedef struct Mtl4AllocationMetadata {
-	GpuMemory	memory;
+	GpuMemory			memory;
+	Mtl4InternalAllocationUsages	internalUsage;
+
 	size_t		size;
+	// TODO: Shouldn't be needed here.
 	size_t		align;
 
 	// Might be nil if memory == GPU_MEMORY_GPU and the actual memory has not yet been committed.
 	id<MTLBuffer>	buffer;
 
-	void*		cpuAddress;
-	Mtl4GpuAddress	gpuAddress;
+	Mtl4GpuAddress	assignedGpuAddress;
 
 	id<MTLHeap>	associatedTextureHeap;
 	Mtl4AllocationTextures*	relatedTextures;
@@ -107,19 +126,28 @@ inline bool mtl4IsGpuAddress(void* ptr) {
 
 uintptr_t mtl4GpuAddressToActual(void* gpuPtr);
 
+inline size_t mtl4GpuAddressOffsetFromBase(void* gpuPtr) {
+	Mtl4GpuAddress address = mtl4PtrToGpuAddress(gpuPtr);
+	return address.offset;
+}
+
 // Acquires the metadata of any non private allocation.
 // NOTE: Thread unsafe: requires locking gMtl4AllocationStorage.mutex
-Mtl4AllocationMetadata* mtl4GetAllocationMetadataOf(void* ptr, bool attemptRangeBasedLookup);
+Mtl4AllocationMetadata* mtl4AllocationMetadataOf(void* ptr, bool attemptRangeBasedLookup);
 
 // Acquires the metadata of a _cpu mapped virtual address_ related to a non-private allocation.
 // NOTE: Thread unsafe: requires locking gMtl4AllocationStorage.mutex
-Mtl4AllocationMetadata* mtl4GetAllocationMetadataOfCpuPtr(void* ptr, bool attemptRangeBasedLookup);
+Mtl4AllocationMetadata* mtl4AllocationMetadataOfCpuPtr(void* ptr, bool attemptRangeBasedLookup);
 
 // Acquires the metadata of a _gpu virtual address_ related to a non-private allocation.
 // NOTE: Thread unsafe: requires locking gMtl4AllocationStorage.mutex
-Mtl4AllocationMetadata* mtl4GetAllocationMetadataOfGpuPtr(Mtl4GpuAddress address);
-inline Mtl4AllocationMetadata* mtl4GetAllocationMetadataOfGpuPtr(void* ptr) {
-	return mtl4GetAllocationMetadataOfGpuPtr(mtl4PtrToGpuAddress(ptr));
+Mtl4AllocationMetadata* mtl4AllocationMetadataOfGpuPtr(Mtl4GpuAddress address);
+inline Mtl4AllocationMetadata* mtl4AllocationMetadataOfGpuPtr(void* ptr) {
+	return mtl4AllocationMetadataOfGpuPtr(mtl4PtrToGpuAddress(ptr));
+}
+
+inline void* mtl4CpuAddressOf(Mtl4AllocationMetadata* metadata) {
+	return metadata->buffer.contents;
 }
 
 void mtl4AssociateTextureToAllocation(Mtl4AllocationMetadata* metadata, Mtl4Texture texture, GpuResult* result);
