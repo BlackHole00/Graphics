@@ -127,10 +127,6 @@ GpuTexture mtl4CreateTexture(const GpuTextureDesc* desc, void* ptrGpu, GpuResult
 	CmnResult localResult;
 	GpuResult localGpuResult;
 
-	if (mtl4IsCpuAddress(ptrGpu)) {
-		return GPU_ALLOCATION_MEMORY_IS_CPU;
-	}
-
 
 	size_t backingSize = 0;
 	id<MTLHeap> backingHeap = nil;
@@ -143,11 +139,6 @@ GpuTexture mtl4CreateTexture(const GpuTextureDesc* desc, void* ptrGpu, GpuResult
 		Mtl4AllocationMetadata* metadata = mtl4AllocationMetadataOf(ptrGpu, true);
 		if (metadata == nullptr) {
 			CMN_SET_RESULT(result, GPU_NO_SUCH_ALLOCATION_FOUND);
-			return 0;
-		}
-
-		if (metadata->memory != GPU_MEMORY_GPU) {
-			CMN_SET_RESULT(result, GPU_ALLOCATION_MEMORY_IS_CPU);
 			return 0;
 		}
 

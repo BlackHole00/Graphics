@@ -47,7 +47,7 @@ GpuTexture mtl4CreateTexture(const GpuTextureDesc* desc, void* ptrGpu, GpuResult
 GpuTextureDescriptor mtl4TextureViewDescriptor(GpuTexture texture, const GpuViewDesc* desc, GpuResult* result);
 GpuTextureDescriptor mtl4RWTextureViewDescriptor(GpuTexture texture, const GpuViewDesc* desc, GpuResult* result);
 
-void mtl4DestroyTexture(GpuTexture texture);
+void mtl4DestroyTexture(Mtl4Texture texture);
 
 Mtl4TextureMetadata* mtl4TextureMetadataOf(Mtl4Texture texture);
 bool mtl4FindTextureViewIn(Mtl4TextureMetadata* metadata, const GpuViewDesc* desc, Mtl4TextureViews** bucket, size_t* index);

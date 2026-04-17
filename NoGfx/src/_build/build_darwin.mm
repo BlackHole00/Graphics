@@ -23,5 +23,5 @@
 #include <lib/metal4/device.mm>
 #include <lib/metal4/allocation.mm>
 #include <lib/metal4/textures.mm>
-#include <lib/metal4/validation.cpp>
+#include <lib/metal4/validation.mm>
 

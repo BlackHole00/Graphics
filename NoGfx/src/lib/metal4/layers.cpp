@@ -16,8 +16,8 @@ GpuBaseLayer gMtl4BaseLayer = {
 	/*gpuHostToDevicePointer=*/	mtl4HostToDevicePointer,
 	/*gpuTextureSizeAlign=*/	mtl4TextureSizeAlign,
 	/*gpuCreateTexture=*/		mtl4CreateTexture,
-	/*gpuTextureViewDescriptor=*/	nullptr,
-	/*gpuRWTextureViewDescriptor=*/	nullptr,
+	/*gpuTextureViewDescriptor=*/	mtl4TextureViewDescriptor,
+	/*gpuRWTextureViewDescriptor=*/	mtl4RWTextureViewDescriptor,
 };
 
 GpuLayer gMtl4ValidationLayer = {
@@ -28,9 +28,9 @@ GpuLayer gMtl4ValidationLayer = {
 	/*gpuMalloc=*/			mtl4ValidateGpuMalloc,
 	/*gpuFree=*/ 			nullptr,
 	/*gpuHostToDevicePointer=*/	mtl4ValidateGpuHostToDevicePointer,
-	/*gpuTextureSizeAlign=*/	nullptr,
-	/*gpuCreateTexture=*/		nullptr,
-	/*gpuTextureViewDescriptor=*/	nullptr,
-	/*gpuRWTextureViewDescriptor=*/	nullptr,
+	/*gpuTextureSizeAlign=*/	mtl4ValidateGpuTextureSizeAndAlign,
+	/*gpuCreateTexture=*/		mtl4ValidateGpuCreateTexture,
+	/*gpuTextureViewDescriptor=*/	mtl4ValidateGpuTextureViewDescriptor,
+	/*gpuRWTextureViewDescriptor=*/	mtl4ValidateGpuTextureRWViewDescriptor,
 };
 
