@@ -4,14 +4,13 @@
 #include <lib/common/common.h>
 #include <lib/common/type_traits.h>
 
-/**
-	Inserts an element at the requested index, shifting subsequent elements to the right.
-
-	@param elements The target array.
-	@param elementCount The current element count.
-	@param index The destination insertion index.
-	@param element The element to insert.
-*/
+// cmnInsertAtIndex inserts element at index and shifts later elements right.
+//
+// Inputs:
+// - elements: Destination array buffer.
+// - elementCount: Number of valid elements currently stored.
+// - index: Insertion index in [0, elementCount].
+// - element: Value to insert.
 template <typename T>
 void cmnInsertAtIndex(T* elements, size_t elementCount, size_t index, const T& element) {
 	if (index > elementCount) {
@@ -25,13 +24,12 @@ void cmnInsertAtIndex(T* elements, size_t elementCount, size_t index, const T& e
 	elements[index] = element;
 }
 
-/**
-	Inserts an element preserving sorted order.
-
-	@param elements The target sorted array.
-	@param elementCount The current element count.
-	@param element The element to insert.
-*/
+// cmnOrderedInsert inserts element into a sorted array while preserving order.
+//
+// Inputs:
+// - elements: Sorted destination array buffer.
+// - elementCount: Number of valid elements currently stored.
+// - element: Value to insert.
 template <typename T>
 void cmnOrderedInsert(T* elements, size_t elementCount, const T& element) {
 	size_t i = 0;
@@ -42,13 +40,12 @@ void cmnOrderedInsert(T* elements, size_t elementCount, const T& element) {
 	cmnInsertAtIndex(elements, elementCount, i, element);
 }
 
-/**
-	Removes the element at the requested index, shifting subsequent elements to the left.
-
-	@param elements The target array.
-	@param elementCount The current element count.
-	@param index The index of the element to remove.
-*/
+// cmnRemoveAtIndex removes the element at index and shifts later elements left.
+//
+// Inputs:
+// - elements: Destination array buffer.
+// - elementCount: Number of valid elements currently stored.
+// - index: Index to remove.
 template <typename T>
 void cmnRemoveAtIndex(T* elements, size_t elementCount, size_t index) {
 	size_t i = index;
@@ -58,13 +55,12 @@ void cmnRemoveAtIndex(T* elements, size_t elementCount, size_t index) {
 	}
 }
 
-/**
-	Removes an element from a sorted array.
-
-	@param elements The target sorted array.
-	@param elementCount The current element count.
-	@param element The element to remove.
-*/
+// cmnOrderedRemove removes element from a sorted array if present.
+//
+// Inputs:
+// - elements: Sorted destination array buffer.
+// - elementCount: Number of valid elements currently stored.
+// - element: Value to remove.
 template <typename T>
 void cmnOrderedRemove(T* elements, size_t elementCount, const T& element) {
 	size_t i = 0;
@@ -79,16 +75,16 @@ void cmnOrderedRemove(T* elements, size_t elementCount, const T& element) {
 	cmnRemoveAtIndex(elements, elementCount, i);
 }
 
-/**
-	Performs a linear search for an element.
-
-	@param elements The target array.
-	@param elementCount The current element count.
-	@param element The element to search.
-	@param[out] didFindElement Optional output flag indicating whether the element was found.
-
-	@return The index of the found element, or `SIZE_MAX` when not found.
-*/
+// cmnLinearSearch scans linearly for element.
+//
+// Inputs:
+// - elements: Array buffer to search.
+// - elementCount: Number of valid elements.
+// - element: Value to find.
+// - didFindElement: Optional output flag.
+//
+// Returns:
+// - Index of the matching element, or SIZE_MAX when not found.
 template <typename T>
 size_t cmnLinearSearch(T* elements, size_t elementCount, const T& element, bool* didFindElement = nullptr) {
 	size_t i = 0;
@@ -111,15 +107,15 @@ size_t cmnLinearSearch(T* elements, size_t elementCount, const T& element, bool*
 	}
 }
 
-/**
-	Finds the first index whose element is greater than or equal to the requested element.
-
-	@param elements The target sorted array.
-	@param elementCount The current element count.
-	@param element The element to compare.
-
-	@return The first matching index, or `elementCount` when no index matches.
-*/
+// cmnFindFirstGreaterElementIndex finds the first index with value >= element.
+//
+// Inputs:
+// - elements: Sorted array buffer.
+// - elementCount: Number of valid elements.
+// - element: Value to compare against.
+//
+// Returns:
+// - First index whose value is >= element, or elementCount.
 template <typename T>
 size_t cmnFindFirstGreaterElementIndex(T* elements, size_t elementCount, const T& element) {
 	size_t i = 0;

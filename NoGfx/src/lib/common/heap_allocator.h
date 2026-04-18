@@ -4,48 +4,49 @@
 #include <lib/common/common.h>
 #include <lib/common/allocator.h>
 
-/**
-  Allocates memory from the default system heap.
-
-	@param size Size in bytes to allocate.
-	@param align Requested alignment.
-	@param[out] result The result of the operation.
-
-	@return Allocated address, or `nullptr` on failure.
-	@retval CMN_SUCCESS Allocation completed successfully.
-	@retval CMN_OUT_OF_MEMORY Heap allocation failed.
-*/
+// cmnHeapAlloc allocates memory from the process heap.
+//
+// Inputs:
+// - size: Number of bytes to allocate.
+// - align: Requested alignment.
+// - result: Optional operation result.
+//
+// Results:
+// - CMN_SUCCESS: Allocation succeeded.
+// - CMN_OUT_OF_MEMORY: Heap allocator ran out of memory.
+//
+// Returns:
+// - Allocated address, or nullptr on failure.
 void* cmnHeapAlloc(size_t size, size_t align, CmnResult* result);
 
-/**
-  Reallocates memory from the default system heap.
+inline void* cmnHeapAlloc(size_t size, CmnResult* result) {
+	return cmnHeapAlloc(size, 0, result);
+}
 
-	@param address Previous allocation address.
-	@param oldSize Previous allocation size in bytes.
-	@param newSize New allocation size in bytes.
-	@param align Requested alignment.
-	@param[out] result The result of the operation.
-
-	@return Reallocated address, or `nullptr` on failure.
-	@retval CMN_SUCCESS Reallocation completed successfully.
-	@retval CMN_OUT_OF_MEMORY Heap reallocation failed.
-*/
+// cmnHeapRealloc reallocates memory previously returned by cmnHeapAlloc.
+//
+// Inputs:
+// - address: Previous allocation address.
+// - oldSize: Previous allocation size in bytes.
+// - newSize: New allocation size in bytes.
+// - align: Requested alignment.
+// - result: Optional operation result.
+//
+// Results:
+// - CMN_SUCCESS: Reallocation succeeded.
+// - CMN_OUT_OF_MEMORY: Heap allocator ran out of memory.
+//
+// Returns:
+// - Reallocated address, or nullptr on failure.
 void* cmnHeapRealloc(void* address, size_t oldSize, size_t newSize, size_t align, CmnResult* result);
 
-/**
-  Frees memory allocated from the default system heap.
+// cmnHeapFree releases memory allocated from the process heap.
+//
+// Inputs:
+// - data: Address to free.
+void cmnHeapFree(void* data);
 
-	@param data Address to free.
-	@param[out] result The result of the operation.
-	@retval CMN_SUCCESS Memory was freed successfully.
-*/
-void cmnHeapFree(void* data, CmnResult* result);
-
-/**
-	Creates a CmnAllocator that uses the process heap.
-
-	@return Heap-backed allocator.
-*/
+// cmnHeapAllocator returns a CmnAllocator backed by the process heap.
 CmnAllocator cmnHeapAllocator(void);
 
 #endif // CMN_HEAPALLOCATOR_H

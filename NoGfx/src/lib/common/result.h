@@ -1,32 +1,24 @@
 #ifndef CMN_RESULT_H
 #define CMN_RESULT_H
 
-/**
-	Result codes returned by common library operations.
-*/
+// Result codes returned by common library operations.
 typedef enum CmnResult {
-	/** The operation completed successfully. */
+	// Operation completed successfully.
 	CMN_SUCCESS		= 0,
 
-	/** Memory allocation from the requested allocator failed. */
 	CMN_OUT_OF_MEMORY,
-	/** Virtual memory allocation failed. */
+	// Virtual memory allocation failed.
 	CMN_VIRTUAL_MEMORY_ALLOCATION_FAILED,
-	/** No more free slots were available in the target resource. */
+	// No free slots are available in the target resource.
 	CMN_OUT_OF_RESOURCE_SLOTS,
 
-	/** The provided parameters are invalid. */
+	// Provided parameters are invalid.
 	CMN_INVALID_PARAMETERS,
-	/** The requested operation is not supported. */
+	// Requested operation is not supported.
 	CMN_UNSUPPORTED_OPERATION,
 } CmnResult;
 
-/**
-	Sets a result code only when the destination pointer is valid.
-
-	@param _res_ptr The destination result pointer.
-	@param _val The result value to write.
-*/
+// Write a result code only when the destination pointer is valid.
 #define CMN_SET_RESULT(_res_ptr, _val) if (_res_ptr != nullptr) { *_res_ptr = _val; }
 
 #endif // CMN_RESULT_H

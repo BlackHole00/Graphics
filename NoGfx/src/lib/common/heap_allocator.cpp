@@ -48,9 +48,8 @@ void* cmnHeapRealloc(void* address, size_t oldSize, size_t newSize, size_t align
 	return newAddress;
 }
 
-void cmnHeapFree(void* data, CmnResult* result) {
+void cmnHeapFree(void* data) {
 	free(data);
-	CMN_SET_RESULT(result, CMN_SUCCESS);
 }
 
 static void* cmnHeapAllocatorAlloc(void*, size_t size, size_t align, CmnResult* result) {
@@ -62,7 +61,8 @@ static void* cmnHeapAllocatorRealloc(void*, void* address, size_t oldSize, size_
 }
 
 static void cmnHeapAllocatorFree(void*, void* address, CmnResult* result) {
-	cmnHeapFree(address, result);
+	cmnHeapFree(address);
+	CMN_SET_RESULT(result, CMN_SUCCESS);
 }
 
 static void cmnHeapAllocatorFreeAll(void*, CmnResult* result) {

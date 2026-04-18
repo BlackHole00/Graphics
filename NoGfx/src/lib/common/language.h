@@ -2,7 +2,7 @@
 #define CMN_COMMONLANGUAGE_H
 
 #ifdef __cplusplus
-	/** The active source language is C++. */
+	// Active source language is C++.
 	#define CMN_LANGUAGE_CPP 1
 
 	#if __cplusplus == 1
@@ -28,7 +28,7 @@
 		#define CMN_LANGUAGE_VERSION 2023
 	#endif
 #else
-	/** The active source language is C. */
+	// Active source language is C.
 	#define CMN_LANGUAGE_C 1
 
 	#ifndef CMN_COMPILER_MSVC
@@ -81,11 +81,11 @@
 #endif
 
 #ifdef __OBJC__
-	/** The active source language includes Objective-C extensions. */
+	// Source language includes Objective-C extensions.
 	#define CMN_LANGUAGE_OBJECTIVEC 1
 
 	#if defined(CMN_LANGUAGE_CPP)
-		/** The active source language is Objective-C++. */
+		// Source language is Objective-C++.
 		#define CMN_LANGUAGE_OBJECTIVECPP 1
 	#endif
 #endif

@@ -6,84 +6,71 @@
 #include <lib/common/allocator.h>
 #include <lib/common/algorithms.h>
 
-/** The maximum number of children in each B-tree node. */
+// Maximum number of children in each B-tree node.
 #define CMN_BTREE_ORDER	16
-/** The minimum degree of the B-tree. */
+// Minimum degree of the B-tree.
 #define CMN_BTREE_T	8
 
-/**
-	A single node of a B-tree.
-	@see CmnBTree
-*/
+// Single node of a B-tree.
 template <typename K, typename V>
 struct CmnBTreeNode {
-	/** True when this node is a leaf node. */
 	bool		isLeaf;
-	/** Number of valid keys in the node. */
 	uint8_t		keyCount;
 
-	/** Ordered keys stored in the node. */
 	K			keys	[CMN_BTREE_ORDER - 1];
-	/** Values associated with each key. */
 	V			elements[CMN_BTREE_ORDER - 1];
-	/** Child pointers for internal nodes. */
 	CmnBTreeNode<K, V>*	children[CMN_BTREE_ORDER];
 };
 
-/**
-	B-tree container mapping keys to values.
-*/
+// B-tree container
 template <typename K, typename V>
 struct CmnBTree {
-	/** Allocator used for node allocations. */
 	CmnAllocator	nodesAllocator;
 
-	/** Root node of the tree. */
 	CmnBTreeNode<K, V>*	root;
-	/** Value returned when lookups fail. */
 	V			defaultElement;
 };
 
-/**
-	Initializes a B-tree.
-
-	@param tree The tree to initialize.
-	@param defaultElement Value returned when lookups fail.
-	@param nodesAllocator Allocator used for node storage.
-	@param[out] result The result of the operation.
-	@retval CMN_SUCCESS Tree initialization completed successfully.
-	@retval CMN_OUT_OF_MEMORY Node allocation failed.
-	@relates CmnBTree
-*/
+// cmnCreateBTree initializes a B-tree.
+//
+// Inputs:
+// - tree: Tree to initialize.
+// - defaultElement: Value returned when lookups fail.
+// - nodesAllocator: Allocator used for nodes.
+// - result: Optional operation result.
+//
+// Results:
+// - CMN_SUCCESS: Initialization succeeded.
+// - CMN_OUT_OF_MEMORY: Backing allocator ran out of memory.
 template <typename K, typename V>
 void cmnCreateBTree(CmnBTree<K, V>* tree, const V& defaultElement, CmnAllocator nodesAllocator, CmnResult* result);
 
-/**
-	Splits a full child node during insertion.
-
-	@param tree The target tree.
-	@param node The parent node.
-	@param index The child index to split.
-	@param[out] result The result of the operation.
-	@retval CMN_SUCCESS Node split completed successfully.
-	@retval CMN_OUT_OF_MEMORY Node allocation failed.
-	@relates CmnBTree
-*/
+// cmnBTreeSplit splits a full child node during insertion.
+//
+// Inputs:
+// - tree: Target tree.
+// - node: Parent node.
+// - index: Child index to split.
+// - result: Optional operation result.
+//
+// Results:
+// - CMN_SUCCESS: Split succeeded.
+// - CMN_OUT_OF_MEMORY: Backing allocator ran out of memory.
 template <typename K, typename V>
 void cmnBTreeSplit(CmnBTree<K, V>* tree, CmnBTreeNode<K, V>* node, size_t index, CmnResult* result);
 
-/**
-	Inserts into a subtree rooted at a non-null node.
-
-	@param tree The target tree.
-	@param node The current node.
-	@param key The key to insert.
-	@param element The value to insert.
-	@param[out] result The result of the operation.
-	@retval CMN_SUCCESS Insertion into the subtree completed successfully.
-	@retval CMN_OUT_OF_MEMORY Node allocation failed while splitting full nodes.
-	@relates CmnBTree
-*/
+// cmnBTreeInsertNotNull inserts into a subtree rooted at node.
+//
+// Inputs:
+// - tree: Target tree.
+// - node: Current node.
+// - key: Key to insert.
+// - element: Value to insert.
+// - result: Optional operation result.
+//
+// Results:
+// - CMN_SUCCESS: Insert step succeeded.
+// - CMN_OUT_OF_MEMORY: Backing allocator ran out of memory.
 template <typename K, typename V>
 void cmnBTreeInsertNotNull(
 	CmnBTree<K, V>* tree,
@@ -93,153 +80,140 @@ void cmnBTreeInsertNotNull(
 	CmnResult* result
 );
 
-/**
-	Searches for a key starting from a node.
-
-	@param node The node where search starts.
-	@param key The key to find.
-	@param[out] indexInNode Output index in the found node.
-
-	@return Pointer to the node containing the key, or `nullptr` if not found.
-*/
+// cmnBTreeSearchNode searches key starting from node.
+//
+// Inputs:
+// - node: Search start node.
+// - key: Key to find.
+// - indexInNode: Output index in found node.
+//
+// Returns:
+// - Pointer to node containing key, or nullptr if missing.
 template <typename K, typename V>
 CmnBTreeNode<K, V>* cmnBTreeSearchNode(CmnBTreeNode<K, V>* node, const K& key, size_t* indexInNode);
 
-/**
-	Gets predecessor key and value of a node entry.
-
-	@param node The node containing the reference entry.
-	@param index The entry index.
-	@param[out] key Output predecessor key.
-	@param[out] element Output predecessor value.
-*/
+// cmnBTreePredecessor gets predecessor key/value for node entry.
+//
+// Inputs:
+// - node: Node containing reference entry.
+// - index: Entry index.
+// - key: Output predecessor key.
+// - element: Output predecessor value.
 template <typename K, typename V>
 void cmnBTreePredecessor(CmnBTreeNode<K, V>* node, size_t index, K* key, V* element);
 
-/**
-	Gets successor key and value of a node entry.
-
-	@param node The node containing the reference entry.
-	@param index The entry index.
-	@param[out] key Output successor key.
-	@param[out] element Output successor value.
-*/
+// cmnBTreeSuccessor gets successor key/value for node entry.
+//
+// Inputs:
+// - node: Node containing reference entry.
+// - index: Entry index.
+// - key: Output successor key.
+// - element: Output successor value.
 template <typename K, typename V>
 void cmnBTreeSuccessor(CmnBTreeNode<K, V>* node, size_t index, K* key, V* element);
 
-/**
-	Borrows one key from the previous sibling.
-
-	@param node Parent node.
-	@param index Child index that borrows.
-*/
+// cmnBTreeBorrowFromPrev borrows one key from the previous sibling.
+//
+// Inputs:
+// - node: Parent node.
+// - index: Borrowing child index.
 template <typename K, typename V>
 void cmnBTreeBorrowFromPrev(CmnBTreeNode<K, V>* node, size_t index);
 
-/**
-	Borrows one key from the next sibling.
-
-	@param node Parent node.
-	@param index Child index that borrows.
-*/
+// cmnBTreeBorrowFromNext borrows one key from the next sibling.
+//
+// Inputs:
+// - node: Parent node.
+// - index: Borrowing child index.
 template <typename K, typename V>
 void cmnBTreeBorrowFromNext(CmnBTreeNode<K, V>* node, size_t index);
 
-/**
-	Merges a child with its next sibling.
-
-	@param tree The target tree.
-	@param node Parent node.
-	@param index Child index to merge.
-*/
+// cmnBTreeMerge merges a child with its next sibling.
+//
+// Inputs:
+// - tree: Target tree.
+// - node: Parent node.
+// - index: Child index to merge.
 template <typename K, typename V>
 void cmnBTreeMerge(CmnBTree<K, V>* tree, CmnBTreeNode<K, V>* node, size_t index);
 
-/**
-	Ensures a child has enough keys before descending.
-
-	@param tree The target tree.
-	@param node Parent node.
-	@param index Child index to fix.
-*/
+// cmnBTreeFill ensures a child has enough keys before descending.
+//
+// Inputs:
+// - tree: Target tree.
+// - node: Parent node.
+// - index: Child index to fix.
 template <typename K, typename V>
 void cmnBTreeFill(CmnBTree<K, V>* tree, CmnBTreeNode<K, V>* node, size_t index);
 
-/**
-	Removes a key from a subtree.
-
-	@param tree The target tree.
-	@param node Subtree root node.
-	@param key The key to remove.
-*/
+// cmnBTreeRemove removes key from subtree rooted at node.
+//
+// Inputs:
+// - tree: Target tree.
+// - node: Subtree root node.
+// - key: Key to remove.
 template <typename K, typename V>
 void cmnBTreeRemove(CmnBTree<K, V>* tree, CmnBTreeNode<K, V>* node, const K& key);
 
-/**
-	Removes a key from an internal node.
-
-	@param tree The target tree.
-	@param node Node containing the key.
-	@param index Entry index to remove.
-*/
+// cmnBTreeRemoveFromNonLeaf removes key from an internal node entry.
+//
+// Inputs:
+// - tree: Target tree.
+// - node: Node containing key.
+// - index: Entry index to remove.
 template <typename K, typename V>
 void cmnBTreeRemoveFromNonLeaf(CmnBTree<K, V>* tree, CmnBTreeNode<K, V>* node, size_t index);
 
-/**
-	Removes a key from a leaf node.
-
-	@param node Leaf node containing the key.
-	@param index Entry index to remove.
-*/
+// cmnBTreeRemoveFromLeaf removes key from a leaf node entry.
+//
+// Inputs:
+// - node: Leaf node containing key.
+// - index: Entry index to remove.
 template <typename K, typename V>
 void cmnBTreeRemoveFromLeaf(CmnBTreeNode<K, V>* node, size_t index);
 
-/**
-	Inserts a key-value pair into the tree.
-
-	@param tree The target tree.
-	@param key The key to insert.
-	@param element The value to insert.
-	@param[out] result The result of the operation.
-	@retval CMN_SUCCESS Key-value insertion completed successfully.
-	@retval CMN_OUT_OF_MEMORY Node allocation failed while splitting full nodes.
-	@relates CmnBTree
-*/
+// cmnInsert inserts a key-value pair into the tree.
+//
+// Inputs:
+// - tree: Target tree.
+// - key: Key to insert.
+// - element: Value to insert.
+// - result: Optional operation result.
+//
+// Results:
+// - CMN_SUCCESS: Insert succeeded.
+// - CMN_OUT_OF_MEMORY: Backing allocator ran out of memory.
 template <typename K, typename V>
 void cmnInsert(CmnBTree<K, V>* tree, const K& key, const V& element, CmnResult* result);
 
-/**
-	Checks whether a key exists in the tree.
-
-	@param tree The target tree.
-	@param key The key to search.
-
-	@return True if the key exists, false otherwise.
-	@relates CmnBTree
-*/
+// cmnContains checks whether key exists in the tree.
+//
+// Inputs:
+// - tree: Target tree.
+// - key: Key to search.
+//
+// Returns:
+// - true when key exists.
 template <typename K, typename V>
 bool cmnContains(CmnBTree<K, V>* tree, const K& key);
 
-/**
-	Gets the value associated with a key.
-
-	@param tree The target tree.
-	@param key The key to search.
-	@param[out] didFindElement Output flag indicating whether the key exists.
-
-	@return Reference to the found value, or to `defaultElement` when missing.
-	@relates CmnBTree
-*/
+// cmnGet gets the value associated with key.
+//
+// Inputs:
+// - tree: Target tree.
+// - key: Key to search.
+// - didFindElement: Optional output flag.
+//
+// Returns:
+// - Found value reference, or defaultElement when missing.
 template <typename K, typename V>
 V& cmnGet(CmnBTree<K, V>* tree, const K& key, bool* didFindElement);
 
-/**
-	Removes a key from the tree.
-
-	@param tree The target tree.
-	@param key The key to remove.
-	@relates CmnBTree
-*/
+// cmnRemove removes key from the tree.
+//
+// Inputs:
+// - tree: Target tree.
+// - key: Key to remove.
 template <typename K, typename V>
 void cmnRemove(CmnBTree<K, V>* tree, const K& key);
 

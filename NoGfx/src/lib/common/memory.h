@@ -3,34 +3,34 @@
 
 #include <lib/common/common.h>
 
-/**
-	Checks whether `ptr` satisfies the requested byte alignment.
-
-	@param ptr The address value to validate.
-	@param alignment Required alignment in bytes.
-
-	@return `true` if `ptr` is aligned to `alignment`, otherwise `false`.
-*/
+// cmnIsAlignedTo reports whether ptr satisfies the requested alignment.
+//
+// Inputs:
+// - ptr: Address value to test.
+// - alignment: Required byte alignment.
+//
+// Returns:
+// - true when ptr is aligned to alignment.
 bool cmnIsAlignedTo(uintptr_t ptr, size_t alignment);
 
-/**
-	Rounds `ptr` up to the next address aligned to `alignment`.
-
-	@param ptr The address value to round.
-	@param alignment Required alignment in bytes.
-
-	@return The smallest address `>= ptr` that is aligned to `alignment`.
-*/
+// cmnUpAlignTo rounds ptr up to the next aligned address.
+//
+// Inputs:
+// - ptr: Address value to round.
+// - alignment: Required byte alignment.
+//
+// Returns:
+// - Smallest address >= ptr aligned to alignment.
 uintptr_t cmnUpAlignTo(uintptr_t ptr, size_t alignment);
 
-/**
-	Rounds `ptr` down to the previous address aligned to `alignment`.
-
-	@param ptr The address value to round.
-	@param alignment Required alignment in bytes.
-
-	@return The largest address `<= ptr` that is aligned to `alignment`.
-*/
+// cmnDownAlignTo rounds ptr down to the previous aligned address.
+//
+// Inputs:
+// - ptr: Address value to round.
+// - alignment: Required byte alignment.
+//
+// Returns:
+// - Largest address <= ptr aligned to alignment.
 uintptr_t cmnDownAlignTo(uintptr_t ptr, size_t alignment);
 
 #endif // CMN_MEMORY_H

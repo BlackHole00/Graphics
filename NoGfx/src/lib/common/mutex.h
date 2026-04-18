@@ -4,51 +4,29 @@
 #include <lib/common/futex.h>
 #include <lib/common/atomic.h>
 
-/**
-	Internal state values of CmnMutex.
-*/
+// Internal state values of CmnMutex.
 typedef enum CmnMutexState {
-	/** The mutex is not held by any thread. */
+	// Mutex is not held by any thread.
 	CMN_MUTEX_UNLOCKED = 0,
-	/** The mutex is currently locked. */
+	// Mutex is currently locked.
 	CMN_MUTEX_LOCKED,
-	/** The mutex has one or more waiting threads. */
+	// Mutex has one or more waiting threads.
 	CMN_MUTEX_WAITING,
 } CmnMutexState;
 
-/**
-	A lightweight mutex.
-*/
+// Lightweight mutex.
 typedef struct CmnMutex {
-	/** Futex word storing the current CmnMutexState value. */
+	// Futex word storing the current CmnMutexState value.
 	CmnFutex futex;
 } CmnMutex;
 
-/**
-	Slow locking path used after a failed fast-path lock attempt.
-
-	@param mutex The mutex to lock.
-	@param initialState The state observed by the caller.
-	@relates CmnMutex
-	@remarks For internal use only. The user should call `cmnMutexLock` instead.
-*/
+// Internal slow path for mutex lock.
 void cmnMutexLockSlow(CmnMutex* mutex, CmnMutexState initialState);
 
-/**
-	Slow unlock path used when waiters are present.
-
-	@param mutex The mutex to unlock.
-	@relates CmnMutex
-	@remarks For internal use only. The user should call `cmnMutexUnlock` instead.
-*/
+// Internal slow path for mutex unlock when waiters are present.
 void cmnMutexUnlockSlow(CmnMutex* mutex);
 
-/**
-	Locks a mutex, blocking when needed.
-
-	@param mutex The mutex to lock.
-	@relates CmnMutex
-*/
+// Lock a mutex, blocking if needed.
 inline void cmnMutexLock(CmnMutex* mutex) {
 	CmnMutexState state = (CmnMutexState)cmnAtomicExchange(&mutex->futex.value, (uint32_t)CMN_MUTEX_LOCKED, CMN_ACQUIRE);
 	if (state != CMN_MUTEX_UNLOCKED) {
@@ -56,25 +34,13 @@ inline void cmnMutexLock(CmnMutex* mutex) {
 	}
 }
 
-/**
-	Attempts to lock a mutex without blocking.
-
-	@param mutex The mutex to lock.
-
-	@return True when the lock was acquired, false otherwise.
-	@relates CmnMutex
-*/
+// Try to lock a mutex without blocking.
 inline bool cmnMutexTryLock(CmnMutex* mutex) {
 	uint32_t expected = (uint32_t)CMN_MUTEX_UNLOCKED;
 	return cmnAtomicCompareExchangeStrong(&mutex->futex.value, &expected, (uint32_t)CMN_MUTEX_LOCKED, CMN_ACQUIRE, CMN_ACQUIRE);
 }
 
-/**
-	Unlocks a mutex.
-
-	@param mutex The mutex to unlock.
-	@relates CmnMutex
-*/
+// Unlock a mutex.
 inline void cmnMutexUnlock(CmnMutex* mutex) {
 	CmnMutexState state = (CmnMutexState)cmnAtomicExchange(&mutex->futex.value, (uint32_t)CMN_MUTEX_UNLOCKED, CMN_RELEASE);
 	if (state == CMN_MUTEX_WAITING) {
@@ -83,29 +49,25 @@ inline void cmnMutexUnlock(CmnMutex* mutex) {
 	}
 }
 
-/**
-	RAII guard that locks a mutex on construction and unlocks on destruction.
-*/
+// RAII guard for CmnMutex.
 typedef class CmnScopedMutex {
 public:
-	/** The managed mutex. */
+	// Managed mutex.
 	CmnMutex* mutex;
 
-	/**
-		Constructs a scoped guard and locks the mutex.
-
-		@param mutex The mutex to lock.
-		@relates CmnScopedMutex
-	*/
+	// Lock mutex on construction.
 	CmnScopedMutex(CmnMutex* mutex) {
 		this->mutex = mutex;
-		cmnMutexLock(mutex);
+		cmnMutexLock(this->mutex);
 	}
 
-	/**
-		Destructs the guard and unlocks the mutex.
-		@relates CmnScopedMutex
-	*/
+	// Lock mutex on construction.
+	CmnScopedMutex(const CmnMutex* mutex) {
+		this->mutex = (CmnMutex*)mutex;
+		cmnMutexLock(this->mutex);
+	}
+
+	// Unlock mutex on destruction.
 	~CmnScopedMutex() {
 		cmnMutexUnlock(this->mutex);
 	}

@@ -17,6 +17,7 @@ bool cmnAppend(CmnExponentialArray<T, N>* array, const T& value, CmnResult* resu
 	}
 
 	cmnSet<T, N>(array, idx, value);
+	CMN_SET_RESULT(result, CMN_SUCCESS);
 	return true;
 }
 

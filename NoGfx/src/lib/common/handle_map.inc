@@ -1,32 +1,12 @@
 template <typename T>
-void cmnCreateHandleMap(CmnHandleMap<T>* map, CmnAllocator backingAllocator, T defaultElement, CmnResult* result) {
-	CmnResult localResult;
-
-	cmnCreateExponentialArray(&map->buckets, backingAllocator, &localResult);
-	if (localResult != CMN_SUCCESS) {
-		CMN_SET_RESULT(result, localResult);
-		return;
-	}
-
-	CmnHandleMapBucket<T> firstBucket;
-	firstBucket.isInUse		= false,
-	firstBucket.generation		= 0,
-	firstBucket.nextFreeIndex	= 1,
-
-	cmnAppend(&map->buckets, firstBucket, &localResult);
-	if (localResult != CMN_SUCCESS) {
-		CMN_SET_RESULT(result, localResult);
-		return;
-	}
-
-	map->firstFree = 0;
-	map->defaultElement = defaultElement;
-
-	CMN_SET_RESULT(result, CMN_SUCCESS);
+bool cmninternalIsValid(const CmnHandleMap<T>* map, CmnHandle handle) {
+	return handle.index < map->buckets.length &&
+		map->buckets[handle.index].isInUse &&
+		handle.generation == map->buckets[handle.index].generation;
 }
 
 template <typename T>
-uint32_t cmnHandleMapGetNextFreeBucket(CmnHandleMap<T>* map, CmnResult* result) {
+uint32_t cmninternalHandleMapGetNextFreeBucket(CmnHandleMap<T>* map, CmnResult* result) {
 	CmnResult localResult;
 
 	uint32_t firstFreeBucketIndex = map->firstFree;
@@ -73,10 +53,40 @@ uint32_t cmnHandleMapGetNextFreeBucket(CmnHandleMap<T>* map, CmnResult* result) 
 }
 
 template <typename T>
+void cmnCreateHandleMap(CmnHandleMap<T>* map, CmnAllocator backingAllocator, T defaultElement, CmnResult* result) {
+	CmnResult localResult;
+	*map = {};
+
+	cmnCreateExponentialArray(&map->buckets, backingAllocator, &localResult);
+	if (localResult != CMN_SUCCESS) {
+		CMN_SET_RESULT(result, localResult);
+		return;
+	}
+
+	CmnHandleMapBucket<T> firstBucket;
+	firstBucket.isInUse		= false,
+	firstBucket.generation		= 0,
+	firstBucket.nextFreeIndex	= 1,
+
+	cmnAppend(&map->buckets, firstBucket, &localResult);
+	if (localResult != CMN_SUCCESS) {
+		CMN_SET_RESULT(result, localResult);
+		return;
+	}
+
+	map->firstFree = 0;
+	map->defaultElement = defaultElement;
+
+	CMN_SET_RESULT(result, CMN_SUCCESS);
+}
+
+template <typename T>
 CmnHandle cmnInsert(CmnHandleMap<T>* map, const T& element, CmnResult* result) {
+	CmnScopedMutex guard(&map->mutex);
+
 	CmnResult localResult;
 
-	uint32_t freeBucketIndex = cmnHandleMapGetNextFreeBucket(map, &localResult);
+	uint32_t freeBucketIndex = cmninternalHandleMapGetNextFreeBucket(map, &localResult);
 	if (localResult != CMN_SUCCESS) {
 		CMN_SET_RESULT(result, localResult);
 		return {};
@@ -84,6 +94,7 @@ CmnHandle cmnInsert(CmnHandleMap<T>* map, const T& element, CmnResult* result) {
 
 	CmnHandleMapBucket<T>* bucket = &map->buckets[freeBucketIndex];
 	bucket->generation++;
+	bucket->refCount = 1;
 	bucket->isInUse = true;
 	bucket->element = element;
 
@@ -96,14 +107,16 @@ CmnHandle cmnInsert(CmnHandleMap<T>* map, const T& element, CmnResult* result) {
 
 template <typename T>
 bool cmnIsValid(const CmnHandleMap<T>* map, CmnHandle handle) {
-	return handle.index < map->buckets.length &&
-		map->buckets[handle.index].isInUse &&
-		handle.generation == map->buckets[handle.index].generation;
+	CmnScopedMutex guard(&map->mutex);
+
+	return cmninternalIsValid<T>(map, handle);
 }
 
 template <typename T>
 T& cmnGet(CmnHandleMap<T>* map, CmnHandle handle, bool* wasHandleValid) {
-	if (!cmnIsValid(map, handle)) {
+	CmnScopedMutex guard(&map->mutex);
+
+	if (!cmninternalIsValid(map, handle)) {
 		if (wasHandleValid != nullptr) {
 			*wasHandleValid = false;
 		}
@@ -120,13 +133,48 @@ T& cmnGet(CmnHandleMap<T>* map, CmnHandle handle, bool* wasHandleValid) {
 
 template <typename T>
 void cmnRemove(CmnHandleMap<T>* map, CmnHandle handle) {
-	if (!cmnIsValid(map, handle)) {
+	CmnScopedMutex guard(&map->mutex);
+
+	if (!cmninternalIsValid(map, handle)) {
 		return;
 	}
 
 	CmnHandleMapBucket<T>* bucket = &map->buckets[handle.index];
+
 	bucket->isInUse = false;
 	bucket->nextFreeIndex = map->firstFree;
 
 	map->firstFree = handle.index;
+}
+
+template <typename T>
+T& cmnRetain(CmnHandleMap<T>* map, CmnHandle handle, bool* wasHandleValid) {
+	CmnScopedMutex guard(&map->mutex);
+
+	if (!cmninternalIsValid(map, handle)) {
+		if (wasHandleValid != nullptr) {
+			*wasHandleValid = false;
+		}
+
+		return map->defaultElement;
+	} else {
+		if (wasHandleValid != nullptr) {
+			*wasHandleValid = true;
+		}
+
+		map->buckets[handle.index].refCount++;
+		return map->buckets[handle.index].element;
+	}
+}
+
+template <typename T>
+bool cmnRelease(CmnHandleMap<T>* map, CmnHandle handle) {
+	CmnScopedMutex guard(&map->mutex);
+
+	if (!cmninternalIsValid(map, handle)) {
+		return false;
+	}
+
+	map->buckets[handle.index].refCount--;
+	return map->buckets[handle.index].refCount == 0;
 }

@@ -3,48 +3,36 @@
 
 #include <lib/common/exponential_array.h>
 
-/** Sentinel key marking a never-used bucket. */
+// Sentinel key marking a never-used bucket.
 #define CMN_POINTERMAP_FREE ((uintptr_t)0)
-/** Sentinel key marking a deleted bucket. */
+// Sentinel key marking a deleted bucket.
 #define CMN_POINTERMAP_DELETED ((uintptr_t)(~(uintptr_t)0))
 
-/**
-	Bucket used internally by CmnPointerMap.
-	@see CmnPointerMap
-*/
+// Bucket used internally by CmnPointerMap.
 template <typename T>
 struct CmnPointerMapBucket {
-	/** Key stored in this bucket. */
 	uintptr_t	key;
-	/** Value stored in this bucket. */
 	T		value;
 };
 
-/**
-	Open-addressing hash map keyed by pointer-sized integers.
-*/
+// Open-addressing hash map keyed by pointer-sized integers.
 template <typename T>
 struct CmnPointerMap {
-	/** Allocator used for bucket storage. */
 	CmnAllocator		allocator;
 
-	/** Bucket array. */
 	CmnPointerMapBucket<T>*	buckets;
-	/** Number of elements currently stored. */
 	size_t			length;
-	/** Total number of buckets. */
 	size_t			capacity;
-	/** Value returned when lookup fails. */
 	T			defaultValue;
 };
 
-/**
-	Hashes a pointer-sized key.
-
-	@param ptr The key to hash.
-
-	@return The computed hash value.
-*/
+// cmnHashPointer hashes a pointer-sized key.
+//
+// Inputs:
+// - ptr: Key to hash.
+//
+// Returns:
+// - Computed hash value.
 inline size_t cmnHashPointer(uintptr_t ptr) {
 	uint64_t hash = ptr + 0x9e3779b97f4a7c15ULL;
 	hash = (hash ^ (hash >> 30)) * 0xbf58476d1ce4e5b9ULL;
@@ -54,18 +42,18 @@ inline size_t cmnHashPointer(uintptr_t ptr) {
 	return (size_t)hash;
 }
 
-/**
-	Initializes a pointer map.
-
-	@param map The map to initialize.
-	@param initialCapacity Initial bucket capacity, or 256 when zero.
-	@param defaultValue Value returned by failed lookups.
-	@param allocator Allocator used for bucket storage.
-	@param[out] result The result of the operation.
-	@retval CMN_SUCCESS Pointer map initialization completed successfully.
-	@retval CMN_OUT_OF_MEMORY Bucket allocation failed.
-	@relates CmnPointerMap
-*/
+// cmnCreatePointerMap initializes a pointer map.
+//
+// Inputs:
+// - map: Map to initialize.
+// - initialCapacity: Initial bucket capacity, or 256 when zero.
+// - defaultValue: Value returned by failed lookups.
+// - allocator: Allocator used for bucket storage.
+// - result: Optional operation result.
+//
+// Results:
+// - CMN_SUCCESS: Initialization succeeded.
+// - CMN_OUT_OF_MEMORY: Backing allocator ran out of memory.
 template <typename T>
 void cmnCreatePointerMap(CmnPointerMap<T>* map, size_t initialCapacity, T defaultValue, CmnAllocator allocator, CmnResult* result) {
 	CmnResult localResult;
@@ -88,12 +76,10 @@ void cmnCreatePointerMap(CmnPointerMap<T>* map, size_t initialCapacity, T defaul
 	CMN_SET_RESULT(result, CMN_SUCCESS);
 }
 
-/**
-	Destroys a pointer map and releases allocated storage.
-
-	@param map The map to destroy.
-	@relates CmnPointerMap
-*/
+// cmnDestroyPointerMap destroys a pointer map and releases storage.
+//
+// Inputs:
+// - map: Map to destroy.
 template <typename T>
 void cmnDestroyPointerMap(CmnPointerMap<T>* map) {
 	if (map->allocator.vtable != nullptr) {
@@ -103,16 +89,17 @@ void cmnDestroyPointerMap(CmnPointerMap<T>* map) {
 	*map = {};
 }
 
-/**
-	Reserves capacity for at least `capacity` elements.
-
-	@param map The target map.
-	@param capacity The requested bucket capacity.
-	@param[out] result The result of the operation.
-	@retval CMN_SUCCESS Capacity reservation completed successfully.
-	@retval CMN_OUT_OF_MEMORY Bucket allocation failed.
-	@relates CmnPointerMap
-*/
+// cmnReserve ensures at least capacity buckets.
+//
+// Inputs:
+// - map: Target map.
+// - capacity: Requested bucket capacity.
+// - result: Optional operation result.
+//
+// Results:
+// - CMN_SUCCESS: Reserve succeeded.
+// - CMN_OUT_OF_MEMORY: Backing allocator ran out of memory.
+// - CMN_INVALID_PARAMETERS: Requested capacity is smaller than current length.
 template <typename T>
 void cmnReserve(CmnPointerMap<T>* map, size_t capacity, CmnResult* result) {
 	if (capacity < map->length) {
@@ -148,17 +135,18 @@ void cmnReserve(CmnPointerMap<T>* map, size_t capacity, CmnResult* result) {
 	CMN_SET_RESULT(result, CMN_SUCCESS);
 }
 
-/**
-	Inserts or overwrites a key-value pair.
-
-	@param map The target map.
-	@param key The key to insert.
-	@param value The value to associate with the key.
-	@param[out] result The result of the operation.
-	@retval CMN_SUCCESS The insertion completed successfully.
-	@retval CMN_OUT_OF_MEMORY Internal growth failed while reserving additional capacity.
-	@relates CmnPointerMap
-*/
+// cmnInsert inserts or overwrites a key-value pair.
+//
+// Inputs:
+// - map: Target map.
+// - key: Key to insert.
+// - value: Value to associate with key.
+// - result: Optional operation result.
+//
+// Results:
+// - CMN_SUCCESS: Insert succeeded.
+// - CMN_OUT_OF_MEMORY: Backing allocator ran out of memory during growth.
+// - CMN_INVALID_PARAMETERS: Key is zero.
 template <typename T>
 void cmnInsert(CmnPointerMap<T>* map, uintptr_t key, const T& value, CmnResult* result) {
 	if (key == 0) {
@@ -193,16 +181,15 @@ void cmnInsert(CmnPointerMap<T>* map, uintptr_t key, const T& value, CmnResult* 
 	map->length++;
 }
 
-/**
-	Gets the value associated with a key.
-
-	@param map The target map.
-	@param key The key to search.
-	@param[out] didFind Optional output flag indicating whether the key was found.
-
-	@return Reference to the stored value when found, or to `defaultValue` otherwise.
-	@relates CmnPointerMap
-*/
+// cmnGet returns the value associated with key.
+//
+// Inputs:
+// - map: Target map.
+// - key: Key to search.
+// - didFind: Optional output flag.
+//
+// Returns:
+// - Value reference when found, or defaultValue otherwise.
 template <typename T>
 T& cmnGet(CmnPointerMap<T>* map, uintptr_t key, bool* didFind) {
 	size_t hash = cmnHashPointer(key) % map->capacity;
@@ -226,15 +213,14 @@ T& cmnGet(CmnPointerMap<T>* map, uintptr_t key, bool* didFind) {
 	}
 }
 
-/**
-	Checks whether a key exists in the map.
-
-	@param map The target map.
-	@param key The key to search.
-
-	@return True if the key exists, false otherwise.
-	@relates CmnPointerMap
-*/
+// cmnContains checks whether key exists in the map.
+//
+// Inputs:
+// - map: Target map.
+// - key: Key to search.
+//
+// Returns:
+// - true when key exists.
 template <typename T>
 bool cmnContains(CmnPointerMap<T>* map, uintptr_t key) {
 	size_t hash = cmnHashPointer(key) % map->capacity;
@@ -252,13 +238,11 @@ bool cmnContains(CmnPointerMap<T>* map, uintptr_t key) {
 	}
 }
 
-/**
-	Removes a key-value pair from the map.
-
-	@param map The target map.
-	@param key The key to remove.
-	@relates CmnPointerMap
-*/
+// cmnRemove removes a key-value pair from the map.
+//
+// Inputs:
+// - map: Target map.
+// - key: Key to remove.
 template <typename T>
 void cmnRemove(CmnPointerMap<T>* map, uintptr_t key) {
 	size_t hash = cmnHashPointer(key) % map->capacity;
