@@ -3,7 +3,7 @@
 
 #include <lib/common/common.h>
 
-// cmnIsAlignedTo reports whether ptr satisfies the requested alignment.
+// Reports whether ptr satisfies the requested alignment.
 //
 // Inputs:
 // - ptr: Address value to test.
@@ -13,7 +13,7 @@
 // - true when ptr is aligned to alignment.
 bool cmnIsAlignedTo(uintptr_t ptr, size_t alignment);
 
-// cmnUpAlignTo rounds ptr up to the next aligned address.
+// Rounds ptr up to the next aligned address.
 //
 // Inputs:
 // - ptr: Address value to round.
@@ -23,7 +23,7 @@ bool cmnIsAlignedTo(uintptr_t ptr, size_t alignment);
 // - Smallest address >= ptr aligned to alignment.
 uintptr_t cmnUpAlignTo(uintptr_t ptr, size_t alignment);
 
-// cmnDownAlignTo rounds ptr down to the previous aligned address.
+// Rounds ptr down to the previous aligned address.
 //
 // Inputs:
 // - ptr: Address value to round.

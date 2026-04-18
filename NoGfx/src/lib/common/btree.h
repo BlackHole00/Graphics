@@ -31,7 +31,7 @@ struct CmnBTree {
 	V			defaultElement;
 };
 
-// cmnCreateBTree initializes a B-tree.
+// Initializes a B-tree.
 //
 // Inputs:
 // - tree: Tree to initialize.
@@ -45,7 +45,7 @@ struct CmnBTree {
 template <typename K, typename V>
 void cmnCreateBTree(CmnBTree<K, V>* tree, const V& defaultElement, CmnAllocator nodesAllocator, CmnResult* result);
 
-// cmnBTreeSplit splits a full child node during insertion.
+// Splits a full child node during insertion.
 //
 // Inputs:
 // - tree: Target tree.
@@ -59,7 +59,7 @@ void cmnCreateBTree(CmnBTree<K, V>* tree, const V& defaultElement, CmnAllocator 
 template <typename K, typename V>
 void cmnBTreeSplit(CmnBTree<K, V>* tree, CmnBTreeNode<K, V>* node, size_t index, CmnResult* result);
 
-// cmnBTreeInsertNotNull inserts into a subtree rooted at node.
+// Inserts into a subtree rooted at node.
 //
 // Inputs:
 // - tree: Target tree.
@@ -80,7 +80,7 @@ void cmnBTreeInsertNotNull(
 	CmnResult* result
 );
 
-// cmnBTreeSearchNode searches key starting from node.
+// Searches for a key starting from node.
 //
 // Inputs:
 // - node: Search start node.
@@ -92,7 +92,7 @@ void cmnBTreeInsertNotNull(
 template <typename K, typename V>
 CmnBTreeNode<K, V>* cmnBTreeSearchNode(CmnBTreeNode<K, V>* node, const K& key, size_t* indexInNode);
 
-// cmnBTreePredecessor gets predecessor key/value for node entry.
+// Gets predecessor key/value for node entry.
 //
 // Inputs:
 // - node: Node containing reference entry.
@@ -102,7 +102,7 @@ CmnBTreeNode<K, V>* cmnBTreeSearchNode(CmnBTreeNode<K, V>* node, const K& key, s
 template <typename K, typename V>
 void cmnBTreePredecessor(CmnBTreeNode<K, V>* node, size_t index, K* key, V* element);
 
-// cmnBTreeSuccessor gets successor key/value for node entry.
+// Gets successor key/value for node entry.
 //
 // Inputs:
 // - node: Node containing reference entry.
@@ -112,7 +112,7 @@ void cmnBTreePredecessor(CmnBTreeNode<K, V>* node, size_t index, K* key, V* elem
 template <typename K, typename V>
 void cmnBTreeSuccessor(CmnBTreeNode<K, V>* node, size_t index, K* key, V* element);
 
-// cmnBTreeBorrowFromPrev borrows one key from the previous sibling.
+// Borrows one key from the previous sibling.
 //
 // Inputs:
 // - node: Parent node.
@@ -120,7 +120,7 @@ void cmnBTreeSuccessor(CmnBTreeNode<K, V>* node, size_t index, K* key, V* elemen
 template <typename K, typename V>
 void cmnBTreeBorrowFromPrev(CmnBTreeNode<K, V>* node, size_t index);
 
-// cmnBTreeBorrowFromNext borrows one key from the next sibling.
+// Borrows one key from the next sibling.
 //
 // Inputs:
 // - node: Parent node.
@@ -128,7 +128,7 @@ void cmnBTreeBorrowFromPrev(CmnBTreeNode<K, V>* node, size_t index);
 template <typename K, typename V>
 void cmnBTreeBorrowFromNext(CmnBTreeNode<K, V>* node, size_t index);
 
-// cmnBTreeMerge merges a child with its next sibling.
+// Merges a child with its next sibling.
 //
 // Inputs:
 // - tree: Target tree.
@@ -137,7 +137,7 @@ void cmnBTreeBorrowFromNext(CmnBTreeNode<K, V>* node, size_t index);
 template <typename K, typename V>
 void cmnBTreeMerge(CmnBTree<K, V>* tree, CmnBTreeNode<K, V>* node, size_t index);
 
-// cmnBTreeFill ensures a child has enough keys before descending.
+// Ensures a child has enough keys before descending.
 //
 // Inputs:
 // - tree: Target tree.
@@ -146,7 +146,7 @@ void cmnBTreeMerge(CmnBTree<K, V>* tree, CmnBTreeNode<K, V>* node, size_t index)
 template <typename K, typename V>
 void cmnBTreeFill(CmnBTree<K, V>* tree, CmnBTreeNode<K, V>* node, size_t index);
 
-// cmnBTreeRemove removes key from subtree rooted at node.
+// Removes key from subtree rooted at node.
 //
 // Inputs:
 // - tree: Target tree.
@@ -155,7 +155,7 @@ void cmnBTreeFill(CmnBTree<K, V>* tree, CmnBTreeNode<K, V>* node, size_t index);
 template <typename K, typename V>
 void cmnBTreeRemove(CmnBTree<K, V>* tree, CmnBTreeNode<K, V>* node, const K& key);
 
-// cmnBTreeRemoveFromNonLeaf removes key from an internal node entry.
+// Removes key from an internal node entry.
 //
 // Inputs:
 // - tree: Target tree.
@@ -164,7 +164,7 @@ void cmnBTreeRemove(CmnBTree<K, V>* tree, CmnBTreeNode<K, V>* node, const K& key
 template <typename K, typename V>
 void cmnBTreeRemoveFromNonLeaf(CmnBTree<K, V>* tree, CmnBTreeNode<K, V>* node, size_t index);
 
-// cmnBTreeRemoveFromLeaf removes key from a leaf node entry.
+// Removes key from a leaf node entry.
 //
 // Inputs:
 // - node: Leaf node containing key.
@@ -172,7 +172,7 @@ void cmnBTreeRemoveFromNonLeaf(CmnBTree<K, V>* tree, CmnBTreeNode<K, V>* node, s
 template <typename K, typename V>
 void cmnBTreeRemoveFromLeaf(CmnBTreeNode<K, V>* node, size_t index);
 
-// cmnInsert inserts a key-value pair into the tree.
+// Inserts a key-value pair into the tree.
 //
 // Inputs:
 // - tree: Target tree.
@@ -186,7 +186,7 @@ void cmnBTreeRemoveFromLeaf(CmnBTreeNode<K, V>* node, size_t index);
 template <typename K, typename V>
 void cmnInsert(CmnBTree<K, V>* tree, const K& key, const V& element, CmnResult* result);
 
-// cmnContains checks whether key exists in the tree.
+// Checks whether key exists in the tree.
 //
 // Inputs:
 // - tree: Target tree.
@@ -197,7 +197,7 @@ void cmnInsert(CmnBTree<K, V>* tree, const K& key, const V& element, CmnResult* 
 template <typename K, typename V>
 bool cmnContains(CmnBTree<K, V>* tree, const K& key);
 
-// cmnGet gets the value associated with key.
+// Gets the value associated with key.
 //
 // Inputs:
 // - tree: Target tree.
@@ -209,7 +209,7 @@ bool cmnContains(CmnBTree<K, V>* tree, const K& key);
 template <typename K, typename V>
 V& cmnGet(CmnBTree<K, V>* tree, const K& key, bool* didFindElement);
 
-// cmnRemove removes key from the tree.
+// Removes key from the tree.
 //
 // Inputs:
 // - tree: Target tree.

@@ -4,7 +4,7 @@
 #include <lib/common/common.h>
 #include <lib/common/type_traits.h>
 
-// cmnInsertAtIndex inserts element at index and shifts later elements right.
+// Inserts element at index and shifts later elements right.
 //
 // Inputs:
 // - elements: Destination array buffer.
@@ -24,7 +24,7 @@ void cmnInsertAtIndex(T* elements, size_t elementCount, size_t index, const T& e
 	elements[index] = element;
 }
 
-// cmnOrderedInsert inserts element into a sorted array while preserving order.
+// Inserts element into a sorted array while preserving order.
 //
 // Inputs:
 // - elements: Sorted destination array buffer.
@@ -40,7 +40,7 @@ void cmnOrderedInsert(T* elements, size_t elementCount, const T& element) {
 	cmnInsertAtIndex(elements, elementCount, i, element);
 }
 
-// cmnRemoveAtIndex removes the element at index and shifts later elements left.
+// Removes the element at index and shifts later elements left.
 //
 // Inputs:
 // - elements: Destination array buffer.
@@ -55,7 +55,7 @@ void cmnRemoveAtIndex(T* elements, size_t elementCount, size_t index) {
 	}
 }
 
-// cmnOrderedRemove removes element from a sorted array if present.
+// Removes element from a sorted array if present.
 //
 // Inputs:
 // - elements: Sorted destination array buffer.
@@ -75,7 +75,7 @@ void cmnOrderedRemove(T* elements, size_t elementCount, const T& element) {
 	cmnRemoveAtIndex(elements, elementCount, i);
 }
 
-// cmnLinearSearch scans linearly for element.
+// Scans linearly for an element.
 //
 // Inputs:
 // - elements: Array buffer to search.
@@ -107,7 +107,7 @@ size_t cmnLinearSearch(T* elements, size_t elementCount, const T& element, bool*
 	}
 }
 
-// cmnFindFirstGreaterElementIndex finds the first index with value >= element.
+// Finds the first index with value >= element.
 //
 // Inputs:
 // - elements: Sorted array buffer.

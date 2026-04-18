@@ -4,7 +4,7 @@
 #include <lib/common/common.h>
 #include <lib/common/allocator.h>
 
-// cmnHeapAlloc allocates memory from the process heap.
+// Allocates memory from the process heap.
 //
 // Inputs:
 // - size: Number of bytes to allocate.
@@ -23,7 +23,7 @@ inline void* cmnHeapAlloc(size_t size, CmnResult* result) {
 	return cmnHeapAlloc(size, 0, result);
 }
 
-// cmnHeapRealloc reallocates memory previously returned by cmnHeapAlloc.
+// Reallocates memory previously returned by cmnHeapAlloc.
 //
 // Inputs:
 // - address: Previous allocation address.
@@ -40,13 +40,13 @@ inline void* cmnHeapAlloc(size_t size, CmnResult* result) {
 // - Reallocated address, or nullptr on failure.
 void* cmnHeapRealloc(void* address, size_t oldSize, size_t newSize, size_t align, CmnResult* result);
 
-// cmnHeapFree releases memory allocated from the process heap.
+// Releases memory allocated from the process heap.
 //
 // Inputs:
 // - data: Address to free.
 void cmnHeapFree(void* data);
 
-// cmnHeapAllocator returns a CmnAllocator backed by the process heap.
+// Returns a CmnAllocator backed by the process heap.
 CmnAllocator cmnHeapAllocator(void);
 
 #endif // CMN_HEAPALLOCATOR_H

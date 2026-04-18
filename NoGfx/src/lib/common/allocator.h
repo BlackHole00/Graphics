@@ -17,7 +17,7 @@ typedef struct CmnAllocator {
 	void* data;
 } CmnAllocator;
 
-// cmnAlloc allocates count elements of type T.
+// Allocates count elements of type T.
 //
 // Inputs:
 // - allocator: Allocator to use.
@@ -36,7 +36,7 @@ template <typename T> T* cmnAlloc(CmnAllocator allocator, size_t count, size_t a
 	return (T*)allocator.vtable->alloc(allocator.data, count * sizeof(T), align, result);
 }
 
-// cmnAlloc allocates count elements of type T with default alignment.
+// Allocates count elements of type T with default alignment.
 //
 // Inputs:
 // - allocator: Allocator to use.
@@ -54,7 +54,7 @@ template <typename T> T* cmnAlloc(CmnAllocator allocator, size_t count, CmnResul
 	return cmnAlloc<T>(allocator, count, 0, result);
 }
 
-// cmnAlloc allocates one element of type T with default alignment.
+// Allocates one element of type T with default alignment.
 //
 // Inputs:
 // - allocator: Allocator to use.
@@ -71,7 +71,7 @@ template <typename T> T* cmnAlloc(CmnAllocator allocator, CmnResult* result) {
 	return cmnAlloc<T>(allocator, 1, 0, result);
 }
 
-// cmnAlloc allocates a raw block of bytes.
+// Allocates a raw block of bytes.
 //
 // Inputs:
 // - allocator: Allocator to use.
@@ -91,7 +91,7 @@ inline void* cmnAlloc(CmnAllocator allocator, size_t size, size_t align, CmnResu
 	return allocator.vtable->alloc(allocator.data, size, align, result);
 }
 
-// cmnRealloc reallocates an array of type T.
+// Reallocates an array of type T.
 //
 // Inputs:
 // - allocator: Allocator to use.
@@ -112,7 +112,7 @@ template <typename T> T* cmnRealloc(CmnAllocator allocator, void* address, size_
 	return (T*)allocator.vtable->realloc(allocator.data, address, newCount * sizeof(T), oldCount * sizeof(T), align, result);
 }
 
-// cmnRealloc reallocates an array of type T with default alignment.
+// Reallocates an array of type T with default alignment.
 //
 // Inputs:
 // - allocator: Allocator to use.
@@ -132,7 +132,7 @@ template <typename T> T* cmnRealloc(CmnAllocator allocator, void* address, size_
 	return cmnRealloc<T>(allocator, address, oldCount, newCount, 0, result);
 }
 
-// cmnRealloc reallocates a raw block of bytes.
+// Reallocates a raw block of bytes.
 //
 // Inputs:
 // - allocator: Allocator to use.
@@ -154,7 +154,7 @@ inline void* cmnRealloc(CmnAllocator allocator, void* address, size_t newSize, s
 	return allocator.vtable->realloc(allocator.data, address, oldSize, newSize, align, result);
 }
 
-// cmnFree releases a previously allocated memory block.
+// Releases a previously allocated memory block.
 //
 // Inputs:
 // - allocator: Allocator to use.
@@ -168,7 +168,7 @@ inline void cmnFree(CmnAllocator allocator, void* address, CmnResult* result = n
 	allocator.vtable->free(allocator.data, address, result);
 }
 
-// cmnFreeAll releases all memory managed by the allocator, when supported.
+// Releases all memory managed by the allocator, when supported.
 //
 // Inputs:
 // - allocator: Allocator to use.

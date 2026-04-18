@@ -27,7 +27,7 @@ typedef struct CmnPool {
 	CmnMutex		mutex;
 } CmnPool;
 
-// cmnCreatePool creates a pool over existing memory.
+// Creates a pool over existing memory.
 //
 // Inputs:
 // - backingMemory: Start address of backing memory.
@@ -39,7 +39,7 @@ typedef struct CmnPool {
 // - Initialized pool.
 CmnPool cmnCreatePool(uint8_t* backingMemory, size_t backingMemorySize, size_t blockSize, size_t prePreparedBlocks);
 
-// cmnPoolAllocRaw allocates one raw block from the pool.
+// Allocates one raw block from the pool.
 //
 // Inputs:
 // - pool: Pool to allocate from.
@@ -53,7 +53,7 @@ CmnPool cmnCreatePool(uint8_t* backingMemory, size_t backingMemorySize, size_t b
 // - Pointer to allocated block, or nullptr on failure.
 void* cmnPoolAllocRaw(CmnPool* pool, CmnResult* result);
 
-// cmnPoolAlloc allocates one object of type T from the pool.
+// Allocates one object of type T from the pool.
 //
 // Inputs:
 // - pool: Pool to allocate from.
@@ -67,14 +67,14 @@ void* cmnPoolAllocRaw(CmnPool* pool, CmnResult* result);
 // - Pointer to allocated object, or nullptr on failure.
 template<typename T> T* cmnPoolAlloc(CmnPool* pool, CmnResult* result);
 
-// cmnPoolFree returns a block to the pool.
+// Returns a block to the pool.
 //
 // Inputs:
 // - pool: Pool owning the block.
 // - address: Block address to free.
 void cmnPoolFree(CmnPool* pool, void* address);
 
-// cmnPoolAllocator creates a CmnAllocator adapter for a CmnPool.
+// Creates a CmnAllocator adapter for a CmnPool.
 //
 // Inputs:
 // - pool: Pool to wrap.
@@ -83,7 +83,7 @@ void cmnPoolFree(CmnPool* pool, void* address);
 // - Allocator backed by pool.
 CmnAllocator cmnPoolAllocator(CmnPool* pool);
 
-// cmnPoolAlloc allocates one object of type T from the pool.
+// Allocates one object of type T from the pool.
 //
 // Inputs:
 // - pool: Pool to allocate from.

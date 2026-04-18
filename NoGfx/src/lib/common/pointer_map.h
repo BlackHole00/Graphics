@@ -26,7 +26,7 @@ struct CmnPointerMap {
 	T			defaultValue;
 };
 
-// cmnHashPointer hashes a pointer-sized key.
+// Hashes a pointer-sized key.
 //
 // Inputs:
 // - ptr: Key to hash.
@@ -42,7 +42,7 @@ inline size_t cmnHashPointer(uintptr_t ptr) {
 	return (size_t)hash;
 }
 
-// cmnCreatePointerMap initializes a pointer map.
+// Initializes a pointer map.
 //
 // Inputs:
 // - map: Map to initialize.
@@ -76,7 +76,7 @@ void cmnCreatePointerMap(CmnPointerMap<T>* map, size_t initialCapacity, T defaul
 	CMN_SET_RESULT(result, CMN_SUCCESS);
 }
 
-// cmnDestroyPointerMap destroys a pointer map and releases storage.
+// Destroys a pointer map and releases storage.
 //
 // Inputs:
 // - map: Map to destroy.
@@ -89,7 +89,7 @@ void cmnDestroyPointerMap(CmnPointerMap<T>* map) {
 	*map = {};
 }
 
-// cmnReserve ensures at least capacity buckets.
+// Ensures at least capacity buckets.
 //
 // Inputs:
 // - map: Target map.
@@ -135,7 +135,7 @@ void cmnReserve(CmnPointerMap<T>* map, size_t capacity, CmnResult* result) {
 	CMN_SET_RESULT(result, CMN_SUCCESS);
 }
 
-// cmnInsert inserts or overwrites a key-value pair.
+// Inserts or overwrites a key-value pair.
 //
 // Inputs:
 // - map: Target map.
@@ -181,7 +181,7 @@ void cmnInsert(CmnPointerMap<T>* map, uintptr_t key, const T& value, CmnResult* 
 	map->length++;
 }
 
-// cmnGet returns the value associated with key.
+// Returns the value associated with key.
 //
 // Inputs:
 // - map: Target map.
@@ -213,7 +213,7 @@ T& cmnGet(CmnPointerMap<T>* map, uintptr_t key, bool* didFind) {
 	}
 }
 
-// cmnContains checks whether key exists in the map.
+// Checks whether key exists in the map.
 //
 // Inputs:
 // - map: Target map.
@@ -238,7 +238,7 @@ bool cmnContains(CmnPointerMap<T>* map, uintptr_t key) {
 	}
 }
 
-// cmnRemove removes a key-value pair from the map.
+// Removes a key-value pair from the map.
 //
 // Inputs:
 // - map: Target map.

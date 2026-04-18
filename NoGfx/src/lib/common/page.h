@@ -22,7 +22,7 @@ typedef struct CmnPage {
 	CmnPagePerms permissions;
 } CmnPage;
 
-// cmnCreatePage creates a page backed by OS virtual memory APIs.
+// Creates a page backed by OS virtual memory APIs.
 //
 // Inputs:
 // - size: Page size in bytes.

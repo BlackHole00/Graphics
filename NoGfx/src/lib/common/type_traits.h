@@ -32,13 +32,13 @@ struct CmnTypeTraits {
 	}
 };
 
-// cmnEq checks equality using CmnTypeTraits.
+// Checks equality using CmnTypeTraits.
 template <typename T>
 bool cmnEq(const T& left, const T& right) {
 	return CmnTypeTraits<T>::eq(left, right);
 }
 
-// cmnCmp compares two values using CmnTypeTraits.
+// Compares two values using CmnTypeTraits.
 template <typename T>
 CmnCmp cmnCmp(const T& left, const T& right) {
 	return CmnTypeTraits<T>::cmp(left, right);

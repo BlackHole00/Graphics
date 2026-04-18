@@ -23,7 +23,7 @@ template <typename T, size_t N>
 struct CmnExponentialArray;
 
 
-// cmnCreateExponentialArray initializes an exponential array.
+// Initializes an exponential array.
 //
 // Inputs:
 // - array: Array to initialize.
@@ -35,7 +35,7 @@ struct CmnExponentialArray;
 // - CMN_OUT_OF_MEMORY: Backing allocator ran out of memory.
 template <typename T, size_t N> void cmnCreateExponentialArray(CmnExponentialArray<T, N>* array, CmnAllocator backingAllocator, CmnResult* result);
 
-// cmnResize changes the logical length of an exponential array.
+// Changes the logical length of an exponential array.
 //
 // Inputs:
 // - array: Array to resize.
@@ -50,7 +50,7 @@ template <typename T, size_t N> void cmnCreateExponentialArray(CmnExponentialArr
 // - true on success.
 template <typename T, size_t N> bool cmnResize(CmnExponentialArray<T, N>* array, size_t length, CmnResult* result);
 
-// cmnSet writes value at index.
+// Writes value at index.
 //
 // Inputs:
 // - array: Target array.
@@ -58,7 +58,7 @@ template <typename T, size_t N> bool cmnResize(CmnExponentialArray<T, N>* array,
 // - value: Value to store.
 template <typename T, size_t N> void cmnSet(CmnExponentialArray<T, N>* array, size_t index, const T& value);
 
-// cmnGet returns the value reference at index.
+// Returns the value reference at index.
 //
 // Inputs:
 // - array: Target array.
@@ -68,7 +68,7 @@ template <typename T, size_t N> void cmnSet(CmnExponentialArray<T, N>* array, si
 // - Mutable reference to stored value.
 template <typename T, size_t N>   T& cmnGet(CmnExponentialArray<T, N>* array, size_t index);
 
-// cmnAppend appends value at the end of the array.
+// Appends value at the end of the array.
 //
 // Inputs:
 // - array: Target array.
@@ -83,7 +83,7 @@ template <typename T, size_t N>   T& cmnGet(CmnExponentialArray<T, N>* array, si
 // - true on success.
 template <typename T, size_t N> bool cmnAppend(CmnExponentialArray<T, N>* array, const T& value, CmnResult* result);
 
-// cmnLast returns a reference to the last logical element.
+// Returns a reference to the last logical element.
 //
 // Inputs:
 // - array: Target array.
@@ -92,13 +92,13 @@ template <typename T, size_t N> bool cmnAppend(CmnExponentialArray<T, N>* array,
 // - Mutable reference to the last element.
 template <typename T, size_t N> T& cmnLast(CmnExponentialArray<T, N>* array);
 
-// cmnPop removes the last logical element.
+// Removes the last logical element.
 //
 // Inputs:
 // - array: Target array.
 template <typename T, size_t N> void cmnPop(CmnExponentialArray<T, N>* array);
 
-// cmnDecomposeExponentialArrayIndex maps a linear index to bucket and element indices.
+// Maps a linear index to bucket and element indices.
 //
 // Inputs:
 // - index: Linear index.

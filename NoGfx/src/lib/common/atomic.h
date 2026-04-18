@@ -11,7 +11,7 @@ typedef enum CmnMemoryOrder {
 	CMN_SEQ_CST
 } CmnMemoryOrder;
 
-// cmnAtomicLoad atomically loads a value.
+// Atomically loads a value.
 //
 // Inputs:
 // - ptr: Pointer to atomic storage.
@@ -21,7 +21,7 @@ typedef enum CmnMemoryOrder {
 // - Loaded value.
 template <typename T> T cmnAtomicLoad(T* ptr, CmnMemoryOrder order = CMN_SEQ_CST);
 
-// cmnAtomicStore atomically stores a value.
+// Atomically stores a value.
 //
 // Inputs:
 // - ptr: Pointer to atomic storage.
@@ -29,7 +29,7 @@ template <typename T> T cmnAtomicLoad(T* ptr, CmnMemoryOrder order = CMN_SEQ_CST
 // - order: Memory ordering constraint.
 template <typename T> void cmnAtomicStore(T* ptr, T value, CmnMemoryOrder order = CMN_SEQ_CST);
 
-// cmnAtomicExchange atomically stores value and returns the previous value.
+// Atomically stores value and returns the previous value.
 //
 // Inputs:
 // - ptr: Pointer to atomic storage.
@@ -40,7 +40,7 @@ template <typename T> void cmnAtomicStore(T* ptr, T value, CmnMemoryOrder order 
 // - Previous value.
 template <typename T> T cmnAtomicExchange(T* ptr, T value, CmnMemoryOrder order = CMN_SEQ_CST);
 
-// cmnAtomicCompareExchangeStrong performs a strong compare-and-exchange.
+// Performs a strong compare-and-exchange.
 //
 // Inputs:
 // - ptr: Pointer to atomic storage.
@@ -53,7 +53,7 @@ template <typename T> T cmnAtomicExchange(T* ptr, T value, CmnMemoryOrder order 
 // - true when the exchange succeeds.
 template <typename T> bool cmnAtomicCompareExchangeStrong(T* ptr, T expected, T value, CmnMemoryOrder successOrder = CMN_SEQ_CST, CmnMemoryOrder failureOrder = CMN_SEQ_CST);
 
-// cmnAtomicCompareExchangeWeak performs a weak compare-and-exchange.
+// Performs a weak compare-and-exchange.
 //
 // Inputs:
 // - ptr: Pointer to atomic storage.
@@ -66,7 +66,7 @@ template <typename T> bool cmnAtomicCompareExchangeStrong(T* ptr, T expected, T 
 // - true when the exchange succeeds.
 template <typename T> bool cmnAtomicCompareExchangeWeak(T* ptr, T expected, T value, CmnMemoryOrder successOrder = CMN_SEQ_CST, CmnMemoryOrder failureOrder = CMN_SEQ_CST);
 
-// cmnAtomicCompareExchangeStrong performs a strong compare-and-exchange.
+// Performs a strong compare-and-exchange.
 //
 // Inputs:
 // - ptr: Pointer to atomic storage.
@@ -79,7 +79,7 @@ template <typename T> bool cmnAtomicCompareExchangeWeak(T* ptr, T expected, T va
 // - true when the exchange succeeds.
 template <typename T> bool cmnAtomicCompareExchangeStrong(T* ptr, T* expected, T value, CmnMemoryOrder successOrder = CMN_SEQ_CST, CmnMemoryOrder failureOrder = CMN_SEQ_CST);
 
-// cmnAtomicCompareExchangeWeak performs a weak compare-and-exchange.
+// Performs a weak compare-and-exchange.
 //
 // Inputs:
 // - ptr: Pointer to atomic storage.
@@ -92,7 +92,7 @@ template <typename T> bool cmnAtomicCompareExchangeStrong(T* ptr, T* expected, T
 // - true when the exchange succeeds.
 template <typename T> bool cmnAtomicCompareExchangeWeak(T* ptr, T* expected, T value, CmnMemoryOrder successOrder = CMN_SEQ_CST, CmnMemoryOrder failureOrder = CMN_SEQ_CST);
 
-// cmnAtomicAdd atomically adds value to *ptr.
+// Atomically adds value to *ptr.
 //
 // Inputs:
 // - ptr: Pointer to atomic storage.
@@ -100,7 +100,7 @@ template <typename T> bool cmnAtomicCompareExchangeWeak(T* ptr, T* expected, T v
 // - order: Memory ordering constraint.
 template <typename T> void cmnAtomicAdd(T* ptr, T value, CmnMemoryOrder order = CMN_SEQ_CST);
 
-// cmnAtomicSub atomically subtracts value from *ptr.
+// Atomically subtracts value from *ptr.
 //
 // Inputs:
 // - ptr: Pointer to atomic storage.
@@ -108,7 +108,7 @@ template <typename T> void cmnAtomicAdd(T* ptr, T value, CmnMemoryOrder order = 
 // - order: Memory ordering constraint.
 template <typename T> void cmnAtomicSub(T* ptr, T value, CmnMemoryOrder order = CMN_SEQ_CST);
 
-// cmnAtomicAnd atomically applies bitwise AND.
+// Atomically applies bitwise AND.
 //
 // Inputs:
 // - ptr: Pointer to atomic storage.
@@ -116,7 +116,7 @@ template <typename T> void cmnAtomicSub(T* ptr, T value, CmnMemoryOrder order = 
 // - order: Memory ordering constraint.
 template <typename T> void cmnAtomicAnd(T* ptr, T value, CmnMemoryOrder order = CMN_SEQ_CST);
 
-// cmnAtomicNand atomically applies bitwise NAND.
+// Atomically applies bitwise NAND.
 //
 // Inputs:
 // - ptr: Pointer to atomic storage.
@@ -124,7 +124,7 @@ template <typename T> void cmnAtomicAnd(T* ptr, T value, CmnMemoryOrder order = 
 // - order: Memory ordering constraint.
 template <typename T> void cmnAtomicNand(T* ptr, T value, CmnMemoryOrder order = CMN_SEQ_CST);
 
-// cmnAtomicOr atomically applies bitwise OR.
+// Atomically applies bitwise OR.
 //
 // Inputs:
 // - ptr: Pointer to atomic storage.
@@ -132,7 +132,7 @@ template <typename T> void cmnAtomicNand(T* ptr, T value, CmnMemoryOrder order =
 // - order: Memory ordering constraint.
 template <typename T> void cmnAtomicOr(T* ptr, T value, CmnMemoryOrder order = CMN_SEQ_CST);
 
-// cmnAtomicXor atomically applies bitwise XOR.
+// Atomically applies bitwise XOR.
 //
 // Inputs:
 // - ptr: Pointer to atomic storage.
@@ -140,7 +140,7 @@ template <typename T> void cmnAtomicOr(T* ptr, T value, CmnMemoryOrder order = C
 // - order: Memory ordering constraint.
 template <typename T> void cmnAtomicXor(T* ptr, T value, CmnMemoryOrder order = CMN_SEQ_CST);
 
-// cmnAtomicFence issues an atomic thread fence.
+// Issues an atomic thread fence.
 //
 // Inputs:
 // - order: Memory ordering constraint.

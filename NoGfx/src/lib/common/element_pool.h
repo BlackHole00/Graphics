@@ -7,7 +7,7 @@
 template <typename T>
 struct CmnElementPool;
 
-// cmnCreateElementPool initializes an element pool.
+// Initializes an element pool.
 //
 // Inputs:
 // - pool: Pool to initialize.
@@ -20,7 +20,7 @@ struct CmnElementPool;
 template <typename T>
 void cmnCreateElementPool(CmnElementPool<T>* pool, CmnAllocator backingAllocator, CmnResult* result);
 
-// cmnInsert inserts element into the pool and returns its slot index.
+// Inserts element into the pool and returns its slot index.
 // Free slots are reused before extending storage.
 //
 // Inputs:
@@ -37,7 +37,7 @@ void cmnCreateElementPool(CmnElementPool<T>* pool, CmnAllocator backingAllocator
 template <typename T>
 size_t cmnInsert(CmnElementPool<T>* pool, const T& element, CmnResult* result);
 
-// cmnRemove removes the element at index and marks the slot reusable.
+// Removes the element at index and marks the slot reusable.
 //
 // Inputs:
 // - pool: Target pool.
@@ -45,7 +45,7 @@ size_t cmnInsert(CmnElementPool<T>* pool, const T& element, CmnResult* result);
 template <typename T>
 void cmnRemove(CmnElementPool<T>* pool, size_t index);
 
-// cmnGet returns a mutable reference to the element at index.
+// Returns a mutable reference to the element at index.
 //
 // Inputs:
 // - pool: Source pool.
@@ -56,7 +56,7 @@ void cmnRemove(CmnElementPool<T>* pool, size_t index);
 template <typename T>
 T& cmnGet(CmnElementPool<T>* pool, size_t index);
 
-// cmnSet overwrites an element at index.
+// Overwrites an element at index.
 //
 // Inputs:
 // - pool: Target pool.

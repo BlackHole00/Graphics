@@ -21,7 +21,7 @@ typedef struct {
 	size_t		originalUsed;
 } CmnArenaState;
 
-// cmnCreateArena initializes an arena over existing memory.
+// Initializes an arena over existing memory.
 //
 // Inputs:
 // - backingMemory: Start address of backing memory.
@@ -32,7 +32,7 @@ typedef struct {
 // - Initialized arena value.
 CmnArena cmnCreateArena(uint8_t* backingMemory, size_t backingMemorySize, bool clearBackingMemory);
 
-// cmnArenaAlloc allocates count objects of type T from the arena.
+// Allocates count objects of type T from the arena.
 //
 // Inputs:
 // - arena: Arena to allocate from.
@@ -48,7 +48,7 @@ CmnArena cmnCreateArena(uint8_t* backingMemory, size_t backingMemorySize, bool c
 // - Allocated memory, or nullptr on failure.
 template <typename T> T* cmnArenaAlloc(CmnArena* arena, size_t count, size_t align, CmnResult* result);
 
-// cmnArenaAlloc allocates count objects of type T with default alignment.
+// Allocates count objects of type T with default alignment.
 //
 // Inputs:
 // - arena: Arena to allocate from.
@@ -65,7 +65,7 @@ template <typename T> T* cmnArenaAlloc(CmnArena* arena, size_t count, CmnResult*
 	return cmnArenaAlloc<T>(arena, count, 0, result);
 }
 
-// cmnArenaAlloc allocates one object of type T with default alignment.
+// Allocates one object of type T with default alignment.
 //
 // Inputs:
 // - arena: Arena to allocate from.
@@ -81,13 +81,13 @@ template <typename T> T* cmnArenaAlloc(CmnArena* arena, CmnResult* result) {
 	return cmnArenaAlloc<T>(arena, 1, 0, result);
 }
 
-// cmnArenaFreeAll resets the arena usage to zero.
+// Resets the arena usage to zero.
 //
 // Inputs:
 // - arena: Arena to reset.
 void cmnArenaFreeAll(CmnArena* arena);
 
-// cmnArenaAllocator creates a CmnAllocator adapter for a CmnArena.
+// Creates a CmnAllocator adapter for a CmnArena.
 //
 // Inputs:
 // - arena: Arena to wrap.
@@ -96,7 +96,7 @@ void cmnArenaFreeAll(CmnArena* arena);
 // - Allocator backed by arena.
 CmnAllocator cmnArenaAllocator(CmnArena* arena);
 
-// cmnBeginArenaTemp begins a temporary arena scope.
+// Begins a temporary arena scope.
 //
 // Inputs:
 // - arena: Arena to snapshot.
@@ -105,7 +105,7 @@ CmnAllocator cmnArenaAllocator(CmnArena* arena);
 // - Saved arena state.
 CmnArenaState cmnBeginArenaTemp(CmnArena* arena);
 
-// cmnEndArenaTemp restores arena state captured by cmnBeginArenaTemp.
+// Restores arena state captured by cmnBeginArenaTemp.
 //
 // Inputs:
 // - state: Previously captured arena state.

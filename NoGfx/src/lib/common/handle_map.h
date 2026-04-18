@@ -13,7 +13,7 @@ typedef struct CmnHandle {
 	uint32_t	generation	: 32;
 } CmnHandle;
 
-// cmnIsZero checks whether a handle is zero.
+// Checks whether a handle is zero.
 inline bool cmnIsZero(CmnHandle handle) {
 	return handle.index == 0 && handle.generation == 0;
 }
@@ -43,7 +43,7 @@ struct CmnHandleMap {
 	CmnMutex					mutex;
 };
 
-// cmnCreateHandleMap initializes a handle map.
+// Initializes a handle map.
 //
 // Inputs:
 // - map: Map to initialize.
@@ -57,7 +57,7 @@ struct CmnHandleMap {
 template <typename T>
 void cmnCreateHandleMap(CmnHandleMap<T>* map, CmnAllocator backingAllocator, T defaultElement, CmnResult* result);
 
-// cmnInsert inserts an element and returns its generated handle.
+// Inserts an element and returns its generated handle.
 //
 // Inputs:
 // - map: Target map.
@@ -74,7 +74,7 @@ void cmnCreateHandleMap(CmnHandleMap<T>* map, CmnAllocator backingAllocator, T d
 template <typename T>
 CmnHandle cmnInsert(CmnHandleMap<T>* map, const T& element, CmnResult* result);
 
-// cmnIsValid checks whether a handle is currently valid.
+// Checks whether a handle is currently valid.
 //
 // Inputs:
 // - map: Target map.
@@ -85,7 +85,7 @@ CmnHandle cmnInsert(CmnHandleMap<T>* map, const T& element, CmnResult* result);
 template <typename T>
 bool cmnIsValid(const CmnHandleMap<T>* map, CmnHandle handle);
 
-// cmnGet returns the element referenced by handle.
+// Returns the element referenced by handle.
 //
 // Inputs:
 // - map: Target map.
@@ -97,7 +97,7 @@ bool cmnIsValid(const CmnHandleMap<T>* map, CmnHandle handle);
 template <typename T>
 T& cmnGet(CmnHandleMap<T>* map, CmnHandle handle, bool* wasHandleValid);
 
-// cmnRemove removes the element referenced by handle.
+// Removes the element referenced by handle.
 //
 // Inputs:
 // - map: Target map.
@@ -105,7 +105,7 @@ T& cmnGet(CmnHandleMap<T>* map, CmnHandle handle, bool* wasHandleValid);
 template <typename T>
 void cmnRemove(CmnHandleMap<T>* map, CmnHandle handle);
 
-// cmnRetain increments the reference count for a valid handle.
+// Increments the reference count for a valid handle.
 //
 // Inputs:
 // - map: Target map.
@@ -113,7 +113,7 @@ void cmnRemove(CmnHandleMap<T>* map, CmnHandle handle);
 template <typename T>
 void cmnRetain(CmnHandleMap<T>* map, CmnHandle handle);
 
-// cmnRelease decrements the reference count for a valid handle.
+// Decrements the reference count for a valid handle.
 //
 // Inputs:
 // - map: Target map.
