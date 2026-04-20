@@ -87,6 +87,8 @@ TestRecord gNoGfxTests[] = {
 	{ "Check GPU RW texture view descriptor creation", 		checkGpuRWTextureViewDescriptor		},
 	{ "Check GPU texture view descriptor invalid texture", 		checkGpuTextureViewDescriptorInvalidTexture	},
 	{ "Check GPU texture view descriptor invalid descriptor", 	checkGpuTextureViewDescriptorInvalidDesc	},
+	{ "Check GPU allocation create/destroy across threads", 	checkGpuAllocationCreatedAndDestroyedOnDifferentThreads },
+	{ "Check GPU texture create/destroy across threads", 	checkGpuTextureCreatedAndBackingFreedOnDifferentThreads },
 };
 
 int main(void) {

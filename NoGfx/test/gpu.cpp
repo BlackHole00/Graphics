@@ -1,6 +1,10 @@
 #include "test.h"
 
 #include <gpu/gpu.h>
+#include <pthread.h>
+#include <sched.h>
+
+#include <lib/common/atomic.h>
 
 GpuBackend selectBackendForCurrentPlatform(void) {
 	#ifdef __APPLE__
@@ -58,6 +62,107 @@ bool initGpuAndSelectFirstDevice(GpuResult* result) {
 	}
 
 	return true;
+}
+
+typedef struct GpuAllocationCreatorContext {
+	size_t bytes;
+	size_t align;
+	GpuMemory memory;
+
+	void* ptr;
+	GpuResult createResult;
+	uint32_t created;
+} GpuAllocationCreatorContext;
+
+static void* gpuAllocationCreatorThreadProc(void* ptr) {
+	GpuAllocationCreatorContext* context = (GpuAllocationCreatorContext*)ptr;
+
+	context->ptr = gpuMalloc(context->bytes, context->align, context->memory, &context->createResult);
+	cmnAtomicStore(&context->created, 1u, CMN_RELEASE);
+
+	return nullptr;
+}
+
+typedef struct GpuAllocationDestroyerContext {
+	GpuAllocationCreatorContext* creator;
+	uint32_t destroyed;
+} GpuAllocationDestroyerContext;
+
+static void* gpuAllocationDestroyerThreadProc(void* ptr) {
+	GpuAllocationDestroyerContext* context = (GpuAllocationDestroyerContext*)ptr;
+
+	while (cmnAtomicLoad(&context->creator->created, CMN_ACQUIRE) == 0u) {
+		sched_yield();
+	}
+
+	if (context->creator->createResult == GPU_SUCCESS && context->creator->ptr != nullptr) {
+		gpuFree(context->creator->ptr);
+	}
+
+	cmnAtomicStore(&context->destroyed, 1u, CMN_RELEASE);
+	return nullptr;
+}
+
+typedef struct GpuTextureCreatorContext {
+	GpuTextureDesc desc;
+
+	void* ptrGpu;
+	GpuTexture texture;
+	GpuResult sizeAlignResult;
+	GpuResult allocationResult;
+	GpuResult createResult;
+	uint32_t created;
+} GpuTextureCreatorContext;
+
+static void* gpuTextureCreatorThreadProc(void* ptr) {
+	GpuTextureCreatorContext* context = (GpuTextureCreatorContext*)ptr;
+
+	GpuTextureSizeAlign sizeAlign = gpuTextureSizeAlign(&context->desc, &context->sizeAlignResult);
+	if (context->sizeAlignResult != GPU_SUCCESS) {
+		cmnAtomicStore(&context->created, 1u, CMN_RELEASE);
+		return nullptr;
+	}
+
+	context->ptrGpu = gpuMalloc(sizeAlign.size, sizeAlign.align, GPU_MEMORY_GPU, &context->allocationResult);
+	if (context->allocationResult != GPU_SUCCESS || context->ptrGpu == nullptr) {
+		cmnAtomicStore(&context->created, 1u, CMN_RELEASE);
+		return nullptr;
+	}
+
+	context->texture = gpuCreateTexture(&context->desc, context->ptrGpu, &context->createResult);
+	cmnAtomicStore(&context->created, 1u, CMN_RELEASE);
+
+	return nullptr;
+}
+
+typedef struct GpuTextureDestroyerContext {
+	GpuTextureCreatorContext* creator;
+	GpuResult descriptorResult;
+	GpuTextureDescriptor descriptor;
+	uint32_t destroyed;
+} GpuTextureDestroyerContext;
+
+static void* gpuTextureDestroyerThreadProc(void* ptr) {
+	GpuTextureDestroyerContext* context = (GpuTextureDestroyerContext*)ptr;
+
+	while (cmnAtomicLoad(&context->creator->created, CMN_ACQUIRE) == 0u) {
+		sched_yield();
+	}
+
+	if (context->creator->createResult == GPU_SUCCESS && context->creator->texture != 0 && context->creator->ptrGpu != nullptr) {
+		GpuViewDesc viewDesc = {};
+		viewDesc.format = context->creator->desc.format;
+		viewDesc.baseMip = 0;
+		viewDesc.mipCount = 1;
+		viewDesc.baseLayer = 0;
+		viewDesc.layerCount = 1;
+
+		context->descriptor = gpuTextureViewDescriptor(context->creator->texture, &viewDesc, &context->descriptorResult);
+		gpuFree(context->creator->ptrGpu);
+	}
+
+	cmnAtomicStore(&context->destroyed, 1u, CMN_RELEASE);
+	return nullptr;
 }
 
 void checkGpuInitAndDeinit(Test* test) {
@@ -575,6 +680,80 @@ void checkGpuTextureViewDescriptorInvalidDesc(Test* test) {
 	TEST_ASSERT(test, descriptor.data[0] == 0);
 
 	gpuFree(ptrGpu);
+	gpuDeinit();
+}
+
+void checkGpuAllocationCreatedAndDestroyedOnDifferentThreads(Test* test) {
+	GpuResult result;
+	if (!initGpuAndSelectFirstDevice(&result)) {
+		TEST_ASSERT(test, result == GPU_SUCCESS);
+		return;
+	}
+
+	GpuAllocationCreatorContext creatorContext = {};
+	creatorContext.bytes = 4096;
+	creatorContext.align = 16;
+	creatorContext.memory = GPU_MEMORY_DEFAULT;
+
+	GpuAllocationDestroyerContext destroyerContext = {};
+	destroyerContext.creator = &creatorContext;
+
+	pthread_t creatorThread;
+	int createResult = pthread_create(&creatorThread, nullptr, gpuAllocationCreatorThreadProc, &creatorContext);
+	TEST_ASSERT(test, createResult == 0);
+
+	pthread_t destroyerThread;
+	createResult = pthread_create(&destroyerThread, nullptr, gpuAllocationDestroyerThreadProc, &destroyerContext);
+	TEST_ASSERT(test, createResult == 0);
+
+	int joinResult = pthread_join(creatorThread, nullptr);
+	TEST_ASSERT(test, joinResult == 0);
+
+	joinResult = pthread_join(destroyerThread, nullptr);
+	TEST_ASSERT(test, joinResult == 0);
+
+	TEST_ASSERT(test, creatorContext.createResult == GPU_SUCCESS);
+	TEST_ASSERT(test, creatorContext.ptr != nullptr);
+	TEST_ASSERT(test, cmnAtomicLoad(&destroyerContext.destroyed, CMN_ACQUIRE) == 1u);
+
+	gpuDeinit();
+}
+
+void checkGpuTextureCreatedAndBackingFreedOnDifferentThreads(Test* test) {
+	GpuResult result;
+	if (!initGpuAndSelectFirstDevice(&result)) {
+		TEST_ASSERT(test, result == GPU_SUCCESS);
+		return;
+	}
+
+	GpuTextureCreatorContext creatorContext = {};
+	creatorContext.desc = makeDefaultTextureDesc();
+
+	GpuTextureDestroyerContext destroyerContext = {};
+	destroyerContext.creator = &creatorContext;
+
+	pthread_t creatorThread;
+	int createResult = pthread_create(&creatorThread, nullptr, gpuTextureCreatorThreadProc, &creatorContext);
+	TEST_ASSERT(test, createResult == 0);
+
+	pthread_t destroyerThread;
+	createResult = pthread_create(&destroyerThread, nullptr, gpuTextureDestroyerThreadProc, &destroyerContext);
+	TEST_ASSERT(test, createResult == 0);
+
+	int joinResult = pthread_join(creatorThread, nullptr);
+	TEST_ASSERT(test, joinResult == 0);
+
+	joinResult = pthread_join(destroyerThread, nullptr);
+	TEST_ASSERT(test, joinResult == 0);
+
+	TEST_ASSERT(test, creatorContext.sizeAlignResult == GPU_SUCCESS);
+	TEST_ASSERT(test, creatorContext.allocationResult == GPU_SUCCESS);
+	TEST_ASSERT(test, creatorContext.createResult == GPU_SUCCESS);
+	TEST_ASSERT(test, creatorContext.texture != 0);
+	TEST_ASSERT(test, destroyerContext.descriptorResult == GPU_SUCCESS);
+	TEST_ASSERT(test, destroyerContext.descriptor.data[0] != 0);
+	TEST_ASSERT(test, cmnAtomicLoad(&destroyerContext.destroyed, CMN_ACQUIRE) == 1u);
+
 	gpuDeinit();
 }
 
