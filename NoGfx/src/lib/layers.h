@@ -21,6 +21,11 @@ typedef struct GpuBaseLayer {
 	GpuTexture (*gpuCreateTexture)(const GpuTextureDesc* desc, void* ptrGpu, GpuResult* result);
 	GpuTextureDescriptor (*gpuTextureViewDescriptor)(GpuTexture texture, const GpuViewDesc* desc, GpuResult* result);
 	GpuTextureDescriptor (*gpuRWTextureViewDescriptor)(GpuTexture texture, const GpuViewDesc* desc, GpuResult* result);
+
+	GpuPipeline (*gpuCreateComputePipeline)(uint8_t* bytes, size_t size, GpuResult* result);
+	GpuPipeline (*gpuCreateRenderPipeline)(uint8_t* bytes, size_t size, GpuResult* result);
+	GpuPipeline (*gpuCreateMeshletPipeline)(uint8_t* bytes, size_t size, GpuResult* result);
+	void (*gpuFreePipeline)(GpuPipeline pipeline);
 } GpuBaseLayer;
 
 typedef struct {

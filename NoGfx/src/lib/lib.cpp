@@ -82,3 +82,24 @@ GpuTextureDescriptor gpuRWTextureViewDescriptor(GpuTexture texture, const GpuVie
 	return {};
 }
 
+GpuPipeline gpuCreateComputePipeline(uint8_t* bytes, size_t size, GpuResult* result) {
+	// GPU_LAYERED_CALL(gpuCreateComputePipeline, bytes, size, result);
+
+	return 0;
+}
+
+GpuPipeline gpuCreateRenderPipeline(uint8_t* bytes, size_t size, GpuResult* result) {
+	GPU_LAYERED_CALL(gpuCreateRenderPipeline, bytes, size, result);
+	
+	return 0;
+}
+
+GpuPipeline gpuCreateMeshletPipeline(uint8_t* bytes, size_t size, GpuResult* result) {
+	GPU_LAYERED_CALL(gpuCreateRenderPipeline, bytes, size, result);
+	
+	return 0;
+}
+
+void gpuFreePipeline(GpuPipeline pipeline) {
+	GPU_LAYERED_CALL(gpuFreePipeline, pipeline);
+}

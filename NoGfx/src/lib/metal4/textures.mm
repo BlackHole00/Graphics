@@ -319,6 +319,7 @@ GpuTextureDescriptor mtl4TextureViewDescriptor(GpuTexture texture, const GpuView
 
 		id<MTLTexture> view = [metadata->texture newTextureViewWithDescriptor:viewDescriptor];
 		if (view == nil) {
+			[viewDescriptor release];
 			CMN_SET_RESULT(result, GPU_GENERAL_ERROR);
 			return {};
 		}
@@ -327,12 +328,14 @@ GpuTextureDescriptor mtl4TextureViewDescriptor(GpuTexture texture, const GpuView
 
 		mtl4AssociateViewToTexture(metadata, view, desc, &localResult);
 		if (localResult != GPU_SUCCESS) {
+			[viewDescriptor release];
 			[view release];
 
 			CMN_SET_RESULT(result, localResult);
 			return {};
 		}
 
+		[viewDescriptor release];
 		CMN_SET_RESULT(result, GPU_SUCCESS);
 		return mtl4TextureResourceIdToDescriptor(resourceId);
 	}
@@ -470,7 +473,7 @@ void mtl4AssociateViewToTexture(Mtl4TextureMetadata* metadata, id<MTLTexture> vi
 	}
 
 	viewsBucket->views[i] = view;
-	memcpy(&viewsBucket->textureDescriptors[i], desc, sizeof(Mtl4TextureViews));
+	memcpy(&viewsBucket->textureDescriptors[i], desc, sizeof(GpuViewDesc));
 
 	CMN_SET_RESULT(result, GPU_SUCCESS);
 }
@@ -480,13 +483,13 @@ void mtl4FreeAssociatedTextureViews(Mtl4TextureMetadata* metadata) {
 
 	while (viewsBucket != nullptr) {
 		size_t i = 0;
-		while (viewsBucket->views[i] == nil) {
+		while (viewsBucket->views[i] != nil) {
 			[viewsBucket->views[i] release];
 			i++;
 		}
 
 
-		Mtl4TextureViews* nextViews = viewsBucket = viewsBucket->nextBucket;
+		Mtl4TextureViews* nextViews = viewsBucket->nextBucket;
 
 		cmnPoolFree(&gMtl4TextureStorage.textureViewsPool, viewsBucket);
 		viewsBucket = nextViews;

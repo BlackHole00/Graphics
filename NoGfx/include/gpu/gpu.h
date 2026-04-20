@@ -25,6 +25,8 @@ typedef enum GpuResult {
 	GPU_ALLOCATION_MEMORY_IS_GPU,
 	GPU_ALLOCATION_MEMORY_IS_CPU,
 
+	GPU_PIPELINE_IR_VALIDATION_FAILED,
+
 	GPU_GENERAL_ERROR,
 } GpuResult;
 
@@ -94,6 +96,7 @@ typedef enum GpuUsage {
 
 typedef size_t GpuDeviceId;
 typedef uint64_t GpuTexture;
+typedef uint64_t GpuPipeline;
 
 typedef struct GpuDeviceInfo {
 	GpuDeviceId identifier;
@@ -145,6 +148,11 @@ typedef struct GpuLayer {
 	bool (*gpuCreateTexture)(const GpuTextureDesc* desc, void* ptrGpu, GpuResult* result);
 	bool (*gpuTextureViewDescriptor)(GpuTexture texture, const GpuViewDesc* desc, GpuResult* result);
 	bool (*gpuRWTextureViewDescriptor)(GpuTexture texture, const GpuViewDesc* desc, GpuResult* result);
+
+	bool (*gpuCreateComputePipeline)(uint8_t* bytes, size_t size, void* constants, size_t constantsSize, GpuResult* result);
+	bool (*gpuCreateRenderPipeline)(uint8_t* bytes, size_t size, GpuResult* result);
+	bool (*gpuCreateMeshletPipeline)(uint8_t* bytes, size_t size, GpuResult* result);
+	bool (*gpuFreePipeline)(GpuPipeline pipeline);
 } GpuLayer;
 
 typedef struct GpuInitDesc {
@@ -168,6 +176,11 @@ GpuTextureSizeAlign gpuTextureSizeAlign(const GpuTextureDesc* desc, GpuResult* r
 GpuTexture gpuCreateTexture(const GpuTextureDesc* desc, void* ptrGpu, GpuResult* result);
 GpuTextureDescriptor gpuTextureViewDescriptor(GpuTexture texture, const GpuViewDesc* desc, GpuResult* result);
 GpuTextureDescriptor gpuRWTextureViewDescriptor(GpuTexture texture, const GpuViewDesc* desc, GpuResult* result);
+
+GpuPipeline gpuCreateComputePipeline(uint8_t* bytes, size_t size, void* constants, size_t constantsSize, GpuResult* result);
+GpuPipeline gpuCreateRenderPipeline(uint8_t* bytes, size_t size, void* constants, size_t constantsSize, GpuResult* result);
+GpuPipeline gpuCreateMeshletPipeline(uint8_t* bytes, size_t size, void* constants, size_t constantsSize, GpuResult* result);
+void gpuFreePipeline(GpuPipeline pipeline);
 
 #ifdef __cplusplus
 } // extern "C"
