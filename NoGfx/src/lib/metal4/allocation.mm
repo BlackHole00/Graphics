@@ -305,7 +305,7 @@ uintptr_t mtl4GpuAddressToActual(void* gpuPtr, bool* couldFindMetadata) {
 		CMN_SET_NULLABLE(couldFindMetadata, false);
 		return 0;
 	}
-	defer(mtl4ReleaseAllocationMetadata());
+	defer (mtl4ReleaseAllocationMetadata());
 
 	if (metadata->buffer == nil) {
 		CMN_SET_NULLABLE(couldFindMetadata, false);
@@ -431,7 +431,7 @@ void* mtl4HostToDevicePointer(void* ptr, GpuResult* result) {
 		CMN_SET_RESULT(result, GPU_NO_SUCH_ALLOCATION_FOUND);
 		return nullptr;
 	}
-	defer(mtl4ReleaseAllocationMetadata());
+	defer (mtl4ReleaseAllocationMetadata());
 
 	CMN_SET_RESULT(result, GPU_SUCCESS);
 
@@ -509,7 +509,7 @@ void mtl4EnsureBackingBufferIsAllocated(Mtl4GpuAddress address, GpuResult* resul
 		CMN_SET_RESULT(result, GPU_SUCCESS);
 		return;
 	}
-	defer(mtl4ReleaseAllocationMetadata());
+	defer (mtl4ReleaseAllocationMetadata());
 
 	id<MTLBuffer> buffer = mtl4AllocateBuffer(metadata->size, metadata->align, metadata->memory, result);
 

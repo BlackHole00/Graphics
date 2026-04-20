@@ -6,6 +6,7 @@
 #include <lib/common/page.h>
 #include <lib/common/handle_map.h>
 #include <lib/common/type_traits.h>
+#include <lib/common/storage_sync.h>
 #include <Metal/Metal.h>
 
 typedef CmnHandle Mtl4Texture;
@@ -19,10 +20,14 @@ typedef struct Mtl4TextureViews {
 } Mtl4TextureViews;
 
 typedef struct Mtl4TextureMetadata {
+	// Final
 	id<MTLTexture>		texture;
+	// Final
 	GpuTextureDescriptor	descriptor;
 
+	// Locked by relatedViewsMutex
 	Mtl4TextureViews*	relatedViews;
+	CmnRWMutex		relatedViewsMutex;
 } Mtl4TextureMetadata;
 
 typedef struct Mtl4TextureStorage {
@@ -32,10 +37,8 @@ typedef struct Mtl4TextureStorage {
 	CmnArena	textureMedatadaArena;
 	CmnPool		textureViewsPool;
 
-	CmnHandleMap<Mtl4TextureMetadata>	textures;
-	CmnMutex				mutex;
-
-	id<MTLHeap>	texturesHeap;
+	CmnHandleMap	<Mtl4TextureMetadata>	textures;
+	CmnStorageSync	sync;
 } Mtl4TextureStorage;
 extern Mtl4TextureStorage gMtl4TextureStorage;
 
@@ -49,7 +52,9 @@ GpuTextureDescriptor mtl4RWTextureViewDescriptor(GpuTexture texture, const GpuVi
 
 void mtl4DestroyTexture(Mtl4Texture texture);
 
-Mtl4TextureMetadata* mtl4TextureMetadataOf(Mtl4Texture texture);
+Mtl4TextureMetadata* mtl4AcquireTextureMetadataFrom(Mtl4Texture texture);
+void mtl4ReleaseTextureMetadata(void);
+
 bool mtl4FindTextureViewIn(Mtl4TextureMetadata* metadata, const GpuViewDesc* desc, Mtl4TextureViews** bucket, size_t* index);
 
 inline Mtl4Texture mtl4GpuTextureToHadle(GpuTexture texture) {

@@ -127,8 +127,6 @@ GpuTexture mtl4CreateTexture(const GpuTextureDesc* desc, void* ptrGpu, GpuResult
 	CmnResult localResult;
 	GpuResult localGpuResult;
 
-
-
 	size_t offsetFromBase = mtl4GpuAddressOffsetFromBase(ptrGpu);
 
 	Mtl4AllocationMetadata* metadata = mtl4AcquireAllocationMetadataFromGpuPtr(ptrGpu);
@@ -136,7 +134,7 @@ GpuTexture mtl4CreateTexture(const GpuTextureDesc* desc, void* ptrGpu, GpuResult
 		CMN_SET_RESULT(result, GPU_NO_SUCH_ALLOCATION_FOUND);
 		return 0;
 	}
-	defer(mtl4ReleaseAllocationMetadata());
+	defer (mtl4ReleaseAllocationMetadata());
 	
 	id<MTLHeap> backingHeap = cmnAtomicLoad(&metadata->associatedTextureHeap);
 	if (backingHeap != nil) {
@@ -214,7 +212,7 @@ GpuTexture mtl4CreateTexture(const GpuTextureDesc* desc, void* ptrGpu, GpuResult
 	Mtl4Texture textureHandle;
 
 	{
-		CmnScopedMutex guard(&gMtl4TextureStorage.mutex);
+		CmnScopedStorageSyncLockRead guard(&gMtl4TextureStorage.sync);
 
 		textureHandle = cmnInsert(&gMtl4TextureStorage.textures, textureMetadata, &localResult);
 		if (localResult != CMN_SUCCESS) {
@@ -261,26 +259,38 @@ GpuTextureSizeAlign mtl4TextureSizeAlign(const GpuTextureDesc* desc, GpuResult* 
 	};
 }
 
-Mtl4TextureMetadata* mtl4TextureMetadataOf(Mtl4Texture texture) {
-	bool isTextureValid = cmnIsValid(&gMtl4TextureStorage.textures, texture);
-	if (!isTextureValid) {
+Mtl4TextureMetadata* mtl4AcquireTextureMetadataFrom(Mtl4Texture texture) {
+	bool wasHandleValid;
+	Mtl4TextureMetadata* metadata = cmnStorageSyncAcquireResource(
+		&gMtl4TextureStorage.textures,
+		&gMtl4TextureStorage.sync,
+		texture,
+		&wasHandleValid
+	);
+	if (!wasHandleValid) {
 		return nullptr;
 	}
-	
-	return &cmnGet(&gMtl4TextureStorage.textures, texture, nullptr);
+
+	return metadata;
+}
+
+void mtl4ReleaseTextureMetadata(void) {
+	cmnStorageSyncReleaseResource(&gMtl4TextureStorage.sync);
 }
 
 GpuTextureDescriptor mtl4TextureViewDescriptor(GpuTexture texture, const GpuViewDesc* desc, GpuResult* result) {
-	CmnScopedMutex guard(&gMtl4TextureStorage.mutex);
+	CmnScopedStorageSyncLockRead guard(&gMtl4TextureStorage.sync);
+
 	GpuResult localResult;
 
 	Mtl4Texture handle = mtl4GpuTextureToHadle(texture);
 
-	Mtl4TextureMetadata* metadata = mtl4TextureMetadataOf(handle);
+	Mtl4TextureMetadata* metadata = mtl4AcquireTextureMetadataFrom(handle);
 	if (metadata == nullptr) {
 		CMN_SET_RESULT(result, GPU_NO_SUCH_TEXTURE_FOUND);
 		return {};
 	}
+	defer (mtl4ReleaseTextureMetadata());
 
 	Mtl4TextureViews* viewsBucket;
 	size_t index;
@@ -323,6 +333,8 @@ GpuTextureDescriptor mtl4RWTextureViewDescriptor(GpuTexture texture, const GpuVi
 }
 
 bool mtl4FindTextureViewIn(Mtl4TextureMetadata* metadata, const GpuViewDesc* desc, Mtl4TextureViews** bucket, size_t* index) {
+	CmnScopedReadRWMutex guard(&metadata->relatedViewsMutex);
+
 	Mtl4TextureViews* currentBucket = metadata->relatedViews;
 
 	size_t i;
@@ -355,18 +367,18 @@ bool mtl4FindTextureViewIn(Mtl4TextureMetadata* metadata, const GpuViewDesc* des
 }
 
 void mtl4DestroyTexture(Mtl4Texture texture) {
-	CmnScopedMutex guard(&gMtl4TextureStorage.mutex);
+	// CmnScopedMutex guard(&gMtl4TextureStorage.mutex);
 
-	Mtl4TextureMetadata* metadata = mtl4TextureMetadataOf(texture);
-	if (metadata == nullptr) {
-		return;
-	}
+	// Mtl4TextureMetadata* metadata = mtl4AcquireTextureMetadataOf(texture);
+	// if (metadata == nullptr) {
+	// 	return;
+	// }
 
-	mtl4FreeAssociatedTextureViews(metadata);
+	// mtl4FreeAssociatedTextureViews(metadata);
 
-	[metadata->texture release];
+	// [metadata->texture release];
 
-	cmnRemove(&gMtl4TextureStorage.textures, texture);
+	// cmnRemove(&gMtl4TextureStorage.textures, texture);
 }
 
 MTLTextureDescriptor* mtl4GpuTextureDescToMtl(const GpuTextureDesc* desc, MTLResourceOptions resourceOptions) {
@@ -416,6 +428,8 @@ MTLTextureViewDescriptor* mtl4GpuViewDescToMtl(id<MTLTexture> referenceTexture, 
 
 void mtl4AssociateViewToTexture(Mtl4TextureMetadata* metadata, id<MTLTexture> view, const GpuViewDesc* desc, GpuResult* result) {
 	CmnResult localResult;
+
+	CmnScopedWriteRWMutex guard(&metadata->relatedViewsMutex);
 
 	// Find the first texture bucket free.
 	Mtl4TextureViews** viewsBucketPtr = &metadata->relatedViews;

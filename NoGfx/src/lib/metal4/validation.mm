@@ -224,14 +224,13 @@ bool mtl4ValidateGpuTextureViewDescriptor(GpuTexture texture, const GpuViewDesc*
 	}
 
 	{
-		CmnScopedMutex guard(&gMtl4TextureStorage.mutex);
-
 		Mtl4Texture handle = mtl4GpuTextureToHadle(texture);
-		Mtl4TextureMetadata* metadata = mtl4TextureMetadataOf(handle);
+		Mtl4TextureMetadata* metadata = mtl4AcquireTextureMetadataFrom(handle);
 		if (metadata == nullptr) {
 			CMN_SET_RESULT(result, GPU_NO_SUCH_TEXTURE_FOUND);
 			return false;
 		}
+		defer (mtl4ReleaseTextureMetadata());
 
 		if (desc->baseMip >= metadata->texture.mipmapLevelCount) {
 			CMN_SET_RESULT(result, GPU_INVALID_PARAMETERS);
