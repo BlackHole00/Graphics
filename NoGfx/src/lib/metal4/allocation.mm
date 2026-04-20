@@ -107,6 +107,7 @@ id<MTLBuffer> mtl4AllocateBuffer(size_t size, size_t align, GpuMemory memory, Gp
 	];
 	if (buffer == nil) {
 		CMN_SET_RESULT(result, GPU_OUT_OF_GPU_MEMORY);
+		return nil;
 	}
 
 	CMN_SET_RESULT(result, GPU_SUCCESS);
@@ -476,7 +477,10 @@ void mtl4AssociateTextureToAllocation(Mtl4AllocationMetadata* metadata, Mtl4Text
 
 	// Set the first free location in the buffer with the texture
 	size_t i = 0;
-	while (cmnIsZero(textures->textures[i])) {
+	while (
+		i < MTL4_TEXTURES_PER_ALLOCATION_TEXTURE_BUCKET &&
+		!cmnIsZero(textures->textures[i])
+	) {
 		i++;
 	}
 
@@ -490,13 +494,12 @@ void mtl4FreeAssociatedTextures(Mtl4AllocationTextures* textureBucket) {
 
 	while (textures != nullptr) {
 		size_t i = 0;
-		while (cmnIsZero(textures->textures[i])) {
+		while (i < 7 && !cmnIsZero(textures->textures[i])) {
 			mtl4DestroyTexture(textures->textures[i]);
 			i++;
 		}
 
-
-		Mtl4AllocationTextures* nextTextures = textures = textures->nextBucket;
+		Mtl4AllocationTextures* nextTextures = textures->nextBucket;
 
 		cmnPoolFree(&gMtl4AllocationStorage.miscPool, textures);
 		textures = nextTextures;
@@ -504,6 +507,8 @@ void mtl4FreeAssociatedTextures(Mtl4AllocationTextures* textureBucket) {
 }
 
 void mtl4EnsureBackingBufferIsAllocated(Mtl4GpuAddress address, GpuResult* result) {
+	GpuResult localResult;
+
 	Mtl4AllocationMetadata* metadata = mtl4AcquireAllocationMetadataFromGpuPtr(address);
 	if (metadata == nullptr) {
 		CMN_SET_RESULT(result, GPU_SUCCESS);
@@ -511,7 +516,11 @@ void mtl4EnsureBackingBufferIsAllocated(Mtl4GpuAddress address, GpuResult* resul
 	}
 	defer (mtl4ReleaseAllocationMetadata());
 
-	id<MTLBuffer> buffer = mtl4AllocateBuffer(metadata->size, metadata->align, metadata->memory, result);
+	id<MTLBuffer> buffer = mtl4AllocateBuffer(metadata->size, metadata->align, metadata->memory, &localResult);
+	if (localResult != GPU_SUCCESS) {
+		CMN_SET_RESULT(result, localResult);
+		return;
+	}
 
 	// NOTE: Another thread could have set this up before us. If so, let's use the other thread buffer.
 	if (!cmnAtomicCompareExchangeStrong(&metadata->buffer, (id<MTLBuffer>)nil, buffer)) {

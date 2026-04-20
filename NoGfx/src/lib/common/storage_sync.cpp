@@ -92,8 +92,17 @@ void cmnStorageSyncReleaseResource(CmnStorageSync* sync) {
 }
 
 void cmnStorageSyncLockWrite(CmnStorageSync* sync) {
-	cmnStorageSyncWaitUntilNormal(sync);
-	cmnRWMutexLockWrite(&sync->mutex);
+	for (;;) {
+		cmnStorageSyncWaitUntilNormal(sync);
+		cmnRWMutexLockWrite(&sync->mutex);
+
+		CmnStorageSyncState state = (CmnStorageSyncState)cmnAtomicLoad(&sync->state.value, CMN_ACQUIRE);
+		if (state == CMN_STORAGE_SYNC_NORMAL) {
+			return;
+		}
+
+		cmnRWMutexUnlockWrite(&sync->mutex);
+	}
 }
 
 void cmnStorageSyncUnlockWrite(CmnStorageSync* sync) {
@@ -101,8 +110,17 @@ void cmnStorageSyncUnlockWrite(CmnStorageSync* sync) {
 }
 
 void cmnStorageSyncLockRead(CmnStorageSync* sync) {
-	cmnStorageSyncWaitUntilNormal(sync);
-	cmnRWMutexLockRead(&sync->mutex);
+	for (;;) {
+		cmnStorageSyncWaitUntilNormal(sync);
+		cmnRWMutexLockRead(&sync->mutex);
+
+		CmnStorageSyncState state = (CmnStorageSyncState)cmnAtomicLoad(&sync->state.value, CMN_ACQUIRE);
+		if (state == CMN_STORAGE_SYNC_NORMAL) {
+			return;
+		}
+
+		cmnRWMutexUnlockRead(&sync->mutex);
+	}
 }
 
 void cmnStorageSyncUnlockRead(CmnStorageSync* sync) {

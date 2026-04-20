@@ -136,16 +136,14 @@ GpuTexture mtl4CreateTexture(const GpuTextureDesc* desc, void* ptrGpu, GpuResult
 	}
 	defer (mtl4ReleaseAllocationMetadata());
 	
-	id<MTLHeap> backingHeap = cmnAtomicLoad(&metadata->associatedTextureHeap);
-	if (backingHeap != nil) {
-		[backingHeap retain];
-	}
-
 	MTLTextureDescriptor* textureDescriptor = mtl4GpuTextureDescToMtl(
 		desc,
 		MTLResourceStorageModePrivate | MTLResourceHazardTrackingModeUntracked
 	);
+	defer ([textureDescriptor release]);
+
 	id<MTLTexture> texture;
+	id<MTLHeap> backingHeap = cmnAtomicLoad(&metadata->associatedTextureHeap);
 
 	if (backingHeap == nil) {
 		GpuTextureSizeAlign expectedSizeAlign = mtl4TextureSizeAlign(desc, nullptr);
@@ -164,6 +162,8 @@ GpuTexture mtl4CreateTexture(const GpuTextureDesc* desc, void* ptrGpu, GpuResult
 		) {
 			// The buffer must contain a new heap, for multiple textures
 			MTLHeapDescriptor* heapDescriptor = [MTLHeapDescriptor new];
+			defer ([heapDescriptor release]);
+
 			heapDescriptor.resourceOptions = MTLResourceStorageModePrivate | MTLResourceHazardTrackingModeUntracked;
 			heapDescriptor.size = metadata->size;
 
@@ -174,10 +174,8 @@ GpuTexture mtl4CreateTexture(const GpuTextureDesc* desc, void* ptrGpu, GpuResult
 			}
 
 			// NOTE: Another thread may have got here before us. If so, let's use the heap set by the other
-			//	thrad.
-			if (cmnAtomicCompareExchangeStrong(&metadata->associatedTextureHeap, (id<MTLHeap>)nil, backingHeap)) {
-				[backingHeap retain];
-			} else {
+			//	thread.
+			if (!cmnAtomicCompareExchangeStrong(&metadata->associatedTextureHeap, (id<MTLHeap>)nil, backingHeap)) {
 				[backingHeap release];
 				backingHeap = cmnAtomicLoad(&metadata->associatedTextureHeap);
 			}
@@ -210,9 +208,8 @@ GpuTexture mtl4CreateTexture(const GpuTextureDesc* desc, void* ptrGpu, GpuResult
 	memcpy(&textureMetadata.descriptor, desc, sizeof(GpuTextureDesc));
 
 	Mtl4Texture textureHandle;
-
 	{
-		CmnScopedStorageSyncLockRead guard(&gMtl4TextureStorage.sync);
+		CmnScopedStorageSyncLockWrite guard(&gMtl4TextureStorage.sync);
 
 		textureHandle = cmnInsert(&gMtl4TextureStorage.textures, textureMetadata, &localResult);
 		if (localResult != CMN_SUCCESS) {
@@ -226,17 +223,14 @@ GpuTexture mtl4CreateTexture(const GpuTextureDesc* desc, void* ptrGpu, GpuResult
 	mtl4AssociateTextureToAllocation(metadata, textureHandle, &localGpuResult);
 	if (localGpuResult != GPU_SUCCESS) {
 		[texture release];
-		cmnRemove(&gMtl4TextureStorage.textures, textureHandle);
+		{
+			CmnScopedStorageSyncLockWrite guard(&gMtl4TextureStorage.sync);
+			cmnRemove(&gMtl4TextureStorage.textures, textureHandle);
+		}
 		
 		CMN_SET_RESULT(result, localGpuResult);
 		return 0;
 	}
-
-	if (backingHeap != nil) {
-		[backingHeap release];
-	}
-
-	[textureDescriptor release];
 
 	CMN_SET_RESULT(result, GPU_SUCCESS);
 	return mtl4HandleToGpuTexture(textureHandle);
@@ -348,13 +342,14 @@ bool mtl4FindTextureViewIn(Mtl4TextureMetadata* metadata, const GpuViewDesc* des
 
 		i = 0;
 		while (
+			i < 7 &&
 			currentBucket->views[i] != nil &&
 			memcmp(&currentBucket->textureDescriptors[i], desc, sizeof(GpuViewDesc))
 		) {
 			i++;
 		}
 
-		if (currentBucket->views[i] != nil) {
+		if (i < 7 && currentBucket->views[i] != nil) {
 			break;
 		}
 
@@ -474,11 +469,10 @@ void mtl4FreeAssociatedTextureViews(Mtl4TextureMetadata* metadata) {
 
 	while (viewsBucket != nullptr) {
 		size_t i = 0;
-		while (viewsBucket->views[i] != nil) {
+		while (i < 7 && viewsBucket->views[i] != nil) {
 			[viewsBucket->views[i] release];
 			i++;
 		}
-
 
 		Mtl4TextureViews* nextViews = viewsBucket->nextBucket;
 
