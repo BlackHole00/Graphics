@@ -5,7 +5,6 @@
 #include <lib/common/common.h>
 #include <lib/common/allocator.h>
 #include <lib/common/exponential_array.h>
-#include <lib/common/mutex.h>
 
 // Opaque generational handle used to reference CmnHandleMap entries.
 typedef struct CmnHandle {
@@ -23,7 +22,6 @@ template <typename T>
 struct CmnHandleMapBucket {
 	bool		isInUse;
 	uint32_t	generation;
-	uint32_t	refCount;
 	union {
 		// If isInUse
 		// Stored element when the bucket is in use.
@@ -40,7 +38,6 @@ struct CmnHandleMap {
 	CmnExponentialArray<CmnHandleMapBucket<T>>	buckets;
 	uint32_t					firstFree;
 	T						defaultElement;
-	CmnMutex					mutex;
 };
 
 // Initializes a handle map.
@@ -104,25 +101,6 @@ T& cmnGet(CmnHandleMap<T>* map, CmnHandle handle, bool* wasHandleValid);
 // - handle: Handle to remove.
 template <typename T>
 void cmnRemove(CmnHandleMap<T>* map, CmnHandle handle);
-
-// Increments the reference count for a valid handle.
-//
-// Inputs:
-// - map: Target map.
-// - handle: Handle to retain.
-template <typename T>
-void cmnRetain(CmnHandleMap<T>* map, CmnHandle handle);
-
-// Decrements the reference count for a valid handle.
-//
-// Inputs:
-// - map: Target map.
-// - handle: Handle to release.
-//
-// Returns:
-// - true when the element was removed because the reference count reached zero.
-template <typename T>
-bool cmnRelease(CmnHandleMap<T>* map, CmnHandle handle);
 
 #include "handle_map.inc"
 

@@ -3,11 +3,14 @@
 
 #include "page.cpp"
 #include "arena.cpp"
+#include "synchronization.cpp"
 #include "pointer_map.cpp"
 #include "exponential_array.cpp"
 #include "pool.cpp"
+#include "heap_allocator.cpp"
 #include "handle_map.cpp"
 #include "btree.cpp"
+#include "storage_sync.cpp"
 
 #include "gpu.cpp"
 
@@ -23,6 +26,12 @@ TestRecord gCommonTests[] = {
 	{ "Check for block reusage in pools",				checkPoolBlockReusage			},
 	{ "Check pool out of memory behaviour",				checkPoolOOMBehaviour			},
 	{ "Check for pool behavious with uninitialized locations",	checkPoolUninitializedLocations		},
+
+	{ "Check heap raw allocation is zeroed",			checkHeapRawAllocationIsZeroed		},
+	{ "Check heap typed allocation overloads",			checkHeapTypedAllocationOverloads		},
+	{ "Check heap raw realloc preserves and zeros",			checkHeapRawReallocPreservesAndZeros	},
+	{ "Check heap typed realloc preserves and zeros",		checkHeapTypedReallocPreservesAndZeros	},
+	{ "Check heap aligned raw allocation",				checkHeapAlignedRawAllocation		},
 
 	{ "Check for handle map data coherency",			checkForHandleMapDataCoherency		},
 	{ "Check for handle map bucket reusage",			checkForHandleMapBucketReusage		},
@@ -43,6 +52,17 @@ TestRecord gCommonTests[] = {
 	{ "Check pointer map get with found and default",		checkPointerMapGet			},
 	{ "Check pointer map removal of keys",				checkPointerMapRemove			},
 	{ "Check pointer map reserve and rehash",			checkPointerMapReserveAndRehash		},
+
+	{ "Check mutex mutual exclusion with pthreads",			checkMutexMutualExclusionWithPthreads	},
+	{ "Check mutex try-lock while locked",				checkMutexTryLockWhileLocked		},
+	{ "Check condition signal wakes waiter",			checkConditionSignalWakesWaiter		},
+	{ "Check condition wait timeout",				checkConditionWaitTimeout		},
+	{ "Check RW mutex allows concurrent readers",			checkRWMutexAllowsConcurrentReaders	},
+	{ "Check RW mutex write exclusion",				checkRWMutexWriteExclusion		},
+
+	{ "Check storage sync acquire/release for valid handles", 	checkStorageSyncAcquireAndReleaseValidHandle },
+	{ "Check storage sync invalid handles do not increment users", 	checkStorageSyncInvalidHandleDoesNotIncrementUsers },
+	{ "Check storage sync deletion waits for active users", 	checkStorageSyncDeletionWaitsForActiveUsers },
 };
 
 TestRecord gNoGfxTests[] = {
@@ -58,14 +78,14 @@ TestRecord gNoGfxTests[] = {
 	{ "Check GPU host to device pointer mapping",			checkGpuHostToDevicePointer		},
 	{ "Check GPU host to device pointer fails for GPU-only memory",	checkGpuHostToDevicePointerOnGpuMemory	},
 	{ "Check GPU host to device pointer mapping with offset",	checkGpuHostToDevicePointerWithOffset	},
-	{ "Check GPU texture size and alignment calculation", 		checkGpuTextureSizeAlign			},
-	{ "Check GPU texture size and alignment invalid descriptor", 	checkGpuTextureSizeAlignInvalidDesc		},
+	{ "Check GPU texture size and alignment calculation", 		checkGpuTextureSizeAlign		},
+	{ "Check GPU texture size and alignment invalid descriptor", 	checkGpuTextureSizeAlignInvalidDesc	},
 	{ "Check GPU texture creation", 				checkGpuCreateTexture			},
-	{ "Check GPU texture creation on CPU allocation", 		checkGpuCreateTextureOnCpuAllocation		},
-	{ "Check GPU texture creation invalid descriptor", 		checkGpuCreateTextureInvalidDesc		},
+	{ "Check GPU texture creation on CPU allocation", 		checkGpuCreateTextureOnCpuAllocation	},
+	{ "Check GPU texture creation invalid descriptor", 		checkGpuCreateTextureInvalidDesc	},
 	{ "Check GPU texture view descriptor creation", 		checkGpuTextureViewDescriptor		},
 	{ "Check GPU RW texture view descriptor creation", 		checkGpuRWTextureViewDescriptor		},
-	{ "Check GPU texture view descriptor invalid texture", 	checkGpuTextureViewDescriptorInvalidTexture	},
+	{ "Check GPU texture view descriptor invalid texture", 		checkGpuTextureViewDescriptorInvalidTexture	},
 	{ "Check GPU texture view descriptor invalid descriptor", 	checkGpuTextureViewDescriptorInvalidDesc	},
 };
 

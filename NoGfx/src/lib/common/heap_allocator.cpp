@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-void* cmnHeapAlloc(size_t size, size_t align, CmnResult* result) {
+void* cmnHeapAllocRaw(size_t size, size_t align, CmnResult* result) {
 	void* data;
 	if (align == 0) {
 		data = malloc(size);
@@ -22,7 +22,7 @@ void* cmnHeapAlloc(size_t size, size_t align, CmnResult* result) {
 	return data;
 }
 
-void* cmnHeapRealloc(void* address, size_t oldSize, size_t newSize, size_t align, CmnResult* result) {
+void* cmnHeapReallocRaw(void* address, size_t oldSize, size_t newSize, size_t align, CmnResult* result) {
 	size_t contentSize = (oldSize < newSize) ? oldSize : newSize;
 	void* newAddress;
 
@@ -30,7 +30,13 @@ void* cmnHeapRealloc(void* address, size_t oldSize, size_t newSize, size_t align
 		newAddress = realloc(address, newSize);
 	} else {
 		newAddress = aligned_alloc(align, newSize);
+		if (newAddress == nullptr) {
+			CMN_SET_RESULT(result, CMN_OUT_OF_MEMORY);
+			return nullptr;
+		}
+
 		memcpy(newAddress, address, contentSize);
+		free(address);
 	}
 
 	if (newAddress == nullptr) {
@@ -53,11 +59,11 @@ void cmnHeapFree(void* data) {
 }
 
 static void* cmnHeapAllocatorAlloc(void*, size_t size, size_t align, CmnResult* result) {
-	return cmnHeapAlloc(size, align, result);
+	return cmnHeapAllocRaw(size, align, result);
 }
 
 static void* cmnHeapAllocatorRealloc(void*, void* address, size_t oldSize, size_t newSize, size_t align, CmnResult* result) {
-	return cmnHeapRealloc(address, oldSize, newSize, align, result);
+	return cmnHeapReallocRaw(address, oldSize, newSize, align, result);
 }
 
 static void cmnHeapAllocatorFree(void*, void* address, CmnResult* result) {
