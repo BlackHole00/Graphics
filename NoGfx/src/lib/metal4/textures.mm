@@ -3,6 +3,7 @@
 #include <lib/common/memory.h>
 #include <lib/metal4/context.h>
 #include <lib/metal4/allocation.h>
+#include <lib/metal4/deletion_manager.h>
 
 Mtl4TextureStorage gMtl4TextureStorage;
 
@@ -362,18 +363,24 @@ bool mtl4FindTextureViewIn(Mtl4TextureMetadata* metadata, const GpuViewDesc* des
 }
 
 void mtl4DestroyTexture(Mtl4Texture texture) {
-	// CmnScopedMutex guard(&gMtl4TextureStorage.mutex);
+	Mtl4TextureMetadata* metadata = mtl4AcquireTextureMetadataFrom(texture);
+	if (metadata == nullptr) {
+		return;
+	}
+	defer (mtl4ReleaseTextureMetadata());
 
-	// Mtl4TextureMetadata* metadata = mtl4AcquireTextureMetadataOf(texture);
-	// if (metadata == nullptr) {
-	// 	return;
-	// }
+	cmnAtomicStore(&metadata->scheduledForDeletion, true);
+	mtl4ScheduleTextureForDeletion(texture);
+}
 
-	// mtl4FreeAssociatedTextureViews(metadata);
-
-	// [metadata->texture release];
-
-	// cmnRemove(&gMtl4TextureStorage.textures, texture);
+bool mtl4IsScheduledForDeletion(Mtl4Texture texture) {
+	Mtl4TextureMetadata* metadata = mtl4AcquireTextureMetadataFrom(texture);
+	if (metadata == nullptr) {
+		return false;
+	}
+	defer (mtl4ReleaseTextureMetadata());
+	
+	return cmnAtomicLoad(&metadata->scheduledForDeletion);
 }
 
 MTLTextureDescriptor* mtl4GpuTextureDescToMtl(const GpuTextureDesc* desc, MTLResourceOptions resourceOptions) {
@@ -479,5 +486,22 @@ void mtl4FreeAssociatedTextureViews(Mtl4TextureMetadata* metadata) {
 		cmnPoolFree(&gMtl4TextureStorage.textureViewsPool, viewsBucket);
 		viewsBucket = nextViews;
 	}
+}
+
+void mtl4PhisicallyDestroyTexture(Mtl4Texture texture) {
+	bool wasHandleValid;
+	Mtl4TextureMetadata* metadata = &cmnGet(&gMtl4TextureStorage.textures, texture, &wasHandleValid);
+	if (!wasHandleValid) {
+		return;
+	}
+
+	if (!metadata->scheduledForDeletion) {
+		return;
+	}
+
+	mtl4FreeAssociatedTextureViews(metadata);
+	[metadata->texture release];
+
+	cmnRemove(&gMtl4TextureStorage.textures, texture);
 }
 

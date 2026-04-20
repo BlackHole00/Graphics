@@ -20,6 +20,9 @@ typedef struct Mtl4TextureViews {
 } Mtl4TextureViews;
 
 typedef struct Mtl4TextureMetadata {
+	// Atomic, Settable once
+	bool scheduledForDeletion;
+	
 	// Final
 	id<MTLTexture>		texture;
 	// Final
@@ -51,6 +54,7 @@ GpuTextureDescriptor mtl4TextureViewDescriptor(GpuTexture texture, const GpuView
 GpuTextureDescriptor mtl4RWTextureViewDescriptor(GpuTexture texture, const GpuViewDesc* desc, GpuResult* result);
 
 void mtl4DestroyTexture(Mtl4Texture texture);
+bool mtl4IsScheduledForDeletion(Mtl4Texture texture);
 
 Mtl4TextureMetadata* mtl4AcquireTextureMetadataFrom(Mtl4Texture texture);
 void mtl4ReleaseTextureMetadata(void);
@@ -79,7 +83,11 @@ MTLTextureDescriptor* mtl4GpuTextureDescToMtl(const GpuTextureDesc* desc, MTLRes
 MTLTextureViewDescriptor* mtl4GpuViewDescToMtl(id<MTLTexture> referenceTexture, const GpuViewDesc* desc);
 
 void mtl4AssociateViewToTexture(Mtl4TextureMetadata* metadata, id<MTLTexture> view, const GpuViewDesc* desc, GpuResult* result);
+// NOTE: Not thread safe. Requires external locking.
 void mtl4FreeAssociatedTextureViews(Mtl4TextureMetadata* metadata);
+
+// NOTE: Requires deletion lock on gMtl4TextureStorage.sync
+void mtl4PhisicallyDestroyTexture(Mtl4Texture texture);
 
 #endif // MTL4_TEXTURES_H
 

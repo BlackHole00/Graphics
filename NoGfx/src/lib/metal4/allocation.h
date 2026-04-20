@@ -62,6 +62,9 @@ static_assert(sizeof(Mtl4AllocationTextures) <= 96, "The allocation misc pool sh
 typedef struct Mtl4AllocationMetadata {
 	// Final
 	GpuMemory			memory;
+
+	// Atomic, settable once
+	bool		scheduledForDeletion;
 	// Mtl4InternalAllocationUsages	internalUsage;
 
 	// Final
@@ -162,9 +165,16 @@ inline void* mtl4CpuAddressOf(Mtl4AllocationMetadata* metadata) {
 }
 
 void mtl4AssociateTextureToAllocation(Mtl4AllocationMetadata* metadata, Mtl4Texture texture, GpuResult* result);
-void mtl4FreeAssociatedTextures(Mtl4AllocationTextures* textureBucket);
+// NOTE: Not thread safe. Requires external locking.
+void mtl4FreeAssociatedTextures(Mtl4AllocationMetadata* metadata);
 
 void mtl4EnsureBackingBufferIsAllocated(Mtl4GpuAddress address, GpuResult* result);
+bool mtl4IsScheduledForDeletion(void* ptr);
+
+// NOTE: Requires a deletion lock in gMtl4AllocationStorage.sync
+void mtl4PhisicallyDestroyAllocation(Mtl4AllocationHandle handle);
+
+// void mtl4Delete
 
 // NOTE: This is an HACK, since eq and cmp are not symmetrical. This works because the implementation of BTree always
 //	compares keys and values with the same order: keys on the right, values on the left.

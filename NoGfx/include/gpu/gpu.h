@@ -27,6 +27,9 @@ typedef enum GpuResult {
 
 	GPU_PIPELINE_IR_VALIDATION_FAILED,
 
+	// Only active while validation is enabled.
+	GPU_USE_AFTER_FREE,
+
 	GPU_GENERAL_ERROR,
 } GpuResult;
 

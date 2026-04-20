@@ -2,6 +2,7 @@
 
 #include <lib/common/heap_allocator.h>
 #include <lib/metal4/context.h>
+#include <lib/metal4/deletion_manager.h>
 
 Mtl4AllocationStorage gMtl4AllocationStorage;
 
@@ -247,42 +248,28 @@ void* mtl4Malloc(size_t size, size_t align, GpuMemory memory, GpuResult* result)
 }
 
 void mtl4Free(void* ptr) {
-	// if (ptr == nullptr) {
-	// 	return;
-	// }
+	if (ptr == nullptr) {
+		return;
+	}
 
+	bool couldFindMetadata;
+	Mtl4AllocationHandle handle = mtl4AllocationHandleOf(ptr, false, &couldFindMetadata);
+	if (!couldFindMetadata) {
+		return;
+	}
 
-	// Mtl4AllocationTextures* texturesToFree;
-	// {
-	// 	CmnScopedMutex guard(&gMtl4AllocationStorage.mutex);
+	Mtl4AllocationMetadata* metadata = mtl4AcquireAllocationMetadataFrom(handle, nullptr);
+	if (metadata == nullptr) {
+		return;
+	}
+	defer (mtl4ReleaseAllocationMetadata());
 
-	// 	Mtl4AllocationMetadata* metadata = mtl4AllocationHandleOf(ptr, false);
-	// 	if (metadata == nullptr) {
-	// 		return;
-	// 	}
+	cmnAtomicStore(&metadata->scheduledForDeletion, true);
 
-	// 	texturesToFree = metadata->relatedTextures;
+	// NOTE: May as well...
+	mtl4FreeAssociatedTextures(metadata);
 
-	// 	Mtl4AddressRange range;
-	// 	range.start = (uintptr_t)ptr;
-	// 	range.length = 0;
-
-	// 	cmnRemove(&gMtl4AllocationStorage.cpuAddressRangeMap, range);
-	// 	cmnRemove(&gMtl4AllocationStorage.cpuAllocationMap, (uintptr_t)ptr);
-	// 	cmnRemove(&gMtl4AllocationStorage.gpuAllocationMap, metadata->assignedGpuAddress.allocationIdentifier);
-
-	// 	if (metadata->buffer != nil) {
-	// 		[metadata->buffer release];
-	// 	}
-
-	// 	cmnPoolFree(&gMtl4AllocationStorage.allocationMetadataPool, metadata);
-	// }
-
-	// NOTE: Needs to be done separately, since this calls the texture storage, thus locking it.
-	//	If this gets done when also the buffer storage gets locked, a deadlock could occurr.
-	// {
-	// 	mtl4FreeAssociatedTextures(texturesToFree);
-	// }
+	mtl4ScheduleAllocationForDeletion(handle);
 }
 
 Mtl4AllocationMetadata* mtl4AcquireAllocationMetadataFrom(Mtl4AllocationHandle handle, bool* wasHandleValid) {
@@ -489,8 +476,8 @@ void mtl4AssociateTextureToAllocation(Mtl4AllocationMetadata* metadata, Mtl4Text
 	CMN_SET_RESULT(result, GPU_SUCCESS);
 }
 
-void mtl4FreeAssociatedTextures(Mtl4AllocationTextures* textureBucket) {
-	Mtl4AllocationTextures* textures = textureBucket;
+void mtl4FreeAssociatedTextures(Mtl4AllocationMetadata* metadata) {
+	Mtl4AllocationTextures* textures = metadata->relatedTextures;
 
 	while (textures != nullptr) {
 		size_t i = 0;
@@ -504,6 +491,8 @@ void mtl4FreeAssociatedTextures(Mtl4AllocationTextures* textureBucket) {
 		cmnPoolFree(&gMtl4AllocationStorage.miscPool, textures);
 		textures = nextTextures;
 	}
+
+	metadata->relatedTextures = nullptr;
 }
 
 void mtl4EnsureBackingBufferIsAllocated(Mtl4GpuAddress address, GpuResult* result) {
@@ -529,3 +518,45 @@ void mtl4EnsureBackingBufferIsAllocated(Mtl4GpuAddress address, GpuResult* resul
 
 	CMN_SET_RESULT(result, GPU_SUCCESS);
 }
+
+bool mtl4IsScheduledForDeletion(void* ptr) {
+	Mtl4AllocationMetadata* metadata = mtl4AcquireAllocationMetadataFrom(ptr, true);
+	if (metadata == nullptr) {
+		return false;
+	}
+	defer (mtl4ReleaseAllocationMetadata());
+
+	return cmnAtomicLoad(&metadata->scheduledForDeletion);
+}
+
+void mtl4PhisicallyDestroyAllocation(Mtl4AllocationHandle handle) {
+	bool wasHandleValid;
+	Mtl4AllocationMetadata* metadata = &cmnGet(&gMtl4AllocationStorage.allocations, handle, &wasHandleValid);
+	if (!wasHandleValid) {
+		return;
+	}
+
+	if (!metadata->scheduledForDeletion) {
+		return;
+	}
+
+	void* ptr = [metadata->buffer contents];
+
+	Mtl4AddressRange range;
+	range.start = (uintptr_t)ptr;
+	range.length = 0;
+
+	mtl4FreeAssociatedTextures(metadata);
+
+	if (metadata->buffer != nil) {
+		[metadata->buffer release];
+	}
+
+	[metadata->associatedTextureHeap release];
+
+	cmnRemove(&gMtl4AllocationStorage.cpuAddressRangeMap, range);
+	cmnRemove(&gMtl4AllocationStorage.cpuAllocationMap, (uintptr_t)ptr);
+	cmnRemove(&gMtl4AllocationStorage.gpuAllocationMap, metadata->assignedGpuAddress.allocationIdentifier);
+	cmnRemove(&gMtl4AllocationStorage.allocations, handle);
+}
+

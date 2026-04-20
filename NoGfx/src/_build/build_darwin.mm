@@ -27,4 +27,5 @@
 #include <lib/metal4/allocation.mm>
 #include <lib/metal4/textures.mm>
 #include <lib/metal4/validation.mm>
+#include <lib/metal4/deletion_manager.cpp>
 

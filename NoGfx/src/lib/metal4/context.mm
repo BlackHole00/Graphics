@@ -6,6 +6,7 @@
 #include <lib/metal4/device.h>
 #include <lib/metal4/allocation.h>
 #include <lib/metal4/textures.h>
+#include <lib/metal4/deletion_manager.h>
 
 // 128 KB
 #define MTL4_GLOBAL_MEMORY 128 * 1024
@@ -51,6 +52,13 @@ void mtl4Init(GpuResult* result) {
 		goto on_error_cleanup;
 	}
 
+	mtl4InitDeletionManager(&localResult);
+	if (localResult != GPU_SUCCESS) {
+		CMN_SET_RESULT(result, localResult);
+		goto on_error_cleanup;
+	}
+
+
 	CMN_SET_RESULT(result, GPU_SUCCESS);
 	return;
 
@@ -60,6 +68,7 @@ on_error_cleanup:
 }
 
 void mtl4Deinit(void) {
+	mtl4FiniAllocationStorage();
 	mtl4FiniTextureStorage();
 	mtl4FiniAllocationStorage();
 

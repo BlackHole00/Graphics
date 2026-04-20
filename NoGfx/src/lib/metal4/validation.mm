@@ -72,6 +72,11 @@ bool mtl4ValidateGpuHostToDevicePointer(void* ptr, GpuResult* result) {
 		CMN_SET_RESULT(result, GPU_INVALID_PARAMETERS);
 		return false;
 	}
+
+	if (mtl4IsScheduledForDeletion(ptr)) {
+		CMN_SET_RESULT(result, GPU_USE_AFTER_FREE);
+		return false;
+	}
 	
 	CMN_SET_RESULT(result, GPU_SUCCESS);
 	return true;
@@ -191,6 +196,11 @@ bool mtl4ValidateGpuCreateTexture(const GpuTextureDesc* desc, void* ptrGpu, GpuR
 		return false;
 	}
 
+	if (mtl4IsScheduledForDeletion(ptrGpu)) {
+		CMN_SET_RESULT(result, GPU_USE_AFTER_FREE);
+		return false;
+	}
+	
 	Mtl4AllocationMetadata* metadata = mtl4AcquireAllocationMetadataFromGpuPtr(ptrGpu);
 	if (metadata == nullptr) {
 		CMN_SET_RESULT(result, GPU_NO_SUCH_ALLOCATION_FOUND);
@@ -223,51 +233,54 @@ bool mtl4ValidateGpuTextureViewDescriptor(GpuTexture texture, const GpuViewDesc*
 		return false;
 	}
 
-	{
-		Mtl4Texture handle = mtl4GpuTextureToHadle(texture);
-		Mtl4TextureMetadata* metadata = mtl4AcquireTextureMetadataFrom(handle);
-		if (metadata == nullptr) {
-			CMN_SET_RESULT(result, GPU_NO_SUCH_TEXTURE_FOUND);
-			return false;
-		}
-		defer (mtl4ReleaseTextureMetadata());
+	if (mtl4IsScheduledForDeletion(mtl4GpuTextureToHadle(texture))) {
+		CMN_SET_RESULT(result, GPU_USE_AFTER_FREE);
+		return false;
+	}
 
-		if (desc->baseMip >= metadata->texture.mipmapLevelCount) {
-			CMN_SET_RESULT(result, GPU_INVALID_PARAMETERS);
-			return false;
-		}
+	Mtl4Texture handle = mtl4GpuTextureToHadle(texture);
+	Mtl4TextureMetadata* metadata = mtl4AcquireTextureMetadataFrom(handle);
+	if (metadata == nullptr) {
+		CMN_SET_RESULT(result, GPU_NO_SUCH_TEXTURE_FOUND);
+		return false;
+	}
+	defer (mtl4ReleaseTextureMetadata());
 
-		if ((uint32_t)desc->baseMip + (uint32_t)desc->mipCount > metadata->texture.mipmapLevelCount) {
-			CMN_SET_RESULT(result, GPU_INVALID_PARAMETERS);
-			return false;
-		}
+	if (desc->baseMip >= metadata->texture.mipmapLevelCount) {
+		CMN_SET_RESULT(result, GPU_INVALID_PARAMETERS);
+		return false;
+	}
 
-		uint32_t maxLayerCount = 1;
-		switch (metadata->texture.textureType) {
-			case MTLTextureType3D: {
-				maxLayerCount = (uint32_t)metadata->texture.depth;
-				break;
-			}
-			case MTLTextureType2DArray:
-			case MTLTextureTypeCubeArray: {
-				maxLayerCount = (uint32_t)metadata->texture.arrayLength;
-				break;
-			}
-			default: {
-				maxLayerCount = 1;
-				break;
-			}
-		}
+	if ((uint32_t)desc->baseMip + (uint32_t)desc->mipCount > metadata->texture.mipmapLevelCount) {
+		CMN_SET_RESULT(result, GPU_INVALID_PARAMETERS);
+		return false;
+	}
 
-		if (desc->baseLayer >= maxLayerCount) {
-			CMN_SET_RESULT(result, GPU_INVALID_PARAMETERS);
-			return false;
+	uint32_t maxLayerCount = 1;
+	switch (metadata->texture.textureType) {
+		case MTLTextureType3D: {
+			maxLayerCount = (uint32_t)metadata->texture.depth;
+			break;
 		}
+		case MTLTextureType2DArray:
+		case MTLTextureTypeCubeArray: {
+			maxLayerCount = (uint32_t)metadata->texture.arrayLength;
+			break;
+		}
+		default: {
+			maxLayerCount = 1;
+			break;
+		}
+	}
 
-		if ((uint32_t)desc->baseLayer + (uint32_t)desc->layerCount > maxLayerCount) {
-			CMN_SET_RESULT(result, GPU_INVALID_PARAMETERS);
-			return false;
-		}
+	if (desc->baseLayer >= maxLayerCount) {
+		CMN_SET_RESULT(result, GPU_INVALID_PARAMETERS);
+		return false;
+	}
+
+	if ((uint32_t)desc->baseLayer + (uint32_t)desc->layerCount > maxLayerCount) {
+		CMN_SET_RESULT(result, GPU_INVALID_PARAMETERS);
+		return false;
 	}
 
 	CMN_SET_RESULT(result, GPU_SUCCESS);
