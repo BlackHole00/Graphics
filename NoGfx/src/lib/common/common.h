@@ -12,4 +12,8 @@
 
 #include "result.h"
 
+#include "defer.h"
+
+#define CMN_SET_NULLABLE(_var, _val) do { if (_var != nullptr) { *_var = _val; } } while(0)
+
 #endif // CMN_COMMONCOMMON_H

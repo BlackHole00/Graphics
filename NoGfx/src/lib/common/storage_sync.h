@@ -53,7 +53,7 @@ void cmnStorageSyncUnlockRead(CmnStorageSync* sync);
 
 // Acquires a resource referenced by handle and marks the storage as in-use when valid.
 template <typename T>
-T& cmnStorageSyncAcquireResource(CmnHandleMap<T>* map, CmnStorageSync* sync, CmnHandle handle, bool* wasHandleValid);
+T* cmnStorageSyncAcquireResource(CmnHandleMap<T>* map, CmnStorageSync* sync, CmnHandle handle, bool* wasHandleValid);
 
 // Releases a previously acquired resource use marker.
 void cmnStorageSyncReleaseResource(CmnStorageSync* sync);

@@ -1,5 +1,5 @@
 template <typename T>
-T& cmnStorageSyncAcquireResource(CmnHandleMap<T>* map, CmnStorageSync* sync, CmnHandle handle, bool* wasHandleValid) {
+T* cmnStorageSyncAcquireResource(CmnHandleMap<T>* map, CmnStorageSync* sync, CmnHandle handle, bool* wasHandleValid) {
 	bool localWasHandleValid;
 
 	for (;;) {
@@ -17,7 +17,7 @@ T& cmnStorageSyncAcquireResource(CmnHandleMap<T>* map, CmnStorageSync* sync, Cmn
 				*wasHandleValid = false;
 			}
 
-			return resource;
+			return &resource;
 		}
 
 		cmnStorageSyncMarkAsUsingResources(sync);
@@ -26,6 +26,6 @@ T& cmnStorageSyncAcquireResource(CmnHandleMap<T>* map, CmnStorageSync* sync, Cmn
 			*wasHandleValid = true;
 		}
 
-		return resource;
+		return &resource;
 	}
 }

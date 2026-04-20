@@ -29,9 +29,9 @@ void checkStorageSyncAcquireAndReleaseValidHandle(Test* test) {
 	CmnStorageSync sync = {};
 
 	bool wasHandleValid = false;
-	int32_t& value = cmnStorageSyncAcquireResource(&map, &sync, handle, &wasHandleValid);
+	int32_t* value = cmnStorageSyncAcquireResource(&map, &sync, handle, &wasHandleValid);
 	TEST_ASSERT(test, wasHandleValid);
-	TEST_ASSERT(test, value == 42);
+	TEST_ASSERT(test, *value == 42);
 	TEST_ASSERT(test, cmnAtomicLoad(&sync.users.value, CMN_ACQUIRE) == 1u);
 
 	cmnStorageSyncReleaseResource(&sync);
@@ -56,9 +56,9 @@ void checkStorageSyncInvalidHandleDoesNotIncrementUsers(Test* test) {
 	CmnStorageSync sync = {};
 
 	bool wasHandleValid = true;
-	int32_t& value = cmnStorageSyncAcquireResource(&map, &sync, CmnHandle{123u, 456u}, &wasHandleValid);
+	int32_t* value = cmnStorageSyncAcquireResource(&map, &sync, CmnHandle{123u, 456u}, &wasHandleValid);
 	TEST_ASSERT(test, !wasHandleValid);
-	TEST_ASSERT(test, value == -1);
+	TEST_ASSERT(test, *value == -1);
 	TEST_ASSERT(test, cmnAtomicLoad(&sync.users.value, CMN_ACQUIRE) == 0u);
 }
 
@@ -75,7 +75,7 @@ static void* storageSyncUserThreadProc(void* ptr) {
 	StorageSyncUserContext* context = (StorageSyncUserContext*)ptr;
 
 	bool wasHandleValid = false;
-	int32_t& value = cmnStorageSyncAcquireResource(context->map, context->sync, context->handle, &wasHandleValid);
+	int32_t* value = cmnStorageSyncAcquireResource(context->map, context->sync, context->handle, &wasHandleValid);
 	if (!wasHandleValid) {
 		return nullptr;
 	}

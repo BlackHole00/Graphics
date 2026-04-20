@@ -191,19 +191,16 @@ bool mtl4ValidateGpuCreateTexture(const GpuTextureDesc* desc, void* ptrGpu, GpuR
 		return false;
 	}
 
-	{
-		CmnScopedMutex guard(&gMtl4AllocationStorage.mutex);
+	Mtl4AllocationMetadata* metadata = mtl4AcquireAllocationMetadataFromGpuPtr(ptrGpu);
+	if (metadata == nullptr) {
+		CMN_SET_RESULT(result, GPU_NO_SUCH_ALLOCATION_FOUND);
+		return false;
+	}
+	defer (mtl4ReleaseAllocationMetadata());
 
-		Mtl4AllocationMetadata* metadata = mtl4AllocationMetadataOf(ptrGpu, true);
-		if (metadata == nullptr) {
-			CMN_SET_RESULT(result, GPU_NO_SUCH_ALLOCATION_FOUND);
-			return false;
-		}
-
-		if (metadata->memory != GPU_MEMORY_GPU) {
-			CMN_SET_RESULT(result, GPU_ALLOCATION_MEMORY_IS_CPU);
-			return false;
-		}
+	if (metadata->memory != GPU_MEMORY_GPU) {
+		CMN_SET_RESULT(result, GPU_ALLOCATION_MEMORY_IS_CPU);
+		return false;
 	}
 
 	CMN_SET_RESULT(result, GPU_SUCCESS);
