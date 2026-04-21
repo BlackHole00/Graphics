@@ -82,22 +82,52 @@ GpuTextureDescriptor gpuRWTextureViewDescriptor(GpuTexture texture, const GpuVie
 	return {};
 }
 
-GpuPipeline gpuCreateComputePipeline(uint8_t* bytes, size_t size, GpuResult* result) {
-	// GPU_LAYERED_CALL(gpuCreateComputePipeline, bytes, size, result);
+GpuPipeline gpuCreateComputePipeline(
+	const uint8_t* ir, size_t irSize,
+	const void* constants, size_t constantsSize,
+	GpuResult* result
+) {
+	GPU_LAYERED_CALL(gpuCreateComputePipeline, ir, irSize, constants, constantsSize, result);
 
-	return 0;
+	return {};
 }
 
-GpuPipeline gpuCreateRenderPipeline(uint8_t* bytes, size_t size, GpuResult* result) {
-	GPU_LAYERED_CALL(gpuCreateRenderPipeline, bytes, size, result);
-	
-	return 0;
+GpuPipeline gpuCreateRenderPipeline(
+	const uint8_t* vertexIr, size_t vertexIrSize,
+	const uint8_t* fragmentIr, size_t fragmentIrSize,
+	const void* vertexConstants, size_t vertexConstantsSize,
+	const void* fragmentConstants, size_t fragmentConstantsSize,
+	GpuResult* result
+) {
+	GPU_LAYERED_CALL(
+		gpuCreateRenderPipeline,
+		vertexIr, vertexIrSize,
+		fragmentIr, fragmentIrSize,
+		vertexConstants, vertexConstantsSize,
+		fragmentConstants, fragmentConstantsSize,
+		result
+	);
+
+	return {};
 }
 
-GpuPipeline gpuCreateMeshletPipeline(uint8_t* bytes, size_t size, GpuResult* result) {
-	GPU_LAYERED_CALL(gpuCreateRenderPipeline, bytes, size, result);
-	
-	return 0;
+GpuPipeline gpuCreateMeshletPipeline(
+	const uint8_t* meshletIr, size_t meshletIrSize,
+	const uint8_t* fragmentIr, size_t fragmentIrSize,
+	const void* meshletConstants, size_t meshletConstantsSize,
+	const void* fragmentConstants, size_t fragmentConstantsSize,
+	GpuResult* result
+) {
+	GPU_LAYERED_CALL(
+		gpuCreateMeshletPipeline,
+		meshletIr, meshletIrSize,
+		fragmentIr, fragmentIrSize,
+		meshletConstants, meshletConstantsSize,
+		fragmentConstants, fragmentConstantsSize,
+		result
+	)
+
+	return {};
 }
 
 void gpuFreePipeline(GpuPipeline pipeline) {

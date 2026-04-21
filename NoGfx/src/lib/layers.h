@@ -22,9 +22,25 @@ typedef struct GpuBaseLayer {
 	GpuTextureDescriptor (*gpuTextureViewDescriptor)(GpuTexture texture, const GpuViewDesc* desc, GpuResult* result);
 	GpuTextureDescriptor (*gpuRWTextureViewDescriptor)(GpuTexture texture, const GpuViewDesc* desc, GpuResult* result);
 
-	GpuPipeline (*gpuCreateComputePipeline)(uint8_t* bytes, size_t size, GpuResult* result);
-	GpuPipeline (*gpuCreateRenderPipeline)(uint8_t* bytes, size_t size, GpuResult* result);
-	GpuPipeline (*gpuCreateMeshletPipeline)(uint8_t* bytes, size_t size, GpuResult* result);
+	GpuPipeline (*gpuCreateComputePipeline)(
+		const uint8_t* ir, size_t irSize,
+		const void* constants, size_t constantsSize,
+		GpuResult* result
+	);
+	GpuPipeline (*gpuCreateRenderPipeline)(
+		const uint8_t* vertexIr, size_t vertexIrSize,
+		const uint8_t* fragmentIr, size_t fragmentIrSize,
+		const void* vertexConstants, size_t vertexConstantsSize,
+		const void* fragmentConstants, size_t fragmentConstantsSize,
+		GpuResult* result
+	);
+	GpuPipeline (*gpuCreateMeshletPipeline)(
+		const uint8_t* meshletIr, size_t meshletIrSize,
+		const uint8_t* fragmentIr, size_t fragmentIrSize,
+		const void* meshletConstants, size_t meshletConstantsSize,
+		const void* fragmentConstants, size_t fragmentConstantsSize,
+		GpuResult* result
+	);
 	void (*gpuFreePipeline)(GpuPipeline pipeline);
 } GpuBaseLayer;
 

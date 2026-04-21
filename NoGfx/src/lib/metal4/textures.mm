@@ -488,7 +488,7 @@ void mtl4FreeAssociatedTextureViews(Mtl4TextureMetadata* metadata) {
 	}
 }
 
-void mtl4PhisicallyDestroyTexture(Mtl4Texture texture) {
+void mtl4DestroyTexture(Mtl4Texture texture) {
 	bool wasHandleValid;
 	Mtl4TextureMetadata* metadata = &cmnGet(&gMtl4TextureStorage.textures, texture, &wasHandleValid);
 	if (!wasHandleValid) {

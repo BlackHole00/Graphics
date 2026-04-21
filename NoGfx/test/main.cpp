@@ -5,6 +5,7 @@
 #include "arena.cpp"
 #include "synchronization.cpp"
 #include "pointer_map.cpp"
+#include "hash_map.cpp"
 #include "exponential_array.cpp"
 #include "pool.cpp"
 #include "heap_allocator.cpp"
@@ -35,7 +36,7 @@ TestRecord gCommonTests[] = {
 
 	{ "Check for handle map data coherency",			checkForHandleMapDataCoherency		},
 	{ "Check for handle map bucket reusage",			checkForHandleMapBucketReusage		},
-	{ "Check for handle map behaviour on generation overflow",	checkForHandleMapGenerationOverflowBehaviour },
+	{ "Check for handle map behaviour on generation overflow",	checkForHandleMapGenerationOverflowBehaviour	},
 	{ "Check for handle map behaviour on index overflow",		checkForHandleMapIndexOverflowBehaviour	},
 	{ "Check for handle map behaviour on invalid handles",		checkForHandleMapInvalidHandleBehaviour	},
 
@@ -53,6 +54,12 @@ TestRecord gCommonTests[] = {
 	{ "Check pointer map removal of keys",				checkPointerMapRemove			},
 	{ "Check pointer map reserve and rehash",			checkPointerMapReserveAndRehash		},
 
+	{ "Check hash map creation and initial state",			checkHashMapCreation			},
+	{ "Check hash map insert contains and get",			checkHashMapInsertContainsAndGet		},
+	{ "Check hash map overwrite does not grow length",		checkHashMapOverwriteDoesNotGrowLength	},
+	{ "Check hash map remove and reuse deleted slots",		checkHashMapRemoveAndReuseDeletedSlots	},
+	{ "Check hash map reserve and rehash",			checkHashMapReserveAndRehash		},
+
 	{ "Check mutex mutual exclusion with pthreads",			checkMutexMutualExclusionWithPthreads	},
 	{ "Check mutex try-lock while locked",				checkMutexTryLockWhileLocked		},
 	{ "Check condition signal wakes waiter",			checkConditionSignalWakesWaiter		},
@@ -60,9 +67,9 @@ TestRecord gCommonTests[] = {
 	{ "Check RW mutex allows concurrent readers",			checkRWMutexAllowsConcurrentReaders	},
 	{ "Check RW mutex write exclusion",				checkRWMutexWriteExclusion		},
 
-	{ "Check storage sync acquire/release for valid handles", 	checkStorageSyncAcquireAndReleaseValidHandle },
-	{ "Check storage sync invalid handles do not increment users", 	checkStorageSyncInvalidHandleDoesNotIncrementUsers },
-	{ "Check storage sync deletion waits for active users", 	checkStorageSyncDeletionWaitsForActiveUsers },
+	{ "Check storage sync acquire/release for valid handles", 	checkStorageSyncAcquireAndReleaseValidHandle	},
+	{ "Check storage sync invalid handles do not increment users", 	checkStorageSyncInvalidHandleDoesNotIncrementUsers	},
+	{ "Check storage sync deletion waits for active users", 	checkStorageSyncDeletionWaitsForActiveUsers	},
 };
 
 TestRecord gNoGfxTests[] = {
@@ -88,7 +95,7 @@ TestRecord gNoGfxTests[] = {
 	{ "Check GPU texture view descriptor invalid texture", 		checkGpuTextureViewDescriptorInvalidTexture	},
 	{ "Check GPU texture view descriptor invalid descriptor", 	checkGpuTextureViewDescriptorInvalidDesc	},
 	{ "Check GPU allocation create/destroy across threads", 	checkGpuAllocationCreatedAndDestroyedOnDifferentThreads },
-	{ "Check GPU texture create/destroy across threads", 	checkGpuTextureCreatedAndBackingFreedOnDifferentThreads },
+	{ "Check GPU texture create/destroy across threads", 		checkGpuTextureCreatedAndBackingFreedOnDifferentThreads },
 };
 
 int main(void) {

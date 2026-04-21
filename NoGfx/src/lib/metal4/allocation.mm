@@ -270,6 +270,8 @@ void mtl4Free(void* ptr) {
 	mtl4FreeAssociatedTextures(metadata);
 
 	mtl4ScheduleAllocationForDeletion(handle);
+
+	mtl4CheckForResourceDeletion();
 }
 
 Mtl4AllocationMetadata* mtl4AcquireAllocationMetadataFrom(Mtl4AllocationHandle handle, bool* wasHandleValid) {
@@ -529,7 +531,7 @@ bool mtl4IsScheduledForDeletion(void* ptr) {
 	return cmnAtomicLoad(&metadata->scheduledForDeletion);
 }
 
-void mtl4PhisicallyDestroyAllocation(Mtl4AllocationHandle handle) {
+void mtl4DestroyAllocation(Mtl4AllocationHandle handle) {
 	bool wasHandleValid;
 	Mtl4AllocationMetadata* metadata = &cmnGet(&gMtl4AllocationStorage.allocations, handle, &wasHandleValid);
 	if (!wasHandleValid) {

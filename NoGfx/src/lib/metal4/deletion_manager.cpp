@@ -26,6 +26,12 @@ void mtl4InitDeletionManager(GpuResult* result) {
 		return;
 	}
 
+	cmnCreateExponentialArray(&gMtl4DeletionManager.pipelines, arenaAllocator, &localResult);
+	if (localResult != CMN_SUCCESS) {
+		CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
+		return;
+	}
+
 	CMN_SET_RESULT(result, GPU_SUCCESS);
 }
 
@@ -54,8 +60,15 @@ void mtl4ScheduleTextureForDeletion(Mtl4Texture texture) {
 	cmnAppend(&gMtl4DeletionManager.textures, texture, nullptr);
 }
 
+void mtl4SchedulePipelineForDeletion(Mtl4Pipeline pipeline) {
+	CmnScopedMutex guard(&gMtl4DeletionManager.pipelinesMutex);
+	cmnAppend(&gMtl4DeletionManager.pipelines, pipeline, nullptr);
+}
+
 bool mtl4ShouldDeleteScheduledResources(void) {
-	return mtl4ShouldDeleteScheduledTextures() || mtl4ShouldDeleteScheduledAllocations();
+	return mtl4ShouldDeleteScheduledTextures() ||
+		mtl4ShouldDeleteScheduledAllocations() ||
+		mtl4ShouldDeleteScheduledPipelines();
 }
 
 bool mtl4ShouldDeleteScheduledAllocations(void) {
@@ -66,16 +79,30 @@ bool mtl4ShouldDeleteScheduledTextures(void) {
 	return gMtl4DeletionManager.texturesToDeallocate >= 128;
 }
 
+bool mtl4ShouldDeleteScheduledPipelines(void) {
+	return gMtl4DeletionManager.pipelinesToDeallocate >= 64;
+}
+
 void mtl4DeleteScheduledResources(void) {
-	mtl4DeleteScheduledAllocations();
-	mtl4DeleteScheduledTextures();
+	if (mtl4ShouldDeleteScheduledAllocations()) {
+		mtl4DeleteScheduledAllocations();
+	}
+
+	if (mtl4ShouldDeleteScheduledTextures()) {
+		mtl4DeleteScheduledTextures();
+	}
+
+	if (mtl4ShouldDeleteScheduledPipelines()) {
+		mtl4DeleteScheduledPipelines();
+	}
 }
 
 void mtl4DeleteScheduledAllocations(void) {
 	CmnScopedStorageSyncDeletionLock guard(&gMtl4AllocationStorage.sync);
+	CmnScopedMutex guardd(&gMtl4DeletionManager.allocationsMutex);
 
 	for (size_t i = 0; i < gMtl4DeletionManager.allocations.length; i++) {
-		mtl4PhisicallyDestroyAllocation(gMtl4DeletionManager.allocations[i]);
+		mtl4DestroyAllocation(gMtl4DeletionManager.allocations[i]);
 	}
 
 	cmnResize(&gMtl4DeletionManager.allocations, 0, nullptr);
@@ -83,11 +110,29 @@ void mtl4DeleteScheduledAllocations(void) {
 
 void mtl4DeleteScheduledTextures(void) {
 	CmnScopedStorageSyncDeletionLock guard(&gMtl4TextureStorage.sync);
+	CmnScopedMutex guardd(&gMtl4DeletionManager.texturesMutex);
 
 	for (size_t i = 0; i < gMtl4DeletionManager.textures.length; i++) {
-		mtl4PhisicallyDestroyTexture(gMtl4DeletionManager.textures[i]);
+		mtl4DestroyTexture(gMtl4DeletionManager.textures[i]);
 	}
 
 	cmnResize(&gMtl4DeletionManager.textures, 0, nullptr);
 }
 
+void mtl4DeleteScheduledPipelines(void) {
+	CmnScopedStorageSyncDeletionLock guard(&gMtl4PipelineStorage.sync);
+	CmnScopedMutex guardd(&gMtl4DeletionManager.pipelinesMutex);
+
+	for (size_t i = 0; i < gMtl4DeletionManager.pipelines.length; i++) {
+		mtl4DestroyPipeline(gMtl4DeletionManager.pipelines[i]);
+	}
+
+	cmnResize(&gMtl4DeletionManager.pipelines, 0, nullptr);
+}
+
+void mtl4CheckForResourceDeletion(void) {
+	if (mtl4ShouldDeleteScheduledResources()) {
+		mtl4DeleteScheduledResources();
+	}
+}
+ 

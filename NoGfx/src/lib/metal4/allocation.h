@@ -172,9 +172,7 @@ void mtl4EnsureBackingBufferIsAllocated(Mtl4GpuAddress address, GpuResult* resul
 bool mtl4IsScheduledForDeletion(void* ptr);
 
 // NOTE: Requires a deletion lock in gMtl4AllocationStorage.sync
-void mtl4PhisicallyDestroyAllocation(Mtl4AllocationHandle handle);
-
-// void mtl4Delete
+void mtl4DestroyAllocation(Mtl4AllocationHandle handle);
 
 // NOTE: This is an HACK, since eq and cmp are not symmetrical. This works because the implementation of BTree always
 //	compares keys and values with the same order: keys on the right, values on the left.

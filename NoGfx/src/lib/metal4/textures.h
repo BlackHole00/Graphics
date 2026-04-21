@@ -87,7 +87,7 @@ void mtl4AssociateViewToTexture(Mtl4TextureMetadata* metadata, id<MTLTexture> vi
 void mtl4FreeAssociatedTextureViews(Mtl4TextureMetadata* metadata);
 
 // NOTE: Requires deletion lock on gMtl4TextureStorage.sync
-void mtl4PhisicallyDestroyTexture(Mtl4Texture texture);
+void mtl4DestroyTexture(Mtl4Texture texture);
 
 #endif // MTL4_TEXTURES_H
 
