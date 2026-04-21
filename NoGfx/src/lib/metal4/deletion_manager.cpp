@@ -139,7 +139,13 @@ void mtl4DeleteScheduledPipelines(void) {
 }
 
 void mtl4CheckForResourceDeletion(void) {
-	if (mtl4ShouldDeleteScheduledResources()) {
+	uint32_t expected = 0u;
+	if (!cmnAtomicCompareExchangeStrong(&gMtl4DeletionManager.isDeleting, &expected, 1u, CMN_ACQ_REL, CMN_ACQUIRE)) {
+		return;
+	}
+	defer (cmnAtomicStore(&gMtl4DeletionManager.isDeleting, 0u, CMN_RELEASE));
+
+	while (mtl4ShouldDeleteScheduledResources()) {
 		mtl4DeleteScheduledResources();
 	}
 }

@@ -470,6 +470,8 @@ void mtl4AssociateViewToTexture(Mtl4TextureMetadata* metadata, id<MTLTexture> vi
 }
 
 void mtl4FreeAssociatedTextureViews(Mtl4TextureMetadata* metadata) {
+	CmnScopedWriteRWMutex guard(&metadata->relatedViewsMutex);
+
 	Mtl4TextureViews* viewsBucket = metadata->relatedViews;
 
 	while (viewsBucket != nullptr) {

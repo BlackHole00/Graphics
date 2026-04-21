@@ -481,6 +481,8 @@ void mtl4AssociateTextureToAllocation(Mtl4AllocationMetadata* metadata, Mtl4Text
 }
 
 void mtl4FreeAssociatedTextures(Mtl4AllocationMetadata* metadata) {
+	CmnScopedWriteRWMutex guard(&metadata->relatedTexturesMutex);
+
 	Mtl4AllocationTextures* textures = metadata->relatedTextures;
 
 	while (textures != nullptr) {
