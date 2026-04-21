@@ -1,6 +1,7 @@
 {
   "chat.tools.terminal.autoApprove": {
-    "./build.sh": true
+    "./build.sh": true,
+    "./run_tests.sh": true
   },
   "cSpell.words": [
     "sistems"

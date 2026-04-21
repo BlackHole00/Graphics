@@ -14,7 +14,7 @@ static_assert(sizeof(Mtl4Texture) == sizeof(GpuTexture), "Mtl4Texture and GpuTex
 
 typedef struct Mtl4TextureViews {
 	id<MTLTexture> views[7];
-	GpuTextureDesc textureDescriptors[7];
+	GpuViewDesc viewsDescriptors[7];
 
 	struct Mtl4TextureViews* nextBucket;
 } Mtl4TextureViews;

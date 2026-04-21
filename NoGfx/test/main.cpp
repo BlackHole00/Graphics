@@ -95,11 +95,19 @@ TestRecord gNoGfxTests[] = {
 	{ "Check GPU texture view descriptor invalid texture", 		checkGpuTextureViewDescriptorInvalidTexture	},
 	{ "Check GPU texture view descriptor invalid descriptor", 	checkGpuTextureViewDescriptorInvalidDesc	},
 	{ "Check GPU compute pipeline creation", 			checkGpuCreateComputePipeline		},
+	{ "Check GPU compute pipeline creation with constants", 	checkGpuCreateComputePipelineWithConstants	},
 	{ "Check GPU compute pipeline invalid IR handling", 		checkGpuCreateComputePipelineInvalidIr	},
 	{ "Check GPU render pipeline creation", 			checkGpuCreateRenderPipeline		},
+	{ "Check GPU render pipeline creation with constants", 	checkGpuCreateRenderPipelineWithConstants	},
 	{ "Check GPU meshlet pipeline creation", 			checkGpuCreateMeshletPipeline		},
+	{ "Check GPU meshlet pipeline creation with constants", 	checkGpuCreateMeshletPipelineWithConstants	},
 	{ "Check GPU allocation create/destroy across threads", 	checkGpuAllocationCreatedAndDestroyedOnDifferentThreads },
 	{ "Check GPU texture create/destroy across threads", 		checkGpuTextureCreatedAndBackingFreedOnDifferentThreads },
+	{ "Check GPU concurrent allocation stress on CPU memory", 	checkGpuConcurrentAllocationStressOnCpuMemory },
+	{ "Check GPU concurrent allocation stress on GPU memory", 	checkGpuConcurrentAllocationStressOnGpuMemory },
+	{ "Check GPU concurrent host pointer stress", 		checkGpuConcurrentHostPointerStress },
+	{ "Check GPU concurrent texture stress", 			checkGpuConcurrentTextureStress },
+	{ "Check GPU concurrent pipeline stress", 			checkGpuConcurrentPipelineStress },
 };
 
 int main(void) {

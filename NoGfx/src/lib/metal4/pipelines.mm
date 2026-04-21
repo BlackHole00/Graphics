@@ -249,7 +249,7 @@ Mtl4CompiledIr mtl4GetOrCompileIr(const uint8_t* ir, size_t irSize, GpuResult* r
 		}
 	}
 
-	Mtl4CompiledIr compiledIr = mtl4CompileIr(ir, irSize, &localGpuResult);
+	Mtl4CompiledIr newlyCompiledIr = mtl4CompileIr(ir, irSize, &localGpuResult);
 	if (localGpuResult != GPU_SUCCESS) {
 		CMN_SET_RESULT(result, localGpuResult);
 		return {};
@@ -261,17 +261,17 @@ Mtl4CompiledIr mtl4GetOrCompileIr(const uint8_t* ir, size_t irSize, GpuResult* r
 		// NOTE: Another thread could have compiled the same Ir while this thread was compiling it. If so, let's
 		//	use the other thread compiled ir.
 		bool didFindIr;
-		Mtl4CompiledIr compiledIr = cmnGet(&gMtl4PipelineStorage.compiledIrs, irr, &didFindIr);
+		Mtl4CompiledIr cachedIr = cmnGet(&gMtl4PipelineStorage.compiledIrs, irr, &didFindIr);
 		if (didFindIr) {
-			[compiledIr.library release];
+			[newlyCompiledIr.library release];
 
 			CMN_SET_RESULT(result, GPU_SUCCESS);
-			return compiledIr;
+			return cachedIr;
 		}
 
-		cmnInsert(&gMtl4PipelineStorage.compiledIrs, irr, compiledIr, &localResult);
+		cmnInsert(&gMtl4PipelineStorage.compiledIrs, irr, newlyCompiledIr, &localResult);
 		if (localResult != CMN_SUCCESS) {
-			[compiledIr.library release];
+			[newlyCompiledIr.library release];
 
 			CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
 			return {};
@@ -279,7 +279,7 @@ Mtl4CompiledIr mtl4GetOrCompileIr(const uint8_t* ir, size_t irSize, GpuResult* r
 	}
 
 	CMN_SET_RESULT(result, GPU_SUCCESS);
-	return compiledIr;
+	return newlyCompiledIr;
 }
 
 Mtl4Function mtl4CreateFunction(Mtl4CompiledIr* function, const void* constants, size_t constantsSize, NSString* name, GpuResult* result) {

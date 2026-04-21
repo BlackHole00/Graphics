@@ -274,8 +274,6 @@ void mtl4ReleaseTextureMetadata(void) {
 }
 
 GpuTextureDescriptor mtl4TextureViewDescriptor(GpuTexture texture, const GpuViewDesc* desc, GpuResult* result) {
-	CmnScopedStorageSyncLockRead guard(&gMtl4TextureStorage.sync);
-
 	GpuResult localResult;
 
 	Mtl4Texture handle = mtl4GpuTextureToHadle(texture);
@@ -345,7 +343,7 @@ bool mtl4FindTextureViewIn(Mtl4TextureMetadata* metadata, const GpuViewDesc* des
 		while (
 			i < 7 &&
 			currentBucket->views[i] != nil &&
-			memcmp(&currentBucket->textureDescriptors[i], desc, sizeof(GpuViewDesc))
+			memcmp(&currentBucket->viewsDescriptors[i], desc, sizeof(GpuViewDesc))
 		) {
 			i++;
 		}
@@ -466,7 +464,7 @@ void mtl4AssociateViewToTexture(Mtl4TextureMetadata* metadata, id<MTLTexture> vi
 	}
 
 	viewsBucket->views[i] = view;
-	memcpy(&viewsBucket->textureDescriptors[i], desc, sizeof(GpuViewDesc));
+	memcpy(&viewsBucket->viewsDescriptors[i], desc, sizeof(GpuViewDesc));
 
 	CMN_SET_RESULT(result, GPU_SUCCESS);
 }

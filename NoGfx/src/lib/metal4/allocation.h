@@ -20,18 +20,43 @@ typedef struct Mtl4AddressRange {
 } Mtl4AddressRange;
 
 typedef struct Mtl4GpuAddress {
-	bool		guard			: 1; /** Always true for gpu addresses. */
-	uint32_t	allocationIdentifier	: 23;
-	uint64_t	offset			: 40;
+	bool		guard;
+	uint32_t	allocationIdentifier;
+	uint64_t	offset;
 } Mtl4GpuAddress;
-static_assert(sizeof(Mtl4GpuAddress) == sizeof(uintptr_t), "The size of the virtual address must be the same as a pointer.");
+
+static_assert(sizeof(uintptr_t) == 8, "Mtl4GpuAddress encoding assumes 64-bit pointers.");
+
+static const uint64_t MTL4_GPU_ADDRESS_OFFSET_BITS = 40ULL;
+static const uint64_t MTL4_GPU_ADDRESS_ID_BITS = 23ULL;
+static const uint64_t MTL4_GPU_ADDRESS_OFFSET_MASK = (1ULL << MTL4_GPU_ADDRESS_OFFSET_BITS) - 1ULL;
+static const uint64_t MTL4_GPU_ADDRESS_ID_MASK = (1ULL << MTL4_GPU_ADDRESS_ID_BITS) - 1ULL;
+static const uint64_t MTL4_GPU_ADDRESS_ID_SHIFT = MTL4_GPU_ADDRESS_OFFSET_BITS;
+static const uint64_t MTL4_GPU_ADDRESS_GUARD_SHIFT = MTL4_GPU_ADDRESS_OFFSET_BITS + MTL4_GPU_ADDRESS_ID_BITS;
+static const uint64_t MTL4_GPU_ADDRESS_GUARD_MASK = 1ULL << MTL4_GPU_ADDRESS_GUARD_SHIFT;
 
 inline Mtl4GpuAddress mtl4PtrToGpuAddress(void* ptr) {
-	return *(Mtl4GpuAddress*)&ptr;
+	uint64_t raw = (uint64_t)(uintptr_t)ptr;
+
+	Mtl4GpuAddress address = {};
+	address.guard = (raw & MTL4_GPU_ADDRESS_GUARD_MASK) != 0;
+	address.allocationIdentifier = (uint32_t)((raw >> MTL4_GPU_ADDRESS_ID_SHIFT) & MTL4_GPU_ADDRESS_ID_MASK);
+	address.offset = raw & MTL4_GPU_ADDRESS_OFFSET_MASK;
+
+	return address;
 }
 
 inline void* mtl4GpuAddressToPtr(Mtl4GpuAddress address) {
-	return *(void**)&address;
+	uint64_t raw = 0;
+
+	if (address.guard) {
+		raw |= MTL4_GPU_ADDRESS_GUARD_MASK;
+	}
+
+	raw |= ((uint64_t)address.allocationIdentifier & MTL4_GPU_ADDRESS_ID_MASK) << MTL4_GPU_ADDRESS_ID_SHIFT;
+	raw |= (address.offset & MTL4_GPU_ADDRESS_OFFSET_MASK);
+
+	return (void*)(uintptr_t)raw;
 }
 
 #define MTL4_TEXTURES_PER_ALLOCATION_TEXTURE_BUCKET 11
