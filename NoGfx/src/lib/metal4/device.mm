@@ -1,6 +1,7 @@
 #include "device.h"
 
 #include <lib/metal4/context.h>
+#include <lib/metal4/pipelines.h>
 
 bool mtl4CheckDeviceSuitability(id<MTLDevice> device) {
 	return device.hasUnifiedMemory &&
@@ -87,6 +88,15 @@ void mtl4SelectDevice(GpuDeviceId deviceId, GpuResult* result) {
 	// This is a non-owning pointer. Ownership is held by availableDevices.devices.
 	gMtl4Context.device = gMtl4Context.availableDevices.devices[deviceId];
 	gMtl4Context.selectedDeviceId = deviceId;
+
+	GpuResult localResult;
+	mtl4InitPipelineStorage(&localResult);
+	if (localResult != GPU_SUCCESS) {
+		mtl4FiniPipelineStorage();
+
+		CMN_SET_RESULT(result, localResult);
+		return;
+	}
 
 	CMN_SET_RESULT(result, GPU_SUCCESS);
 }

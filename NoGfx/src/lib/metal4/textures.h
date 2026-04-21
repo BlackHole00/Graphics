@@ -53,8 +53,8 @@ GpuTexture mtl4CreateTexture(const GpuTextureDesc* desc, void* ptrGpu, GpuResult
 GpuTextureDescriptor mtl4TextureViewDescriptor(GpuTexture texture, const GpuViewDesc* desc, GpuResult* result);
 GpuTextureDescriptor mtl4RWTextureViewDescriptor(GpuTexture texture, const GpuViewDesc* desc, GpuResult* result);
 
-void mtl4DestroyTexture(Mtl4Texture texture);
-bool mtl4IsScheduledForDeletion(Mtl4Texture texture);
+void mtl4FreeTexture(Mtl4Texture texture);
+bool mtl4IsTextureScheduledForDeletion(Mtl4Texture texture);
 
 Mtl4TextureMetadata* mtl4AcquireTextureMetadataFrom(Mtl4Texture texture);
 void mtl4ReleaseTextureMetadata(void);
@@ -87,7 +87,7 @@ void mtl4AssociateViewToTexture(Mtl4TextureMetadata* metadata, id<MTLTexture> vi
 void mtl4FreeAssociatedTextureViews(Mtl4TextureMetadata* metadata);
 
 // NOTE: Requires deletion lock on gMtl4TextureStorage.sync
-void mtl4DestroyTexture(Mtl4Texture texture);
+void mtl4FreeTexture(Mtl4Texture texture);
 
 #endif // MTL4_TEXTURES_H
 

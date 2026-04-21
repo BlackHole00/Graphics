@@ -4,6 +4,7 @@
 #include <lib/metal4/device.h>
 #include <lib/metal4/allocation.h>
 #include <lib/metal4/textures.h>
+#include <lib/metal4/pipelines.h>
 #include <lib/metal4/validation.h>
 
 GpuBaseLayer gMtl4BaseLayer = {
@@ -18,6 +19,10 @@ GpuBaseLayer gMtl4BaseLayer = {
 	/*gpuCreateTexture=*/		mtl4CreateTexture,
 	/*gpuTextureViewDescriptor=*/	mtl4TextureViewDescriptor,
 	/*gpuRWTextureViewDescriptor=*/	mtl4RWTextureViewDescriptor,
+	/*gpuCreateComputePipeline=*/	mtl4CreateComputePipeline,
+	/*gpuCreateRenderPipeline=*/	mtl4CreateRenderPipeline,
+	/*gpuCreateMeshletPipeline=*/	mtl4CreateMeshletPipeline,
+	/*gpuFreePipeline=*/		mtl4FreePipeline,
 };
 
 GpuLayer gMtl4ValidationLayer = {
@@ -32,5 +37,9 @@ GpuLayer gMtl4ValidationLayer = {
 	/*gpuCreateTexture=*/		mtl4ValidateGpuCreateTexture,
 	/*gpuTextureViewDescriptor=*/	mtl4ValidateGpuTextureViewDescriptor,
 	/*gpuRWTextureViewDescriptor=*/	mtl4ValidateGpuTextureRWViewDescriptor,
+	/*gpuCreateComputePipeline=*/	nullptr,
+	/*gpuCreateRenderPipeline=*/	nullptr,
+	/*gpuCreateMeshletPipeline=*/	nullptr,
+	/*gpuFreePipeline=*/		nullptr,
 };
 

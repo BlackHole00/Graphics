@@ -14,7 +14,7 @@ void mtl4InitPipelineStorage(GpuResult* result) {
 
 	gMtl4PipelineStorage = {};
 
-	gMtl4PipelineStorage.page = cmnCreatePage(1024 * 1024, CMN_PAGE_READABLE | CMN_PAGE_WRITABLE, &localResult);
+	gMtl4PipelineStorage.page = cmnCreatePage(32 * 1024 * 1024, CMN_PAGE_READABLE | CMN_PAGE_WRITABLE, &localResult);
 	if (localResult != CMN_SUCCESS) {
 		CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
 		return;
@@ -24,7 +24,7 @@ void mtl4InitPipelineStorage(GpuResult* result) {
 
 	CmnAllocator allocator = cmnArenaAllocator(&gMtl4PipelineStorage.arena);
 
-	cmnCreateHashMap(&gMtl4PipelineStorage.compiledIrs, 128, {}, cmnHeapAllocator(), &localResult);
+	cmnCreateHashMap(&gMtl4PipelineStorage.compiledIrs, 0, {}, cmnHeapAllocator(), &localResult);
 	if (localResult != CMN_SUCCESS) {
 		mtl4FiniPipelineStorage();
 
@@ -42,6 +42,7 @@ void mtl4InitPipelineStorage(GpuResult* result) {
 
 	compilerDescriptor = [MTL4CompilerDescriptor new];
 	defer ([compilerDescriptor release]);
+
 	compilerDescriptor.label = @"No Graphics compiler descriptor";
 
 	gMtl4PipelineStorage.compiler = [gMtl4Context.device newCompilerWithDescriptor:compilerDescriptor error:nil];
@@ -277,6 +278,7 @@ Mtl4CompiledIr mtl4GetOrCompileIr(const uint8_t* ir, size_t irSize, GpuResult* r
 		}
 	}
 
+	CMN_SET_RESULT(result, GPU_SUCCESS);
 	return compiledIr;
 }
 
@@ -386,7 +388,7 @@ void mtl4ReleasePipelineMetadata(void) {
 	cmnStorageSyncReleaseResource(&gMtl4PipelineStorage.sync);
 }
 
-bool mtl4IsScheduledForDeletion(Mtl4Pipeline pipeline) {
+bool mtl4IsPipelineScheduledForDeletion(Mtl4Pipeline pipeline) {
 	Mtl4PipelineMetadata* metadata = mtl4AcquirePipelineMetadataFrom(pipeline);
 	if (metadata == nullptr) {
 		return false;

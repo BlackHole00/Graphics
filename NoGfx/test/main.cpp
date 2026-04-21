@@ -94,6 +94,10 @@ TestRecord gNoGfxTests[] = {
 	{ "Check GPU RW texture view descriptor creation", 		checkGpuRWTextureViewDescriptor		},
 	{ "Check GPU texture view descriptor invalid texture", 		checkGpuTextureViewDescriptorInvalidTexture	},
 	{ "Check GPU texture view descriptor invalid descriptor", 	checkGpuTextureViewDescriptorInvalidDesc	},
+	{ "Check GPU compute pipeline creation", 			checkGpuCreateComputePipeline		},
+	{ "Check GPU compute pipeline invalid IR handling", 		checkGpuCreateComputePipelineInvalidIr	},
+	{ "Check GPU render pipeline creation", 			checkGpuCreateRenderPipeline		},
+	{ "Check GPU meshlet pipeline creation", 			checkGpuCreateMeshletPipeline		},
 	{ "Check GPU allocation create/destroy across threads", 	checkGpuAllocationCreatedAndDestroyedOnDifferentThreads },
 	{ "Check GPU texture create/destroy across threads", 		checkGpuTextureCreatedAndBackingFreedOnDifferentThreads },
 };

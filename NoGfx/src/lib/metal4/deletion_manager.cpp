@@ -113,7 +113,7 @@ void mtl4DeleteScheduledTextures(void) {
 	CmnScopedMutex guardd(&gMtl4DeletionManager.texturesMutex);
 
 	for (size_t i = 0; i < gMtl4DeletionManager.textures.length; i++) {
-		mtl4DestroyTexture(gMtl4DeletionManager.textures[i]);
+		mtl4FreeTexture(gMtl4DeletionManager.textures[i]);
 	}
 
 	cmnResize(&gMtl4DeletionManager.textures, 0, nullptr);

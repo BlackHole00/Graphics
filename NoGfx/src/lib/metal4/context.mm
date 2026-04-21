@@ -68,9 +68,10 @@ on_error_cleanup:
 }
 
 void mtl4Deinit(void) {
-	mtl4FiniAllocationStorage();
+	mtl4FiniPipelineStorage();
 	mtl4FiniTextureStorage();
 	mtl4FiniAllocationStorage();
+	mtl4FiniDeletionManager();
 
 	if (gMtl4Context.availableDevices.devices != nullptr) {
 		for (size_t i = 0; i < gMtl4Context.availableDevices.count; i++) {

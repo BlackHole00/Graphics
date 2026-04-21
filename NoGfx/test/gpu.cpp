@@ -1,6 +1,8 @@
 #include "test.h"
 
 #include <gpu/gpu.h>
+#include <cstdio>
+#include <cstdlib>
 #include <pthread.h>
 #include <sched.h>
 
@@ -62,6 +64,50 @@ bool initGpuAndSelectFirstDevice(GpuResult* result) {
 	}
 
 	return true;
+}
+
+static bool loadBinaryFile(const char* path, uint8_t** data, size_t* size) {
+	FILE* file = fopen(path, "rb");
+	if (file == nullptr) {
+		return false;
+	}
+
+	if (fseek(file, 0, SEEK_END) != 0) {
+		fclose(file);
+		return false;
+	}
+
+	long fileSize = ftell(file);
+	if (fileSize <= 0) {
+		fclose(file);
+		return false;
+	}
+
+	if (fseek(file, 0, SEEK_SET) != 0) {
+		fclose(file);
+		return false;
+	}
+
+	uint8_t* buffer = (uint8_t*)malloc((size_t)fileSize);
+	if (buffer == nullptr) {
+		fclose(file);
+		return false;
+	}
+
+	size_t readSize = fread(buffer, 1, (size_t)fileSize, file);
+	fclose(file);
+	if (readSize != (size_t)fileSize) {
+		free(buffer);
+		return false;
+	}
+
+	*data = buffer;
+	*size = (size_t)fileSize;
+	return true;
+}
+
+static void freeBinaryFile(uint8_t* data) {
+	free(data);
 }
 
 typedef struct GpuAllocationCreatorContext {
@@ -680,6 +726,98 @@ void checkGpuTextureViewDescriptorInvalidDesc(Test* test) {
 	TEST_ASSERT(test, descriptor.data[0] == 0);
 
 	gpuFree(ptrGpu);
+	gpuDeinit();
+}
+
+void checkGpuCreateComputePipeline(Test* test) {
+	GpuResult result;
+	if (!initGpuAndSelectFirstDevice(&result)) {
+		TEST_ASSERT(test, result == GPU_SUCCESS);
+		return;
+	}
+
+	uint8_t* ir = nullptr;
+	size_t irSize = 0;
+	TEST_ASSERT(test, loadBinaryFile("build/compute.metallib", &ir, &irSize));
+
+	GpuPipeline pipeline = gpuCreateComputePipeline(ir, irSize, nullptr, 0, &result);
+
+	TEST_ASSERT(test, result == GPU_SUCCESS);
+	TEST_ASSERT(test, pipeline != 0);
+
+	freeBinaryFile(ir);
+
+	gpuFreePipeline(pipeline);
+	gpuDeinit();
+}
+
+void checkGpuCreateComputePipelineInvalidIr(Test* test) {
+	GpuResult result;
+	if (!initGpuAndSelectFirstDevice(&result)) {
+		TEST_ASSERT(test, result == GPU_SUCCESS);
+		return;
+	}
+
+	const uint8_t ir[] = { 0x13, 0x37, 0x00, 0x42 };
+	GpuPipeline pipeline = gpuCreateComputePipeline(ir, sizeof(ir), nullptr, 0, &result);
+
+	TEST_ASSERT(test, result == GPU_PIPELINE_IR_VALIDATION_FAILED);
+	TEST_ASSERT(test, pipeline == 0);
+
+	gpuDeinit();
+}
+
+void checkGpuCreateRenderPipeline(Test* test) {
+	GpuResult result;
+	if (!initGpuAndSelectFirstDevice(&result)) {
+		TEST_ASSERT(test, result == GPU_SUCCESS);
+		return;
+	}
+
+	uint8_t* vertexIr = nullptr;
+	size_t vertexIrSize = 0;
+	TEST_ASSERT(test, loadBinaryFile("build/render_vertex.metallib", &vertexIr, &vertexIrSize));
+
+	uint8_t* fragmentIr = nullptr;
+	size_t fragmentIrSize = 0;
+	TEST_ASSERT(test, loadBinaryFile("build/render_fragment.metallib", &fragmentIr, &fragmentIrSize));
+
+	GpuPipeline pipeline = gpuCreateRenderPipeline(vertexIr, vertexIrSize, fragmentIr, fragmentIrSize, nullptr, 0, nullptr, 0, &result);
+
+	TEST_ASSERT(test, result == GPU_SUCCESS);
+	TEST_ASSERT(test, pipeline != 0);
+
+	freeBinaryFile(vertexIr);
+	freeBinaryFile(fragmentIr);
+
+	gpuFreePipeline(pipeline);
+	gpuDeinit();
+}
+
+void checkGpuCreateMeshletPipeline(Test* test) {
+	GpuResult result;
+	if (!initGpuAndSelectFirstDevice(&result)) {
+		TEST_ASSERT(test, result == GPU_SUCCESS);
+		return;
+	}
+
+	uint8_t* meshletIr = nullptr;
+	size_t meshletIrSize = 0;
+	TEST_ASSERT(test, loadBinaryFile("build/meshlet.metallib", &meshletIr, &meshletIrSize));
+
+	uint8_t* fragmentIr = nullptr;
+	size_t fragmentIrSize = 0;
+	TEST_ASSERT(test, loadBinaryFile("build/render_fragment.metallib", &fragmentIr, &fragmentIrSize));
+
+	GpuPipeline pipeline = gpuCreateMeshletPipeline(meshletIr, meshletIrSize, fragmentIr, fragmentIrSize, nullptr, 0, nullptr, 0, &result);
+
+	TEST_ASSERT(test, result == GPU_SUCCESS);
+	TEST_ASSERT(test, pipeline != 0);
+
+	freeBinaryFile(meshletIr);
+	freeBinaryFile(fragmentIr);
+
+	gpuFreePipeline(pipeline);
 	gpuDeinit();
 }
 

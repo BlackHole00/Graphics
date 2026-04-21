@@ -484,7 +484,7 @@ void mtl4FreeAssociatedTextures(Mtl4AllocationMetadata* metadata) {
 	while (textures != nullptr) {
 		size_t i = 0;
 		while (i < 7 && !cmnIsZero(textures->textures[i])) {
-			mtl4DestroyTexture(textures->textures[i]);
+			mtl4FreeTexture(textures->textures[i]);
 			i++;
 		}
 
@@ -521,7 +521,7 @@ void mtl4EnsureBackingBufferIsAllocated(Mtl4GpuAddress address, GpuResult* resul
 	CMN_SET_RESULT(result, GPU_SUCCESS);
 }
 
-bool mtl4IsScheduledForDeletion(void* ptr) {
+bool mtl4IsAllocationScheduledForDeletion(void* ptr) {
 	Mtl4AllocationMetadata* metadata = mtl4AcquireAllocationMetadataFrom(ptr, true);
 	if (metadata == nullptr) {
 		return false;

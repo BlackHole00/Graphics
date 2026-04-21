@@ -362,7 +362,7 @@ bool mtl4FindTextureViewIn(Mtl4TextureMetadata* metadata, const GpuViewDesc* des
 	return true;
 }
 
-void mtl4DestroyTexture(Mtl4Texture texture) {
+void mtl4FreeTexture(Mtl4Texture texture) {
 	Mtl4TextureMetadata* metadata = mtl4AcquireTextureMetadataFrom(texture);
 	if (metadata == nullptr) {
 		return;
@@ -373,7 +373,7 @@ void mtl4DestroyTexture(Mtl4Texture texture) {
 	mtl4ScheduleTextureForDeletion(texture);
 }
 
-bool mtl4IsScheduledForDeletion(Mtl4Texture texture) {
+bool mtl4IsTextureScheduledForDeletion(Mtl4Texture texture) {
 	Mtl4TextureMetadata* metadata = mtl4AcquireTextureMetadataFrom(texture);
 	if (metadata == nullptr) {
 		return false;

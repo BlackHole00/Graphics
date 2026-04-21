@@ -169,7 +169,7 @@ void mtl4AssociateTextureToAllocation(Mtl4AllocationMetadata* metadata, Mtl4Text
 void mtl4FreeAssociatedTextures(Mtl4AllocationMetadata* metadata);
 
 void mtl4EnsureBackingBufferIsAllocated(Mtl4GpuAddress address, GpuResult* result);
-bool mtl4IsScheduledForDeletion(void* ptr);
+bool mtl4IsAllocationScheduledForDeletion(void* ptr);
 
 // NOTE: Requires a deletion lock in gMtl4AllocationStorage.sync
 void mtl4DestroyAllocation(Mtl4AllocationHandle handle);

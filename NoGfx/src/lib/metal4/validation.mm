@@ -73,7 +73,7 @@ bool mtl4ValidateGpuHostToDevicePointer(void* ptr, GpuResult* result) {
 		return false;
 	}
 
-	if (mtl4IsScheduledForDeletion(ptr)) {
+	if (mtl4IsAllocationScheduledForDeletion(ptr)) {
 		CMN_SET_RESULT(result, GPU_USE_AFTER_FREE);
 		return false;
 	}
@@ -196,7 +196,7 @@ bool mtl4ValidateGpuCreateTexture(const GpuTextureDesc* desc, void* ptrGpu, GpuR
 		return false;
 	}
 
-	if (mtl4IsScheduledForDeletion(ptrGpu)) {
+	if (mtl4IsAllocationScheduledForDeletion(ptrGpu)) {
 		CMN_SET_RESULT(result, GPU_USE_AFTER_FREE);
 		return false;
 	}
@@ -233,7 +233,7 @@ bool mtl4ValidateGpuTextureViewDescriptor(GpuTexture texture, const GpuViewDesc*
 		return false;
 	}
 
-	if (mtl4IsScheduledForDeletion(mtl4GpuTextureToHadle(texture))) {
+	if (mtl4IsTextureScheduledForDeletion(mtl4GpuTextureToHadle(texture))) {
 		CMN_SET_RESULT(result, GPU_USE_AFTER_FREE);
 		return false;
 	}

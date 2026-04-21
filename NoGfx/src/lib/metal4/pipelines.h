@@ -119,7 +119,7 @@ Mtl4Pipeline mtl4CreateMeshletPipeline(Mtl4Function meshlet, Mtl4Function fragme
 Mtl4PipelineMetadata* mtl4AcquirePipelineMetadataFrom(Mtl4Pipeline pipeline);
 void mtl4ReleasePipelineMetadata(void);
 
-bool mtl4IsScheduledForDeletion(Mtl4Pipeline pipeline);
+bool mtl4IsPipelineScheduledForDeletion(Mtl4Pipeline pipeline);
 
 // NOTE: Requires external deletion lock on gMtl4PipelineStorage.sync
 //	Please, remove related pipelines before removing functions
