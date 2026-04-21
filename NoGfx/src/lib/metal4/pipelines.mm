@@ -199,16 +199,17 @@ GpuPipeline mtl4CreateMeshletPipeline(
 
 void mtl4FreePipeline(GpuPipeline pipeline) {
 	Mtl4Pipeline handle = mtl4GpuPipelineToHandle(pipeline);
+	{
+		Mtl4PipelineMetadata* metadata = mtl4AcquirePipelineMetadataFrom(handle);
+		if (metadata == nullptr) {
+			return;
+		}
+		defer (mtl4ReleasePipelineMetadata());
 
-	Mtl4PipelineMetadata* metadata = mtl4AcquirePipelineMetadataFrom(handle);
-	if (metadata == nullptr) {
-		return;
+		cmnAtomicStore(&metadata->scheduledForDeletion, true);
+
+		mtl4SchedulePipelineForDeletion(handle);
 	}
-	defer (mtl4ReleasePipelineMetadata());
-
-	cmnAtomicStore(&metadata->scheduledForDeletion, true);
-
-	mtl4SchedulePipelineForDeletion(handle);
 
 	mtl4CheckForResourceDeletion();
 }

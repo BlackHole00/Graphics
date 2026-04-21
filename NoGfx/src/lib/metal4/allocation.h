@@ -20,9 +20,9 @@ typedef struct Mtl4AddressRange {
 } Mtl4AddressRange;
 
 typedef struct Mtl4GpuAddress {
-	bool		guard;
-	uint32_t	allocationIdentifier;
-	uint64_t	offset;
+	bool		guard			: 1;
+	uint32_t	allocationIdentifier	: 23;
+	uint64_t	offset			: 48;
 } Mtl4GpuAddress;
 
 static_assert(sizeof(uintptr_t) == 8, "Mtl4GpuAddress encoding assumes 64-bit pointers.");

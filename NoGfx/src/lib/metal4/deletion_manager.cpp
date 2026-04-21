@@ -58,11 +58,13 @@ void mtl4ScheduleAllocationForDeletion(Mtl4AllocationHandle allocation) {
 void mtl4ScheduleTextureForDeletion(Mtl4Texture texture) {
 	CmnScopedMutex guard(&gMtl4DeletionManager.texturesMutex);
 	cmnAppend(&gMtl4DeletionManager.textures, texture, nullptr);
+	gMtl4DeletionManager.texturesToDeallocate += 1;
 }
 
 void mtl4SchedulePipelineForDeletion(Mtl4Pipeline pipeline) {
 	CmnScopedMutex guard(&gMtl4DeletionManager.pipelinesMutex);
 	cmnAppend(&gMtl4DeletionManager.pipelines, pipeline, nullptr);
+	gMtl4DeletionManager.pipelinesToDeallocate += 1;
 }
 
 bool mtl4ShouldDeleteScheduledResources(void) {
@@ -72,14 +74,17 @@ bool mtl4ShouldDeleteScheduledResources(void) {
 }
 
 bool mtl4ShouldDeleteScheduledAllocations(void) {
+	CmnScopedMutex guard(&gMtl4DeletionManager.allocationsMutex);
 	return gMtl4DeletionManager.bytesToDeallocate >= 10 * 1024 * 1024;
 }
 
 bool mtl4ShouldDeleteScheduledTextures(void) {
+	CmnScopedMutex guard(&gMtl4DeletionManager.texturesMutex);
 	return gMtl4DeletionManager.texturesToDeallocate >= 128;
 }
 
 bool mtl4ShouldDeleteScheduledPipelines(void) {
+	CmnScopedMutex guard(&gMtl4DeletionManager.pipelinesMutex);
 	return gMtl4DeletionManager.pipelinesToDeallocate >= 64;
 }
 
@@ -106,6 +111,7 @@ void mtl4DeleteScheduledAllocations(void) {
 	}
 
 	cmnResize(&gMtl4DeletionManager.allocations, 0, nullptr);
+	gMtl4DeletionManager.bytesToDeallocate = 0;
 }
 
 void mtl4DeleteScheduledTextures(void) {
@@ -113,10 +119,11 @@ void mtl4DeleteScheduledTextures(void) {
 	CmnScopedMutex guardd(&gMtl4DeletionManager.texturesMutex);
 
 	for (size_t i = 0; i < gMtl4DeletionManager.textures.length; i++) {
-		mtl4FreeTexture(gMtl4DeletionManager.textures[i]);
+		mtl4DestroyTexture(gMtl4DeletionManager.textures[i]);
 	}
 
 	cmnResize(&gMtl4DeletionManager.textures, 0, nullptr);
+	gMtl4DeletionManager.texturesToDeallocate = 0;
 }
 
 void mtl4DeleteScheduledPipelines(void) {
@@ -128,6 +135,7 @@ void mtl4DeleteScheduledPipelines(void) {
 	}
 
 	cmnResize(&gMtl4DeletionManager.pipelines, 0, nullptr);
+	gMtl4DeletionManager.pipelinesToDeallocate = 0;
 }
 
 void mtl4CheckForResourceDeletion(void) {

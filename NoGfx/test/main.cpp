@@ -108,6 +108,8 @@ TestRecord gNoGfxTests[] = {
 	{ "Check GPU concurrent host pointer stress", 		checkGpuConcurrentHostPointerStress },
 	{ "Check GPU concurrent texture stress", 			checkGpuConcurrentTextureStress },
 	{ "Check GPU concurrent pipeline stress", 			checkGpuConcurrentPipelineStress },
+	{ "Check GPU deferred allocation deletion threshold flush", 	checkGpuDeferredAllocationDeletionThresholdFlush },
+	{ "Check GPU deferred texture deletion threshold flush", 	checkGpuDeferredTextureDeletionThresholdFlush },
 };
 
 int main(void) {

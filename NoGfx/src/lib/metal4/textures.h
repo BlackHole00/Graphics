@@ -88,6 +88,8 @@ void mtl4FreeAssociatedTextureViews(Mtl4TextureMetadata* metadata);
 
 // NOTE: Requires deletion lock on gMtl4TextureStorage.sync
 void mtl4FreeTexture(Mtl4Texture texture);
+// NOTE: Requires deletion lock on gMtl4TextureStorage.sync
+void mtl4DestroyTexture(Mtl4Texture texture);
 
 #endif // MTL4_TEXTURES_H
 

@@ -258,18 +258,20 @@ void mtl4Free(void* ptr) {
 		return;
 	}
 
-	Mtl4AllocationMetadata* metadata = mtl4AcquireAllocationMetadataFrom(handle, nullptr);
-	if (metadata == nullptr) {
-		return;
+	{
+		Mtl4AllocationMetadata* metadata = mtl4AcquireAllocationMetadataFrom(handle, nullptr);
+		if (metadata == nullptr) {
+			return;
+		}
+		defer (mtl4ReleaseAllocationMetadata());
+
+		cmnAtomicStore(&metadata->scheduledForDeletion, true);
+
+		// NOTE: May as well...
+		mtl4FreeAssociatedTextures(metadata);
+
+		mtl4ScheduleAllocationForDeletion(handle);
 	}
-	defer (mtl4ReleaseAllocationMetadata());
-
-	cmnAtomicStore(&metadata->scheduledForDeletion, true);
-
-	// NOTE: May as well...
-	mtl4FreeAssociatedTextures(metadata);
-
-	mtl4ScheduleAllocationForDeletion(handle);
 
 	mtl4CheckForResourceDeletion();
 }
