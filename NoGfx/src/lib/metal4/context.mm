@@ -7,6 +7,7 @@
 #include <lib/metal4/allocation.h>
 #include <lib/metal4/textures.h>
 #include <lib/metal4/queue.h>
+#include <lib/metal4/command_buffers.h>
 #include <lib/metal4/deletion_manager.h>
 
 // 128 KB
@@ -74,6 +75,11 @@ on_error_cleanup:
 }
 
 void mtl4Deinit(void) {
+	mtl4DeleteScheduledPipelines();
+	mtl4DeleteScheduledTextures();
+	mtl4DeleteScheduledAllocations();
+
+	mtl4FiniCommandBufferStorage();
 	mtl4FiniPipelineStorage();
 	mtl4FiniQueueStorage();
 	mtl4FiniTextureStorage();

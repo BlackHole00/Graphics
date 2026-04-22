@@ -25,17 +25,6 @@ void mtl4InitQueueStorage(GpuResult* result);
 void mtl4FiniQueueStorage(void);
 
 GpuQueue mtl4CreateQueue(GpuResult* result);
-GpuCommandBuffer mtl4StartCommandEncoding(GpuQueue queue, GpuResult* result);
-void mtl4Submit(GpuQueue queue, GpuCommandBuffer* commandBuffers, size_t commandBufferCount, GpuResult* result);
-void mtl4SubmitWithSignal(
-	GpuQueue queue,
-	GpuCommandBuffer* commandBuffers,
-	size_t commandBufferCount,
-	GpuSemaphore semaphore,
-	uint64_t value,
-	GpuResult* result
-);
-
 id<MTL4CommandQueue> mtl4Mtl4QueueOf(Mtl4Queue queue);
 
 inline Mtl4Queue mtl4GpuQueueToHandle(GpuQueue queue) {

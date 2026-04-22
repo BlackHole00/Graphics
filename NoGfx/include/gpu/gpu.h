@@ -23,12 +23,15 @@ typedef enum GpuResult {
 	GPU_INVALID_PARAMETERS,
 	GPU_NO_SUCH_ALLOCATION_FOUND,
 	GPU_NO_SUCH_TEXTURE_FOUND,
+	GPU_NO_SUCH_QUEUE_FOUND,
+	GPU_NO_SUCH_COMMAND_BUFFER_FOUND,
 	GPU_ALLOCATION_MEMORY_IS_GPU,
 	GPU_ALLOCATION_MEMORY_IS_CPU,
 
 	GPU_PIPELINE_IR_VALIDATION_FAILED,
 
 	GPU_COUND_NOT_CREATE_QUEUE,
+	GPU_COUND_NOT_CREATE_COMMAND_BUFFER,
 
 	// Only active while validation is enabled.
 	GPU_USE_AFTER_FREE,
@@ -247,6 +250,33 @@ void gpuSubmitWithSignal(
 	uint64_t value,
 	GpuResult* result
 );
+
+void gpuMemCpy(GpuCommandBuffer cb, void* destGpu, void* srcGpu, size_t size, GpuResult* result);
+void gpuCopyToTexture(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTexture texture, GpuResult* result);
+void gpuCopyFromTexture(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTexture texture, GpuResult* result);
+
+void gpuSetActiveTextureHeapPtr(GpuCommandBuffer cb, void *ptrGpu, GpuResult* result);
+
+// void gpuBarrier(GpuCommandBuffer cb, STAGE before, STAGE after, HAZARD_FLAGS hazards = 0);
+// void gpuSignalAfter(GpuCommandBuffer cb, STAGE before, void *ptrGpu, uint64 value, SIGNAL signal);
+// void gpuWaitBefore(GpuCommandBuffer cb, STAGE after, void *ptrGpu, uint64 value, OP op, HAZARD_FLAGS hazards = 0, uint64 mask = ~0);
+
+void gpuSetPipeline(GpuCommandBuffer cb, GpuPipeline pipeline);
+// void gpuSetDepthStencilState(GpuCommandBuffer cb, GpuDepthStencilState state);
+// void gpuSetBlendState(GpuCommandBuffer cb, GpuBlendState state); 
+
+void gpuDispatch(GpuCommandBuffer cb, void* dataGpu, uint32_t gridDimensions[3]);
+void gpuDispatchIndirect(GpuCommandBuffer cb, void* dataGpu, void* gridDimensionsGpu);
+
+// void gpuBeginRenderPass(GpuCommandBuffer cb, GpuRenderPassDesc desc);
+// void gpuEndRenderPass(GpuCommandBuffer cb);
+
+// void gpuDrawIndexedInstanced(GpuCommandBuffer cb, void* vertexDataGpu, void* pixelDataGpu, void* indicesGpu, uint32_t indexCount, uint32_t instanceCount);
+// void gpuDrawIndexedInstancedIndirect(GpuCommandBuffer cb, void* vertexDataGpu, void* pixelDataGpu, void* indicesGpu, void* argsGpu);
+// void gpuDrawIndexedInstancedIndirectMulti(GpuCommandBuffer cb, void* dataVxGpu, uint32_t vxStride, void* dataPxGpu, uint32_t pxStride, void* argsGpu, void* drawCountGpu);
+
+// void gpuDrawMeshlets(GpuCommandBuffer cb, void* meshletDataGpu, void* pixelDataGpu, uint32_t dim[3]);
+// void gpuDrawMeshletsIndirect(GpuCommandBuffer cb, void* meshletDataGpu, void* pixelDataGpu, void *dimGpu);
 
 #ifdef __cplusplus
 } // extern "C"

@@ -2,6 +2,7 @@
 
 #include <lib/metal4/context.h>
 #include <lib/metal4/pipelines.h>
+#include <lib/metal4/command_buffers.h>
 
 bool mtl4CheckDeviceSuitability(id<MTLDevice> device) {
 	return device.hasUnifiedMemory &&
@@ -90,9 +91,19 @@ void mtl4SelectDevice(GpuDeviceId deviceId, GpuResult* result) {
 	gMtl4Context.selectedDeviceId = deviceId;
 
 	GpuResult localResult;
+
 	mtl4InitPipelineStorage(&localResult);
 	if (localResult != GPU_SUCCESS) {
 		mtl4FiniPipelineStorage();
+
+		CMN_SET_RESULT(result, localResult);
+		return;
+	}
+
+	mtl4InitCommandBufferStorage(&localResult);
+	if (localResult != GPU_SUCCESS) {
+		mtl4FiniPipelineStorage();
+		mtl4FiniCommandBufferStorage();
 
 		CMN_SET_RESULT(result, localResult);
 		return;

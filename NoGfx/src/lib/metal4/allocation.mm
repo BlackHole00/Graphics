@@ -501,15 +501,13 @@ void mtl4FreeAssociatedTextures(Mtl4AllocationMetadata* metadata) {
 	metadata->relatedTextures = nullptr;
 }
 
-void mtl4EnsureBackingBufferIsAllocated(Mtl4GpuAddress address, GpuResult* result) {
+void mtl4EnsureBackingBufferIsAllocated(Mtl4AllocationMetadata* metadata, GpuResult* result) {
 	GpuResult localResult;
 
-	Mtl4AllocationMetadata* metadata = mtl4AcquireAllocationMetadataFromGpuPtr(address);
-	if (metadata == nullptr) {
+	if (cmnAtomicLoad(&metadata->buffer) != nil) {
 		CMN_SET_RESULT(result, GPU_SUCCESS);
 		return;
 	}
-	defer (mtl4ReleaseAllocationMetadata());
 
 	id<MTLBuffer> buffer = mtl4AllocateBuffer(metadata->size, metadata->align, metadata->memory, &localResult);
 	if (localResult != GPU_SUCCESS) {
@@ -523,6 +521,17 @@ void mtl4EnsureBackingBufferIsAllocated(Mtl4GpuAddress address, GpuResult* resul
 	}
 
 	CMN_SET_RESULT(result, GPU_SUCCESS);
+}
+
+void mtl4EnsureBackingBufferIsAllocated(Mtl4GpuAddress address, GpuResult* result) {
+	Mtl4AllocationMetadata* metadata = mtl4AcquireAllocationMetadataFromGpuPtr(address);
+	if (metadata == nullptr) {
+		CMN_SET_RESULT(result, GPU_SUCCESS);
+		return;
+	}
+	defer (mtl4ReleaseAllocationMetadata());
+
+	mtl4EnsureBackingBufferIsAllocated(address, result);
 }
 
 bool mtl4IsAllocationScheduledForDeletion(void* ptr) {

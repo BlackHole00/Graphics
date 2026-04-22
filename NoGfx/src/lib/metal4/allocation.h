@@ -193,7 +193,9 @@ void mtl4AssociateTextureToAllocation(Mtl4AllocationMetadata* metadata, Mtl4Text
 // NOTE: Not thread safe. Requires external locking.
 void mtl4FreeAssociatedTextures(Mtl4AllocationMetadata* metadata);
 
+void mtl4EnsureBackingBufferIsAllocated(Mtl4AllocationMetadata* metadata, GpuResult* result);
 void mtl4EnsureBackingBufferIsAllocated(Mtl4GpuAddress address, GpuResult* result);
+
 bool mtl4IsAllocationScheduledForDeletion(void* ptr);
 
 // NOTE: Requires a deletion lock in gMtl4AllocationStorage.sync
