@@ -42,6 +42,18 @@ typedef struct GpuBaseLayer {
 		GpuResult* result
 	);
 	void (*gpuFreePipeline)(GpuPipeline pipeline);
+
+	GpuQueue (*gpuCreateQueue)(GpuResult* result);
+	GpuCommandBuffer (*gpuStartCommandEncoding)(GpuQueue queue, GpuResult* result);
+	void (*gpuSubmit)(GpuQueue queue, GpuCommandBuffer* commandBuffers, size_t commandBufferCount, GpuResult* result);
+	void (*gpuSubmitWithSignal)(
+		GpuQueue queue,
+		GpuCommandBuffer* commandBuffers,
+		size_t commandBufferCount,
+		GpuSemaphore semaphore,
+		uint64_t value,
+		GpuResult* result
+	);
 } GpuBaseLayer;
 
 typedef struct {

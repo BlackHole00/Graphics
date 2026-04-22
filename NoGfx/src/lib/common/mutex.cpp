@@ -40,7 +40,7 @@ void cmnMutexLockSlow(CmnMutex* mutex, CmnMutexState initialState) {
 				break;
 			}
 
-			// NOTE: In the contention situation explained in the previous note occurs, the mutex state
+			// NOTE: If the contention situation explained in the previous note occurs, the mutex state
 			//	could be CMN_MUTEX_LOCKED, thus skipping a futex wait.
 			cmnFutexWait(&mutex->futex, CMN_MUTEX_WAITING);
 		}

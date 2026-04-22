@@ -16,6 +16,7 @@ typedef enum GpuResult {
 	GPU_TOO_MANY_LAYERS,
 	GPU_INVALID_DEVICE,
 	GPU_DEVICE_ALREADY_SELECTED,
+	GPU_DEVICE_NOT_SELECTED,
 	GPU_OUT_OF_CPU_MEMORY,
 	GPU_OUT_OF_GPU_MEMORY,
 
@@ -26,6 +27,8 @@ typedef enum GpuResult {
 	GPU_ALLOCATION_MEMORY_IS_CPU,
 
 	GPU_PIPELINE_IR_VALIDATION_FAILED,
+
+	GPU_COUND_NOT_CREATE_QUEUE,
 
 	// Only active while validation is enabled.
 	GPU_USE_AFTER_FREE,
@@ -100,6 +103,9 @@ typedef enum GpuUsage {
 typedef size_t GpuDeviceId;
 typedef uint64_t GpuTexture;
 typedef uint64_t GpuPipeline;
+typedef uint64_t GpuQueue;
+typedef uint64_t GpuCommandBuffer;
+typedef uint64_t GpuSemaphore;
 
 typedef struct GpuDeviceInfo {
 	GpuDeviceId identifier;
@@ -172,6 +178,19 @@ typedef struct GpuLayer {
 		GpuResult* result
 	);
 	bool (*gpuFreePipeline)(GpuPipeline pipeline);
+
+	bool (*gpuCreateQueue)(GpuResult* result);
+	bool (*gpuStartCommandEncoding)(GpuQueue queue, GpuResult* result);
+	bool (*gpuSubmit)(GpuQueue queue, GpuCommandBuffer* commandBuffers, size_t commandBufferCount, GpuResult* result);
+	bool (*gpuSubmitWithSignal)(
+		GpuQueue queue,
+		GpuCommandBuffer* commandBuffers,
+		size_t commandBufferCount,
+		GpuSemaphore semaphore,
+		uint64_t value,
+		GpuResult* result
+	);
+
 } GpuLayer;
 
 typedef struct GpuInitDesc {
@@ -216,6 +235,18 @@ GpuPipeline gpuCreateMeshletPipeline(
 	GpuResult* result
 );
 void gpuFreePipeline(GpuPipeline pipeline);
+
+GpuQueue gpuCreateQueue(GpuResult* result);
+GpuCommandBuffer gpuStartCommandEncoding(GpuQueue queue, GpuResult* result);
+void gpuSubmit(GpuQueue queue, GpuCommandBuffer* commandBuffers, size_t commandBufferCount, GpuResult* result);
+void gpuSubmitWithSignal(
+	GpuQueue queue,
+	GpuCommandBuffer* commandBuffers,
+	size_t commandBufferCount,
+	GpuSemaphore semaphore,
+	uint64_t value,
+	GpuResult* result
+);
 
 #ifdef __cplusplus
 } // extern "C"

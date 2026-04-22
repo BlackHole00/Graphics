@@ -133,3 +133,30 @@ GpuPipeline gpuCreateMeshletPipeline(
 void gpuFreePipeline(GpuPipeline pipeline) {
 	GPU_LAYERED_CALL(gpuFreePipeline, pipeline);
 }
+
+GpuQueue gpuCreateQueue(GpuResult* result) {
+	GPU_LAYERED_CALL(gpuCreateQueue, result);
+
+	return {};
+}
+
+GpuCommandBuffer gpuStartCommandEncoding(GpuQueue queue, GpuResult* result) {
+	GPU_LAYERED_CALL(gpuStartCommandEncoding, queue, result);
+
+	return {};
+}
+
+void gpuSubmit(GpuQueue queue, GpuCommandBuffer* commandBuffers, size_t commandBufferCount, GpuResult* result) {
+	GPU_LAYERED_CALL(gpuSubmit, queue, commandBuffers, commandBufferCount, result);
+}
+
+void gpuSubmitWithSignal(
+	GpuQueue queue,
+	GpuCommandBuffer* commandBuffers,
+	size_t commandBufferCount,
+	GpuSemaphore semaphore,
+	uint64_t value,
+	GpuResult* result
+) {
+	GPU_LAYERED_CALL(gpuSubmitWithSignal, queue, commandBuffers, commandBufferCount, semaphore, value, result);
+}

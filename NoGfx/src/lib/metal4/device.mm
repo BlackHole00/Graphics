@@ -101,3 +101,7 @@ void mtl4SelectDevice(GpuDeviceId deviceId, GpuResult* result) {
 	CMN_SET_RESULT(result, GPU_SUCCESS);
 }
 
+bool mtl4HasDevice(void) {
+	return gMtl4Context.device != nil;
+}
+
