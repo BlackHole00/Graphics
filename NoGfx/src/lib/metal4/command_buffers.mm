@@ -1,7 +1,10 @@
 #include "command_buffers.h"
 
 #include <lib/common/heap_allocator.h>
+#include <lib/common/atomic.h>
+#include <lib/common/futex.h>
 #include <lib/metal4/context.h>
+#include <lib/metal4/tables.h>
 #include <lib/metal4/allocation.h>
 
 Mtl4CommandBufferStorage gMtl4CommandBufferStorage;
@@ -55,12 +58,14 @@ void mtl4Submit(GpuQueue queue, GpuCommandBuffer* commandBuffers, size_t command
 	id<MTL4CommandQueue> metalQueue = mtl4Mtl4QueueOf(queueHandle);
 	if (metalQueue == nil) {
 		CMN_SET_RESULT(result, GPU_NO_SUCH_QUEUE_FOUND);
+		return;
 	}
 
 	CMN_SET_RESULT(result, GPU_SUCCESS);
 
 	// TODO: Switch thread local arena.
 	id<MTL4CommandBuffer>* metalCommandBuffers = cmnHeapAlloc<id<MTL4CommandBuffer>>(commandBufferCount, &localResult);
+	defer (cmnHeapFree(metalCommandBuffers));
 	size_t validCommandBufferCount = 0;
 
 	for (size_t i = 0; i < commandBufferCount; i++) {
@@ -87,13 +92,18 @@ void mtl4Submit(GpuQueue queue, GpuCommandBuffer* commandBuffers, size_t command
 		validCommandBufferCount++;
 	}
 
-	[metalQueue commit:metalCommandBuffers count:validCommandBufferCount];
+	if (validCommandBufferCount > 0) {
+		__block CmnFutex completionFutex = {};
+		MTL4CommitOptions* commitOptions = [MTL4CommitOptions new];
+		[commitOptions addFeedbackHandler:^(id<MTL4CommitFeedback> commitFeedback) {
+			(void)commitFeedback;
+			cmnAtomicStore(&completionFutex.value, 1u, CMN_RELEASE);
+			cmnFutexSignal(&completionFutex);
+		}];
 
-	for (size_t i = 0; i < commandBufferCount; i++) {
-		GpuCommandBuffer commandBuffer = commandBuffers[i];
-		Mtl4CommandBuffer commandBufferHandle = mtl4GpuCommandBufferToHandle(commandBuffer);
-		
-		// TODO: Schedule the deletion of the submitted command buffers.
+		[metalQueue commit:metalCommandBuffers count:validCommandBufferCount options:commitOptions];
+		cmnFutexWait(&completionFutex, 0u);
+		[commitOptions release];
 	}
 
 	// NOTE: Result here is GPU_SUCCESS if all the command buffers were valid.
@@ -111,7 +121,7 @@ void mtl4SubmitWithSignal(
 	assert(false && "Unimplemented");
 }
 
-void gpuMemCpy(GpuCommandBuffer cb, void* destGpu, void* srcGpu, size_t size, GpuResult* result) {
+void mtl4MemCpy(GpuCommandBuffer cb, void* destGpu, void* srcGpu, size_t size, GpuResult* result) {
 	GpuResult localResult;
 
 	Mtl4CommandBuffer handle = mtl4GpuCommandBufferToHandle(cb);
@@ -154,7 +164,7 @@ void gpuMemCpy(GpuCommandBuffer cb, void* destGpu, void* srcGpu, size_t size, Gp
 	CMN_SET_RESULT(result, GPU_SUCCESS);
 }
 
-void gpuCopyToTexture(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTexture texture, GpuResult* result) {
+void mtl4CopyToTexture(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTexture texture, GpuResult* result) {
 	(void)destGpu;
 	
 	Mtl4CommandBuffer handle = mtl4GpuCommandBufferToHandle(cb);
@@ -181,15 +191,98 @@ void gpuCopyToTexture(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTextu
 	}
 	defer (mtl4ReleaseTextureMetadata());
 
-	// [metadata->computeEncoder copyFromTexture:textureMetadata->texture
-	// 	 sourceSlice:0 sourceLevel:0 sourceOrigin:(MTLOrigin) sourceSize:(MTLSize) toBuffer:(nonnull id<MTLBuffer>) destinationOffset:(NSUInteger) destinationBytesPerRow:(NSUInteger) destinationBytesPerImage:(NSUInteger)];
+	// TODO: Support arrays.
+	if (textureMetadata->descriptor.type == GPU_TEXTURE_2D_ARRAY ||
+		textureMetadata->descriptor.type == GPU_TEXTURE_CUBE_ARRAY
+	) {
+		assert(false && "Unimplemented");
+	}
+
+	MTLSize textureSize = MTLSizeMake(
+		textureMetadata->descriptor.dimensions[0],
+		textureMetadata->descriptor.dimensions[1],
+		textureMetadata->descriptor.dimensions[2]
+	);
+	size_t bytesPerRow = textureMetadata->descriptor.dimensions[0] * gMtl4GpuFormatPixelSize[textureMetadata->descriptor.format];
+	size_t bytesPerImage = textureMetadata->descriptor.dimensions[0] *
+				textureMetadata->descriptor.dimensions[1] *
+				textureMetadata->descriptor.dimensions[2] *
+				gMtl4GpuFormatPixelSize[textureMetadata->descriptor.format];
+
+	// TODO: Support mipmaps.
+	[metadata->computeEncoder copyFromBuffer:sourceMetadata->buffer
+	 	sourceOffset:source.offset
+		sourceBytesPerRow:bytesPerRow
+		sourceBytesPerImage:bytesPerImage
+		sourceSize:textureSize
+		toTexture:textureMetadata->texture
+		destinationSlice:0
+		destinationLevel:0
+		destinationOrigin:MTLOriginMake(0, 0, 0)];
 
 	CMN_SET_RESULT(result, GPU_SUCCESS);
 }
 
-void gpuCopyFromTexture(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTexture texture, GpuResult* result);
+void mtl4CopyFromTexture(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTexture texture, GpuResult* result) {
+	(void)srcGpu;
 
-void gpuSetActiveTextureHeapPtr(GpuCommandBuffer cb, void *ptrGpu, GpuResult* result) {
+	Mtl4CommandBuffer handle = mtl4GpuCommandBufferToHandle(cb);
+	Mtl4CommandBufferMetadata* metadata = mtl4AcquireCommandBufferMetadataFrom(handle);
+	if (metadata == nullptr) {
+		CMN_SET_RESULT(result, GPU_NO_SUCH_COMMAND_BUFFER_FOUND);
+		return;
+	}
+	defer (mtl4ReleaseCommandBufferMetadata());
+
+	Mtl4GpuAddress destination = mtl4PtrToGpuAddress(destGpu);
+	Mtl4AllocationMetadata* destinationMetadata = mtl4AcquireAllocationMetadataFromGpuPtr(destination);
+	if (destinationMetadata == nullptr) {
+		CMN_SET_RESULT(result, GPU_NO_SUCH_ALLOCATION_FOUND);
+		return;
+	}
+	defer (mtl4ReleaseAllocationMetadata());
+
+	Mtl4Texture textureHandle = mtl4GpuTextureToHadle(texture);
+	Mtl4TextureMetadata* textureMetadata = mtl4AcquireTextureMetadataFrom(textureHandle);
+	if (textureMetadata == nullptr) {
+		CMN_SET_RESULT(result, GPU_NO_SUCH_TEXTURE_FOUND);
+		return;
+	}
+	defer (mtl4ReleaseTextureMetadata());
+
+	// TODO: Support arrays.
+	if (textureMetadata->descriptor.type == GPU_TEXTURE_2D_ARRAY ||
+		textureMetadata->descriptor.type == GPU_TEXTURE_CUBE_ARRAY
+	) {
+		assert(false && "Unimplemented");
+	}
+
+	MTLSize textureSize = MTLSizeMake(
+		textureMetadata->descriptor.dimensions[0],
+		textureMetadata->descriptor.dimensions[1],
+		textureMetadata->descriptor.dimensions[2]
+	);
+	size_t bytesPerRow = textureMetadata->descriptor.dimensions[0] * gMtl4GpuFormatPixelSize[textureMetadata->descriptor.format];
+	size_t bytesPerImage = textureMetadata->descriptor.dimensions[0] *
+				textureMetadata->descriptor.dimensions[1] *
+				textureMetadata->descriptor.dimensions[2] *
+				gMtl4GpuFormatPixelSize[textureMetadata->descriptor.format];
+
+	// TODO: Support mipmaps.
+	[metadata->computeEncoder copyFromTexture:textureMetadata->texture
+		sourceSlice:0
+		sourceLevel:0
+		sourceOrigin:MTLOriginMake(0, 0, 0)
+		sourceSize:textureSize
+		toBuffer:destinationMetadata->buffer
+		destinationOffset:destination.offset
+		destinationBytesPerRow:bytesPerRow
+		destinationBytesPerImage:bytesPerImage
+	];
+
+}
+
+void mtl4SetActiveTextureHeapPtr(GpuCommandBuffer cb, void *ptrGpu, GpuResult* result) {
 	Mtl4CommandBuffer handle = mtl4GpuCommandBufferToHandle(cb);
 	Mtl4CommandBufferMetadata* metadata = mtl4AcquireCommandBufferMetadataFrom(handle);
 	if (metadata == nullptr) {

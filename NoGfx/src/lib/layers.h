@@ -7,7 +7,7 @@
 #define GPU_MAX_LAYERS 4
 
 typedef struct GpuBaseLayer {
-	void (*layerInit)(GpuResult* result);
+	void (*layerInit)(const GpuInitDesc* desc, GpuResult* result);
 	void (*gpuDeinit)(void);
 
 	void (*gpuEnumerateDevices)(GpuDeviceInfo** devices, size_t* devices_count, GpuResult* result);
@@ -54,6 +54,10 @@ typedef struct GpuBaseLayer {
 		uint64_t value,
 		GpuResult* result
 	);
+
+	void (*gpuMemCpy)(GpuCommandBuffer cb, void* destGpu, void* srcGpu, size_t size, GpuResult* result);
+	void (*gpuCopyToTexture)(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTexture texture, GpuResult* result);
+	void (*gpuCopyFromTexture)(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTexture texture, GpuResult* result);
 } GpuBaseLayer;
 
 typedef struct {

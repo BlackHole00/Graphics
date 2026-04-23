@@ -145,8 +145,10 @@ typedef struct GpuViewDesc {
 	uint16_t layerCount;
 } GpuViewDesc;
 
+struct GpuInitDesc;
+
 typedef struct GpuLayer {
-	bool (*layerInit)(GpuResult* result);
+	bool (*layerInit)(const struct GpuInitDesc* desc, GpuResult* result);
 	bool (*gpuDeinit)(void);
 
 	bool (*gpuEnumerateDevices)(GpuDeviceInfo** devices, size_t* devices_count, GpuResult* result);
@@ -194,11 +196,15 @@ typedef struct GpuLayer {
 		GpuResult* result
 	);
 
+	bool (*gpuMemCpy)(GpuCommandBuffer cb, void* destGpu, void* srcGpu, size_t size, GpuResult* result);
+	bool (*gpuCopyToTexture)(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTexture texture, GpuResult* result);
+	bool (*gpuCopyFromTexture)(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTexture texture, GpuResult* result);
 } GpuLayer;
 
 typedef struct GpuInitDesc {
 	GpuBackend backend;
 	bool validationEnabled;
+	bool tracingEnabled;
 	GpuLayer* extraLayers;
 	size_t extraLayerCount;
 } GpuInitDesc;

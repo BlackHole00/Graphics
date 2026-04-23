@@ -26,7 +26,7 @@ typedef struct Mtl4TextureMetadata {
 	// Final
 	id<MTLTexture>		texture;
 	// Final
-	GpuTextureDescriptor	descriptor;
+	GpuTextureDesc		descriptor;
 
 	// Locked by relatedViewsMutex
 	Mtl4TextureViews*	relatedViews;

@@ -109,10 +109,58 @@ void mtl4SelectDevice(GpuDeviceId deviceId, GpuResult* result) {
 		return;
 	}
 
+	if (gMtl4Context.shouldTrace) {
+		mtl4BeginTracing("/tmp/nogfx.gputrace");
+	}
+
 	CMN_SET_RESULT(result, GPU_SUCCESS);
 }
 
 bool mtl4HasDevice(void) {
 	return gMtl4Context.device != nil;
+}
+
+void mtl4BeginTracing(const char* traceDestinationFile) {
+	MTLCaptureManager* captureManager = [MTLCaptureManager sharedCaptureManager];
+	if (![captureManager supportsDestination:MTLCaptureDestinationGPUTraceDocument]) {
+		printf(
+			"WARN - Could not start a capture. Try starting the application with the following "
+			"environment variables:\n"
+			"\t- MTL_DEBUG_LAYER=1\n"
+			"\t- MTL_CAPTURE_ENABLED=1\n"
+		);
+		return;
+	}
+
+	MTLCaptureDescriptor* captureDescriptor = [MTLCaptureDescriptor new];
+	defer ([captureDescriptor release]);
+
+	captureDescriptor.captureObject = gMtl4Context.device;
+	captureDescriptor.destination = MTLCaptureDestinationGPUTraceDocument;
+	captureDescriptor.outputURL = [NSURL fileURLWithPath: (NSString*)__CFStringMakeConstantString(traceDestinationFile)];
+
+	if (access("/tmp/nogfx.gputrace", F_OK) == 0) {
+		// NOTE: Removing a folder with the C standard library is difficult.
+		system("rm -rf /tmp/nogfx.gputrace");
+	}
+
+	NSError* err = nil;
+	[captureManager startCaptureWithDescriptor:captureDescriptor error:&err];
+	if (err != nil) {
+		printf("WARN - Could not start a capture:\n");
+		printf("\t%s\n", [[err localizedFailureReason] UTF8String]);
+		printf("\t%s\n", [[err localizedDescription] UTF8String]);
+	}
+
+	gMtl4Context.isCurrentlyTracing = true;
+}
+
+void mtl4StopTracing(void) {
+	if (!gMtl4Context.isCurrentlyTracing) {
+		return;
+	}
+
+	MTLCaptureManager* captureManager = [MTLCaptureManager sharedCaptureManager];
+	[captureManager stopCapture];
 }
 

@@ -25,7 +25,7 @@ void gpuInit(const GpuInitDesc* desc, GpuResult* result) {
 		gpuPushLayer(validationLayer);
 	}
 
-	GPU_LAYERED_CALL(layerInit, result);
+	GPU_LAYERED_CALL(layerInit, desc, result);
 }
 
 void gpuDeinit(void) {
@@ -160,3 +160,15 @@ void gpuSubmitWithSignal(
 ) {
 	GPU_LAYERED_CALL(gpuSubmitWithSignal, queue, commandBuffers, commandBufferCount, semaphore, value, result);
 }
+
+void gpuMemCpy(GpuCommandBuffer cb, void* destGpu, void* srcGpu, size_t size, GpuResult* result) {
+	GPU_LAYERED_CALL(gpuMemCpy, cb, destGpu, srcGpu, size, result);
+}
+
+void gpuCopyToTexture(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTexture texture, GpuResult* result) {
+	GPU_LAYERED_CALL(gpuCopyToTexture, cb, destGpu, srcGpu, texture, result);
+}
+void gpuCopyFromTexture(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTexture texture, GpuResult* result) {
+	GPU_LAYERED_CALL(gpuCopyFromTexture, cb, destGpu, srcGpu, texture, result);
+}
+

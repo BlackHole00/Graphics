@@ -18,8 +18,10 @@
 
 Mtl4Context gMtl4Context;
 
-void mtl4Init(GpuResult* result) {
+void mtl4Init(const GpuInitDesc* desc, GpuResult* result) {
 	GpuResult localResult;
+
+	gMtl4Context.shouldTrace = desc->tracingEnabled;
 
 	gMtl4Context.globalBackingMemory	= (uint8_t*)malloc(MTL4_GLOBAL_MEMORY);
 	if (gMtl4Context.globalBackingMemory == nullptr) {
@@ -85,6 +87,10 @@ void mtl4Deinit(void) {
 	mtl4FiniTextureStorage();
 	mtl4FiniAllocationStorage();
 	mtl4FiniDeletionManager();
+
+	if (gMtl4Context.isCurrentlyTracing) {
+		mtl4StopTracing();
+	}
 
 	if (gMtl4Context.availableDevices.devices != nullptr) {
 		for (size_t i = 0; i < gMtl4Context.availableDevices.count; i++) {

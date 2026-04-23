@@ -54,11 +54,11 @@ void mtl4SubmitWithSignal(
 	GpuResult* result
 );
 
-void gpuMemCpy(GpuCommandBuffer cb, void* destGpu, void* srcGpu, size_t size, GpuResult* result);
-void gpuCopyToTexture(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTexture texture, GpuResult* result);
-void gpuCopyFromTexture(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTexture texture, GpuResult* result);
+void mtl4MemCpy(GpuCommandBuffer cb, void* destGpu, void* srcGpu, size_t size, GpuResult* result);
+void mtl4CopyToTexture(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTexture texture, GpuResult* result);
+void mtl4CopyFromTexture(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTexture texture, GpuResult* result);
 
-void gpuSetActiveTextureHeapPtr(GpuCommandBuffer cb, void *ptrGpu, GpuResult* result);
+void mtl4SetActiveTextureHeapPtr(GpuCommandBuffer cb, void *ptrGpu, GpuResult* result);
 
 Mtl4CommandBuffer mtl4CreateCommandBuffer(GpuResult* result);
 // NOTE: Requires deletion-lock on gMtl4CommandBufferStorage.sync.

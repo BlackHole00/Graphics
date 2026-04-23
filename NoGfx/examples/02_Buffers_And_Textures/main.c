@@ -1,8 +1,11 @@
 #include <stdio.h>
+#include <unistd.h>
 #include <gpu/gpu.h>
 
 #define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image.h"
+#include "stb_image_write.h"
 
 GpuBackend selectBackend(void) {
 	#ifdef __APPLE__
@@ -50,6 +53,7 @@ int main(void) {
 	GpuInitDesc desc;
 	desc.backend		= selectBackend();
 	desc.validationEnabled	= true;
+	desc.tracingEnabled	= true;
 	desc.extraLayers	= NULL;
 	desc.extraLayerCount	= 0;
 
@@ -97,7 +101,13 @@ int main(void) {
 	GpuBumpAllocator bumpAllocator;
 	createGpuBumpAllocator(&bumpAllocator, 1 * 1024 * 1024);
 
-	FILE* f = fopen("image.png", "r");
+	FILE* f = fopen("image.png", "rb");
+	if (f == NULL) {
+		printf("Could not open image.png\n");
+		gpuDeinit();
+		return -1;
+	}
+
 	int x, y, channels;
 	uint8_t* data = stbi_load_from_file(f, &x, &y, &channels, 4);
 	assert(channels == 4);
@@ -108,7 +118,7 @@ int main(void) {
 	memcpy(gpuTempData.cpu, data, x * y * channels);
 
 	GpuTextureDesc textureDescriptor = {};
-	textureDescriptor.type = GPU_TEXTURE_3D;
+	textureDescriptor.type = GPU_TEXTURE_2D;
 	textureDescriptor.format = GPU_FORMAT_RGBA8_UNORM;
 	textureDescriptor.usage = GPU_USAGE_SAMPLED;
 	textureDescriptor.dimensions[0] = x;
@@ -119,11 +129,31 @@ int main(void) {
 	textureDescriptor.sampleCount = 1;
 
 	GpuTextureSizeAlign sizeAlign = gpuTextureSizeAlign(&textureDescriptor, NULL);
+	printf("%lu %lu\n", sizeAlign.size, sizeAlign.align);
+
 	void* gpuTextureBuffer = gpuMalloc(sizeAlign.size + 1024, sizeAlign.align, GPU_MEMORY_GPU, NULL);
-	gpuCreateTexture(&textureDescriptor, gpuTextureBuffer, NULL);
+	GpuTexture texture = gpuCreateTexture(&textureDescriptor, gpuTextureBuffer, NULL);
 
-	/* TODO: Update the texture data with the buffer in the bump allocator */
+	GpuQueue queue = gpuCreateQueue(NULL);
 
+	GpuCommandBuffer uploadCommandBuffer = gpuStartCommandEncoding(queue, NULL);
+	gpuCopyToTexture(uploadCommandBuffer, gpuTextureBuffer, gpuTempData.gpu, texture, NULL);
+	gpuSubmit(queue, &uploadCommandBuffer, 1, NULL);
+
+	// Poor man's barrier
+	usleep(1000000);
+
+	GpuAllocation downloadBuffer = bumpAlloc(&bumpAllocator, x * y * channels);
+	GpuCommandBuffer downloadCommandBuffer = gpuStartCommandEncoding(queue, NULL);
+	gpuCopyFromTexture(downloadCommandBuffer, downloadBuffer.gpu, gpuTextureBuffer, texture, NULL);
+	gpuSubmit(queue, &downloadCommandBuffer, 1, NULL);
+
+	// Poor man's barrier 2
+	usleep(1000000);
+
+	stbi_write_png("out.png", x, y, 4, downloadBuffer.cpu, x * 4);
+	stbi_image_free(data);
+	
 	gpuDeinit();
 	return 0;
 }
