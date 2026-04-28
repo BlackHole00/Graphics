@@ -443,67 +443,27 @@ void* mtl4HostToDevicePointer(void* ptr, GpuResult* result) {
 void mtl4AssociateTextureToAllocation(Mtl4AllocationMetadata* metadata, Mtl4Texture texture, GpuResult* result) {
 	CmnResult localResult;
 
-	CmnScopedWriteRWMutex guard(&metadata->relatedTexturesMutex);
-
-	// Find the first texture bucket free.
-	Mtl4AllocationTextures** texturesPtr = &metadata->relatedTextures;
-	for (;;) {
-		if (*texturesPtr == nullptr) {
-			break;
-		}
-
-		if (cmnIsZero((*texturesPtr)->textures[MTL4_TEXTURES_PER_ALLOCATION_TEXTURE_BUCKET - 1])) {
-			break;
-		}
-
-		texturesPtr = &(*texturesPtr)->nextBucket;
+	cmnInsert(&metadata->relatedTextures, texture, cmnPoolAllocator(&gMtl4AllocationStorage.miscPool), &localResult);
+	if (localResult != CMN_SUCCESS) {
+		CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
+		return;
 	}
-
-	// If there is no space, allocate a new bucket.
-	Mtl4AllocationTextures* textures = *texturesPtr;
-	if (textures == nullptr) {
-		textures = cmnPoolAlloc<Mtl4AllocationTextures>(&gMtl4AllocationStorage.miscPool, &localResult);
-		if (localResult != CMN_SUCCESS) {
-			CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
-			return;
-		}
-
-		*texturesPtr = textures;
-	}
-
-	// Set the first free location in the buffer with the texture
-	size_t i = 0;
-	while (
-		i < MTL4_TEXTURES_PER_ALLOCATION_TEXTURE_BUCKET &&
-		!cmnIsZero(textures->textures[i])
-	) {
-		i++;
-	}
-
-	textures->textures[i] = texture;
 
 	CMN_SET_RESULT(result, GPU_SUCCESS);
 }
 
 void mtl4FreeAssociatedTextures(Mtl4AllocationMetadata* metadata) {
-	CmnScopedWriteRWMutex guard(&metadata->relatedTexturesMutex);
+	CmnScopedWriteRWMutex guard(&metadata->relatedTextures.mutex);
 
-	Mtl4AllocationTextures* textures = metadata->relatedTextures;
+	CmnChainIterator<Mtl4Texture, 10> iter;
+	cmnCreateChainIterator(&metadata->relatedTextures, &iter);
 
-	while (textures != nullptr) {
-		size_t i = 0;
-		while (i < 7 && !cmnIsZero(textures->textures[i])) {
-			mtl4FreeTexture(textures->textures[i]);
-			i++;
-		}
-
-		Mtl4AllocationTextures* nextTextures = textures->nextBucket;
-
-		cmnPoolFree(&gMtl4AllocationStorage.miscPool, textures);
-		textures = nextTextures;
+	Mtl4Texture* texture;
+	while (cmnIterate(&iter, &texture)) {
+		mtl4FreeTexture(*texture);
 	}
 
-	metadata->relatedTextures = nullptr;
+	cmnDestroyChain(&metadata->relatedTextures, cmnPoolAllocator(&gMtl4AllocationStorage.miscPool));
 }
 
 void mtl4EnsureBackingBufferIsAllocated(Mtl4AllocationMetadata* metadata, GpuResult* result) {

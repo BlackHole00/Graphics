@@ -22,6 +22,7 @@ typedef struct Mtl4CommandBufferMetadata {
 	Mtl4CommandBufferStatus	status;
 
 	Mtl4Queue			relatedQueue;
+	// NSAutoreleasePool*		commandBufferObjects;
 
 	id<MTL4CommandBuffer>		commandBuffer;
 	id<MTL4ComputeCommandEncoder>	computeEncoder;

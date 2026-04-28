@@ -8,6 +8,8 @@
 #include "hash_map.cpp"
 #include "exponential_array.cpp"
 #include "pool.cpp"
+#include "chain.cpp"
+#include "keyed_chain.cpp"
 #include "heap_allocator.cpp"
 #include "handle_map.cpp"
 #include "btree.cpp"
@@ -27,6 +29,14 @@ TestRecord gCommonTests[] = {
 	{ "Check for block reusage in pools",				checkPoolBlockReusage			},
 	{ "Check pool out of memory behaviour",				checkPoolOOMBehaviour			},
 	{ "Check for pool behavious with uninitialized locations",	checkPoolUninitializedLocations		},
+
+	{ "Check chain creation and insertion", checkChainCreationAndInsertion		},
+	{ "Check chain contains and removal", checkChainContainsAndRemove		},
+	{ "Check chain iteration", checkChainIteration				},
+
+	{ "Check keyed chain creation and insertion", checkKeyedChainCreationAndInsertion },
+	{ "Check keyed chain overwrite and removal", checkKeyedChainOverwriteAndRemoval },
+	{ "Check keyed chain iteration", checkKeyedChainIteration },
 
 	{ "Check heap raw allocation is zeroed",			checkHeapRawAllocationIsZeroed		},
 	{ "Check heap typed allocation overloads",			checkHeapTypedAllocationOverloads		},

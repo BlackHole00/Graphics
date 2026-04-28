@@ -5,6 +5,7 @@
 #include <Metal/Metal.h>
 
 #include <lib/common/page.h>
+#include <lib/common/chain.h>
 #include <lib/common/btree.h>
 #include <lib/common/pointer_map.h>
 #include <lib/common/element_pool.h>
@@ -59,13 +60,10 @@ inline void* mtl4GpuAddressToPtr(Mtl4GpuAddress address) {
 	return (void*)(uintptr_t)raw;
 }
 
-#define MTL4_TEXTURES_PER_ALLOCATION_TEXTURE_BUCKET 11
-typedef struct Mtl4AllocationTextures {
-	Mtl4Texture textures[MTL4_TEXTURES_PER_ALLOCATION_TEXTURE_BUCKET];
+#define MTL4_ALLOCATION_METADATA_OBJECT_SIZE 96
 
-	struct Mtl4AllocationTextures* nextBucket;
-} Mtl4AllocationTextures;
-static_assert(sizeof(Mtl4AllocationTextures) <= 96, "The allocation misc pool should be able to contain this struct.");
+typedef CmnChain<Mtl4Texture, 10> Mtl4AllocationTextures;
+static_assert(sizeof(CmnChainNode<Mtl4Texture, 10>) <= 96, "The allocation misc pool should be able to contain this struct.");
 
 typedef enum Mtl4InternalAllocationUsage {
 	MTL4_ALLOCATION_SCHEDULED_FOR_DELETION	= 1 << 0,
@@ -115,15 +113,12 @@ typedef struct Mtl4AllocationMetadata {
 	// Atomic, settable once
 	id<MTLHeap>	associatedTextureHeap;
 
-	// Locked by relatedTexturesMutex
-	Mtl4AllocationTextures*	relatedTextures;
-	CmnRWMutex		relatedTexturesMutex;
+	// Related textures
+	Mtl4AllocationTextures	relatedTextures;
 } Mtl4AllocationMetadata;
 
-// Mtl4AllocationMetadata and Mtl4AllocationTextures should be allocated both using gMtl4AllocationStorage.
-#define MTL4_ALLOCATION_METADATA_OBJECT_SIZE sizeof(Mtl4AllocationTextures)
 static_assert(
-	sizeof(Mtl4AllocationMetadata) <= 96,
+	sizeof(Mtl4AllocationMetadata) <= MTL4_ALLOCATION_METADATA_OBJECT_SIZE,
 	"Mtl4AllocationMetadata is too big for the allocation misc pool"
 );
 

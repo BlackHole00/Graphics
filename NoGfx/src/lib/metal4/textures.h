@@ -7,6 +7,7 @@
 #include <lib/common/handle_map.h>
 #include <lib/common/type_traits.h>
 #include <lib/common/storage_sync.h>
+#include <lib/common/keyed_chain.h>
 #include <Metal/Metal.h>
 
 typedef CmnHandle Mtl4Texture;
@@ -18,6 +19,7 @@ typedef struct Mtl4TextureViews {
 
 	struct Mtl4TextureViews* nextBucket;
 } Mtl4TextureViews;
+// typedef CmnKeyedChain<GpuViewDesc, id<MTLTexture>, 7> Mtl4TextureViews;
 
 typedef struct Mtl4TextureMetadata {
 	// Atomic, Settable once

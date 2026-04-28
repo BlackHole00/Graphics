@@ -33,6 +33,8 @@ typedef enum GpuResult {
 	GPU_COUND_NOT_CREATE_QUEUE,
 	GPU_COUND_NOT_CREATE_COMMAND_BUFFER,
 
+	GPU_UNSUPPORTED_OPERATION,
+
 	// Only active while validation is enabled.
 	GPU_USE_AFTER_FREE,
 
@@ -117,6 +119,26 @@ typedef enum GpuHazardFlags {
 	GPU_HAZARD_DESCRIPTORS = 0x2,
 	GPU_HAZARD_DEPTH_STENCIL = 0x4
 } GpuHazardFlags;
+
+typedef enum GpuOp {
+	GPU_OP_NEVER = 0,
+	GPU_OP_LESS,
+	GPU_OP_EQUAL,
+	GPU_OP_LESS_EQUAL,
+	GPU_OP_GREATER,
+	GPU_OP_NOT_EQUAL,
+	GPU_OP_GREATER_EQUAL,
+	GPU_OP_ALWAYS,
+} GpuOp;
+
+typedef enum GpuSignal {
+	SIGNAL_ATOMIC_SET,
+	SIGNAL_ATOMIC_MAX,
+	SIGNAL_ATOMIC_OR,
+	// ...
+} GpuSignal;
+
+#define GPU_MASK_ALL (~(uint64_t)0)
 
 typedef size_t GpuDeviceId;
 typedef uint64_t GpuTexture;
@@ -216,6 +238,8 @@ typedef struct GpuLayer {
 	bool (*gpuCopyFromTexture)(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTexture texture, GpuResult* result);
 
 	bool (*gpuBarrier)(GpuCommandBuffer cb, GpuStage before, GpuStage after, GpuHazardFlags hazards, GpuResult* result);
+	bool (*gpuSignalAfter)(GpuCommandBuffer cb, GpuStage before, void* ptrGpu, uint64_t value, GpuSignal signal, GpuResult* result);
+	bool (*gpuWaitBefore)(GpuCommandBuffer cb, GpuStage after, void* ptrGpu, uint64_t value, GpuOp op, GpuSignal hazards, uint64_t mask, GpuResult* result);
 } GpuLayer;
 
 typedef struct GpuInitDesc {
@@ -278,9 +302,11 @@ void gpuMemCpy(GpuCommandBuffer cb, void* destGpu, void* srcGpu, size_t size, Gp
 void gpuCopyToTexture(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTexture texture, GpuResult* result);
 void gpuCopyFromTexture(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTexture texture, GpuResult* result);
 
-void gpuSetActiveTextureHeapPtr(GpuCommandBuffer cb, void *ptrGpu, GpuResult* result);
+void gpuSetActiveTextureHeapPtr(GpuCommandBuffer cb, void* ptrGpu, GpuResult* result);
 
 void gpuBarrier(GpuCommandBuffer cb, GpuStage before, GpuStage after, GpuHazardFlags hazards, GpuResult* result);
+void gpuSignalAfter(GpuCommandBuffer cb, GpuStage before, void* ptrGpu, uint64_t value, GpuSignal signal, GpuResult* result);
+void gpuWaitBefore(GpuCommandBuffer cb, GpuStage after, void* ptrGpu, uint64_t value, GpuOp op, GpuSignal hazards, uint64_t mask, GpuResult* result);
 
 // void gpuBarrier(GpuCommandBuffer cb, STAGE before, STAGE after, HAZARD_FLAGS hazards = 0);
 // void gpuSignalAfter(GpuCommandBuffer cb, STAGE before, void *ptrGpu, uint64 value, SIGNAL signal);
