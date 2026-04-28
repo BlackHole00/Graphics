@@ -32,6 +32,7 @@ GpuBaseLayer gMtl4BaseLayer = {
 	/*gpuMemCpy=*/			mtl4MemCpy,
 	/*gpuCopyToTexture=*/		mtl4CopyToTexture,
 	/*gpuCopyFromTexture=*/		mtl4CopyFromTexture,
+	/*gpuBarrier=*/			mtl4Barrier,
 };
 
 GpuLayer gMtl4ValidationLayer = {
@@ -57,5 +58,6 @@ GpuLayer gMtl4ValidationLayer = {
 	/*gpuMemCpy=*/			nullptr,
 	/*gpuCopyToTexture=*/		nullptr,
 	/*gpuCopyFromTexture=*/		nullptr,
+	/*gpuBarrier=*/			nullptr,
 };
 

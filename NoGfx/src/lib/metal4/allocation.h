@@ -67,30 +67,36 @@ typedef struct Mtl4AllocationTextures {
 } Mtl4AllocationTextures;
 static_assert(sizeof(Mtl4AllocationTextures) <= 96, "The allocation misc pool should be able to contain this struct.");
 
-// typedef enum Mtl4InternalAllocationUsage {
-// 	// The allocation references directly a `MTLBuffer`. Its memory type is _GPU_MEMORY_DEFAULT_ or _GPU_MEMORY_READBACK_.
-// 	MTL4_ALLOCATION_DIRECT			= 1,
-// 	// The allocation is _GPU_MEMORY_GPU_. No actual memory will be committed until first usage, thus the allocation is _virtual_.
-// 	MTL4_ALLOCATION_VIRTUAL			= 2,
+typedef enum Mtl4InternalAllocationUsage {
+	MTL4_ALLOCATION_SCHEDULED_FOR_DELETION	= 1 << 0,
+
+	// The allocation references directly a `MTLBuffer`. Its memory type is _GPU_MEMORY_DEFAULT_ or _GPU_MEMORY_READBACK_.
+	MTL4_ALLOCATION_DIRECT			= 1 << 1,
+	// The allocation is _GPU_MEMORY_GPU_. No actual memory will be committed until first usage, thus the allocation is _virtual_.
+	MTL4_ALLOCATION_VIRTUAL			= 1 << 2,
+
+	// The allocation buffer is accessible from the cpu-side.
+	MTL4_ALLOCATION_CPU_ACCESSIBLE		= 1 << 3,
 	
-// 	// The allocation has a real backing `MTLBuffer`.
-// 	MTL4_ALLOCATION_COMMITTED		= 4,
+	// The allocation has a real backing `MTLBuffer`.
+	MTL4_ALLOCATION_COMMITTED		= 1 << 3,
 
-// 	// The allocation has been used for a single texture. The allocation does not have any other free memory.
-// 	MTL4_ALLOCATION_FOR_SINGLE_TEXTURE	= 8,
+	// The allocation has been used for a single texture. The allocation does not have any other free memory.
+	MTL4_ALLOCATION_FOR_SINGLE_TEXTURE	= 1 << 4,
+	// The allocation is correlated with a texture heap, thus can contain multiple textures, given there is space in the heap.
+	MTL4_ALLOCATION_FOR_TEXTURE_HEAP	= 1 << 5,
 
-// 	// The allocation is correlated with a texture heap, thus can contain multiple textures, given there is space in the heap.
-// 	MTL4_ALLOCATION_FOR_TEXTURE_HEAP	= 16,
-// } Mtl4InternalAllocationUsage;
-// typedef uint32_t Mtl4InternalAllocationUsages;
+	// The allocation contains a signal.
+	MTL4_ALLOCATION_CONTAINS_SIGNALS	= 1 << 6,
+} Mtl4InternalAllocationUsage;
+typedef uint32_t Mtl4InternalAllocationUsages;
 
 typedef struct Mtl4AllocationMetadata {
 	// Final
 	GpuMemory			memory;
 
-	// Atomic, settable once
-	bool		scheduledForDeletion;
-	// Mtl4InternalAllocationUsages	internalUsage;
+	// Atomic
+	Mtl4InternalAllocationUsages	internalUsage;
 
 	// Final
 	size_t		size;
@@ -195,6 +201,7 @@ void mtl4FreeAssociatedTextures(Mtl4AllocationMetadata* metadata);
 
 void mtl4EnsureBackingBufferIsAllocated(Mtl4AllocationMetadata* metadata, GpuResult* result);
 void mtl4EnsureBackingBufferIsAllocated(Mtl4GpuAddress address, GpuResult* result);
+void mtl4MarkAsContainingSignals(Mtl4AllocationMetadata* metadata, GpuResult* result);
 
 bool mtl4IsAllocationScheduledForDeletion(void* ptr);
 

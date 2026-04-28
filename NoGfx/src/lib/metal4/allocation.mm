@@ -155,6 +155,10 @@ void* mtl4MallocDirectMemory(size_t size, size_t align, GpuMemory memory, GpuRes
 		metadata.assignedGpuAddress.guard	= 1;
 		metadata.assignedGpuAddress.offset	= 0;
 		metadata.assignedGpuAddress.allocationIdentifier = gpuAllocationIndex;
+		metadata.internalUsage =
+			MTL4_ALLOCATION_DIRECT |
+			MTL4_ALLOCATION_CPU_ACCESSIBLE |
+			MTL4_ALLOCATION_COMMITTED;
 
 		handle = cmnInsert(&gMtl4AllocationStorage.allocations, metadata, &localResult);
 		if (localResult != CMN_SUCCESS) {
@@ -217,6 +221,7 @@ void* mtl4MallocVirtualMemory(size_t size, size_t align, GpuResult* result) {
 		address.guard			= true;
 		address.offset			= 0;
 		metadata.assignedGpuAddress	= address;
+		metadata.internalUsage	= MTL4_ALLOCATION_VIRTUAL;
 
 		handle = cmnInsert(&gMtl4AllocationStorage.allocations, metadata, &localResult);
 		if (localResult != CMN_SUCCESS) {
@@ -265,7 +270,7 @@ void mtl4Free(void* ptr) {
 		}
 		defer (mtl4ReleaseAllocationMetadata());
 
-		cmnAtomicStore(&metadata->scheduledForDeletion, true);
+		cmnAtomicOr(&metadata->internalUsage, (Mtl4InternalAllocationUsages)MTL4_ALLOCATION_SCHEDULED_FOR_DELETION);
 
 		// NOTE: May as well...
 		mtl4FreeAssociatedTextures(metadata);
@@ -520,6 +525,8 @@ void mtl4EnsureBackingBufferIsAllocated(Mtl4AllocationMetadata* metadata, GpuRes
 		[buffer release];
 	}
 
+	cmnAtomicOr(&metadata->internalUsage, (Mtl4InternalAllocationUsages)MTL4_ALLOCATION_COMMITTED);
+
 	CMN_SET_RESULT(result, GPU_SUCCESS);
 }
 
@@ -534,6 +541,33 @@ void mtl4EnsureBackingBufferIsAllocated(Mtl4GpuAddress address, GpuResult* resul
 	mtl4EnsureBackingBufferIsAllocated(address, result);
 }
 
+void mtl4MarkAsContainingSignals(Mtl4AllocationMetadata* metadata, GpuResult* result) {
+	GpuResult localResult;
+
+	Mtl4InternalAllocationUsages usages = cmnAtomicLoad(&metadata->internalUsage);
+
+	if (usages & MTL4_ALLOCATION_CPU_ACCESSIBLE) {
+		cmnAtomicOr(&metadata->internalUsage, (Mtl4InternalAllocationUsages)MTL4_ALLOCATION_CONTAINS_SIGNALS);
+	} else if (!(usages & MTL4_ALLOCATION_COMMITTED)) {
+		id<MTLBuffer> buffer = mtl4AllocateBuffer(metadata->size, metadata->align, metadata->memory, &localResult);
+		if (localResult != GPU_SUCCESS) {
+			CMN_SET_RESULT(result, localResult);
+			return;
+		}
+
+		// NOTE: Another thread could have set this up before us. If so, let's use the other thread buffer.
+		if (!cmnAtomicCompareExchangeStrong(&metadata->buffer, (id<MTLBuffer>)nil, buffer)) {
+			[buffer release];
+		}
+
+		cmnAtomicOr(
+			&metadata->internalUsage,
+			(Mtl4InternalAllocationUsages)MTL4_ALLOCATION_COMMITTED | MTL4_ALLOCATION_CPU_ACCESSIBLE);
+
+		CMN_SET_RESULT(result, GPU_SUCCESS);
+	}
+}
+
 bool mtl4IsAllocationScheduledForDeletion(void* ptr) {
 	Mtl4AllocationMetadata* metadata = mtl4AcquireAllocationMetadataFrom(ptr, true);
 	if (metadata == nullptr) {
@@ -541,7 +575,7 @@ bool mtl4IsAllocationScheduledForDeletion(void* ptr) {
 	}
 	defer (mtl4ReleaseAllocationMetadata());
 
-	return cmnAtomicLoad(&metadata->scheduledForDeletion);
+	return cmnAtomicLoad(&metadata->internalUsage) & MTL4_ALLOCATION_SCHEDULED_FOR_DELETION;
 }
 
 void mtl4DestroyAllocation(Mtl4AllocationHandle handle) {
@@ -551,7 +585,7 @@ void mtl4DestroyAllocation(Mtl4AllocationHandle handle) {
 		return;
 	}
 
-	if (!metadata->scheduledForDeletion) {
+	if (!(metadata->internalUsage & MTL4_ALLOCATION_SCHEDULED_FOR_DELETION)) {
 		return;
 	}
 

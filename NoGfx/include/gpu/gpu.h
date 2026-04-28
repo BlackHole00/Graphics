@@ -103,6 +103,21 @@ typedef enum GpuUsage {
 	GPU_USAGE_DEPTH_STENCIL_ATTACHMENT,
 } GpuUsage;
 
+typedef enum GpuStage {
+	GPU_STAGE_TRANSFER = 0x1,
+	GPU_STAGE_COMPUTE = 0x2,
+	GPU_STAGE_RASTER_COLOR_OUT = 0x4,
+	GPU_STAGE_PIXEL_SHADER = 0x8,
+	GPU_STAGE_VERTEX_SHADER = 0x10,
+} GpuStage;
+
+typedef enum GpuHazardFlags {
+	GPU_HAZARD_NONE = 0,
+	GPU_HAZARD_DRAW_ARGUMENTS = 0x1,
+	GPU_HAZARD_DESCRIPTORS = 0x2,
+	GPU_HAZARD_DEPTH_STENCIL = 0x4
+} GpuHazardFlags;
+
 typedef size_t GpuDeviceId;
 typedef uint64_t GpuTexture;
 typedef uint64_t GpuPipeline;
@@ -199,6 +214,8 @@ typedef struct GpuLayer {
 	bool (*gpuMemCpy)(GpuCommandBuffer cb, void* destGpu, void* srcGpu, size_t size, GpuResult* result);
 	bool (*gpuCopyToTexture)(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTexture texture, GpuResult* result);
 	bool (*gpuCopyFromTexture)(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTexture texture, GpuResult* result);
+
+	bool (*gpuBarrier)(GpuCommandBuffer cb, GpuStage before, GpuStage after, GpuHazardFlags hazards, GpuResult* result);
 } GpuLayer;
 
 typedef struct GpuInitDesc {
@@ -262,6 +279,8 @@ void gpuCopyToTexture(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTextu
 void gpuCopyFromTexture(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTexture texture, GpuResult* result);
 
 void gpuSetActiveTextureHeapPtr(GpuCommandBuffer cb, void *ptrGpu, GpuResult* result);
+
+void gpuBarrier(GpuCommandBuffer cb, GpuStage before, GpuStage after, GpuHazardFlags hazards, GpuResult* result);
 
 // void gpuBarrier(GpuCommandBuffer cb, STAGE before, STAGE after, HAZARD_FLAGS hazards = 0);
 // void gpuSignalAfter(GpuCommandBuffer cb, STAGE before, void *ptrGpu, uint64 value, SIGNAL signal);

@@ -132,24 +132,36 @@ int main(void) {
 	printf("%lu %lu\n", sizeAlign.size, sizeAlign.align);
 
 	void* gpuTextureBuffer = gpuMalloc(sizeAlign.size + 1024, sizeAlign.align, GPU_MEMORY_GPU, NULL);
-	GpuTexture texture = gpuCreateTexture(&textureDescriptor, gpuTextureBuffer, NULL);
+	result = GPU_SUCCESS;
+	GpuTexture texture = gpuCreateTexture(&textureDescriptor, gpuTextureBuffer, &result);
+	if (result != GPU_SUCCESS) {
+		printf("Failed to create texture. Got error %d.\n", result);
+		gpuDeinit();
+		return -1;
+	}
 
 	GpuQueue queue = gpuCreateQueue(NULL);
 
-	GpuCommandBuffer uploadCommandBuffer = gpuStartCommandEncoding(queue, NULL);
-	gpuCopyToTexture(uploadCommandBuffer, gpuTextureBuffer, gpuTempData.gpu, texture, NULL);
-	gpuSubmit(queue, &uploadCommandBuffer, 1, NULL);
-
-	// Poor man's barrier
-	usleep(1000000);
+	GpuCommandBuffer commandBuffer = gpuStartCommandEncoding(queue, NULL);
+	result = GPU_SUCCESS;
+	gpuCopyToTexture(commandBuffer, gpuTextureBuffer, gpuTempData.gpu, texture, &result);
+	if (result != GPU_SUCCESS) {
+		printf("Failed to copy to texture. Got error %d.\n", result);
+		gpuDeinit();
+		return -1;
+	}
 
 	GpuAllocation downloadBuffer = bumpAlloc(&bumpAllocator, x * y * channels);
-	GpuCommandBuffer downloadCommandBuffer = gpuStartCommandEncoding(queue, NULL);
-	gpuCopyFromTexture(downloadCommandBuffer, downloadBuffer.gpu, gpuTextureBuffer, texture, NULL);
-	gpuSubmit(queue, &downloadCommandBuffer, 1, NULL);
+	gpuBarrier(commandBuffer, GPU_STAGE_TRANSFER, GPU_STAGE_TRANSFER, GPU_HAZARD_NONE, NULL);
+	result = GPU_SUCCESS;
+	gpuCopyFromTexture(commandBuffer, downloadBuffer.gpu, gpuTextureBuffer, texture, &result);
+	if (result != GPU_SUCCESS) {
+		printf("Failed to copy from texture. Got error %d.\n", result);
+		gpuDeinit();
+		return -1;
+	}
 
-	// Poor man's barrier 2
-	usleep(1000000);
+	gpuSubmit(queue, &commandBuffer, 1, NULL);
 
 	stbi_write_png("out.png", x, y, 4, downloadBuffer.cpu, x * 4);
 	stbi_image_free(data);

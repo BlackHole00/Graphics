@@ -168,7 +168,11 @@ void gpuMemCpy(GpuCommandBuffer cb, void* destGpu, void* srcGpu, size_t size, Gp
 void gpuCopyToTexture(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTexture texture, GpuResult* result) {
 	GPU_LAYERED_CALL(gpuCopyToTexture, cb, destGpu, srcGpu, texture, result);
 }
+
 void gpuCopyFromTexture(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTexture texture, GpuResult* result) {
 	GPU_LAYERED_CALL(gpuCopyFromTexture, cb, destGpu, srcGpu, texture, result);
 }
 
+void gpuBarrier(GpuCommandBuffer cb, GpuStage before, GpuStage after, GpuHazardFlags hazards, GpuResult* result) {
+	GPU_LAYERED_CALL(gpuBarrier, cb, before, after, hazards, result);
+}

@@ -295,6 +295,54 @@ void mtl4SetActiveTextureHeapPtr(GpuCommandBuffer cb, void *ptrGpu, GpuResult* r
 	metadata->boundTextureHeap = ptrGpu;
 }
 
+void mtl4Barrier(GpuCommandBuffer cb, GpuStage before, GpuStage after, GpuHazardFlags hazards, GpuResult* result) {
+	Mtl4CommandBuffer handle = mtl4GpuCommandBufferToHandle(cb);
+	Mtl4CommandBufferMetadata* metadata = mtl4AcquireCommandBufferMetadataFrom(handle);
+	if (metadata == nullptr) {
+		CMN_SET_RESULT(result, GPU_NO_SUCH_COMMAND_BUFFER_FOUND);
+		return;
+	}
+	defer (mtl4ReleaseCommandBufferMetadata());
+
+	MTLStages metalBefore = mtl4GpuToMtlStage(before, hazards);
+	MTLStages metalAfter = mtl4GpuToMtlStage(after, hazards);
+	MTL4VisibilityOptions metalVisibilityOptions = mtl4GpuHazardsToMtlVisibilityOptions(hazards);
+
+	if (mtl4CanImposeNormalMtlBarrierBetween(before, after, hazards)) {
+		[metadata->computeEncoder
+			barrierAfterEncoderStages:metalBefore
+			beforeEncoderStages:metalAfter
+			visibilityOptions:metalVisibilityOptions];
+	} else {
+		// TODO: Check if also the renderEncoder needs [endEncoding].
+
+		if(before & GPU_STAGE_PIXEL_SHADER || before & GPU_STAGE_RASTER_COLOR_OUT) {
+			// NOTE: The user is asking for a consumer barrier (it is consuming the result of a previous
+			//	renderpass).
+
+			[metadata->computeEncoder endEncoding];
+
+			metadata->computeEncoder = [metadata->commandBuffer computeCommandEncoder];
+			[metadata->computeEncoder barrierAfterQueueStages:metalBefore
+				beforeStages:metalAfter
+				visibilityOptions:metalVisibilityOptions];
+		} else {
+			// NOTE: The user is asking for a producer barrier (it is producing the data requires for the
+			//	next renderpass).
+
+			[metadata->computeEncoder
+				barrierAfterStages:metalBefore
+				beforeQueueStages:metalAfter
+				visibilityOptions:metalVisibilityOptions];
+			[metadata->computeEncoder endEncoding];
+
+			metadata->computeEncoder = [metadata->commandBuffer computeCommandEncoder];
+		}
+	}
+
+	CMN_SET_RESULT(result, GPU_SUCCESS);
+}
+
 Mtl4CommandBuffer mtl4CreateCommandBuffer(GpuResult* result) {
 	CmnResult localResult;
 
@@ -358,6 +406,58 @@ bool mtl4IsCommandBufferScheduledForDeletion(Mtl4CommandBuffer commandBuffer) {
 	}
 
 	return metadata->status == MTL4_COMMAND_BUFFER_SUBMITTED;
+}
+
+bool mtl4CanImposeNormalMtlBarrierBetween(GpuStage before, GpuStage after, GpuHazardFlags hazards) {
+	(void)hazards;
+
+	bool cannotImpose = before & GPU_STAGE_PIXEL_SHADER ||
+		before & GPU_STAGE_RASTER_COLOR_OUT ||
+		after & GPU_STAGE_PIXEL_SHADER ||
+		after & GPU_STAGE_RASTER_COLOR_OUT;
+	return !cannotImpose;
+}
+
+MTLStages mtl4GpuToMtlStage(GpuStage stage, GpuHazardFlags hazards) {
+	(void)hazards;
+
+	MTLStages stages = 0;
+
+	if (stage & GPU_STAGE_TRANSFER) {
+		stages |= MTLStageBlit;
+	}
+	if (stage & GPU_STAGE_COMPUTE) {
+		stages |= MTLStageDispatch;
+	}
+	if (stage & GPU_STAGE_VERTEX_SHADER) {
+		stages |= MTLStageVertex;
+	}
+	if (stage & GPU_STAGE_PIXEL_SHADER) {
+		stages |= MTLStageFragment;
+	}
+	if (stage & GPU_STAGE_RASTER_COLOR_OUT) {
+		stages |= MTLStageTile;
+	}
+
+	// TODO: Manage hazards
+
+	return stages;
+}
+
+MTL4VisibilityOptions mtl4GpuHazardsToMtlVisibilityOptions(GpuHazardFlags hazards) {
+	MTL4VisibilityOptions options = MTL4VisibilityOptionNone;
+
+	if (hazards & GPU_HAZARD_DESCRIPTORS) {
+		options |= MTL4VisibilityOptionResourceAlias;
+	}
+	if (hazards & GPU_HAZARD_DRAW_ARGUMENTS) {
+		options |= MTL4VisibilityOptionResourceAlias;
+	}
+	if (hazards & GPU_HAZARD_DEPTH_STENCIL) {
+		options |= MTL4VisibilityOptionDevice;
+	}
+
+	return options;
 }
 
 Mtl4CommandBufferMetadata* mtl4AcquireCommandBufferMetadataFrom(Mtl4CommandBuffer handle) {

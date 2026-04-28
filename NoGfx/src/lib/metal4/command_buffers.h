@@ -21,6 +21,8 @@ typedef enum Mtl4CommandBufferStatus {
 typedef struct Mtl4CommandBufferMetadata {
 	Mtl4CommandBufferStatus	status;
 
+	Mtl4Queue			relatedQueue;
+
 	id<MTL4CommandBuffer>		commandBuffer;
 	id<MTL4ComputeCommandEncoder>	computeEncoder;
 	id<MTL4RenderCommandEncoder>	currentRenderEncoder;
@@ -60,10 +62,16 @@ void mtl4CopyFromTexture(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTe
 
 void mtl4SetActiveTextureHeapPtr(GpuCommandBuffer cb, void *ptrGpu, GpuResult* result);
 
+void mtl4Barrier(GpuCommandBuffer cb, GpuStage before, GpuStage after, GpuHazardFlags hazards, GpuResult* result);
+
 Mtl4CommandBuffer mtl4CreateCommandBuffer(GpuResult* result);
 // NOTE: Requires deletion-lock on gMtl4CommandBufferStorage.sync.
 void mtl4DestroyCommandBuffer(Mtl4CommandBuffer commandBuffer);
 bool mtl4IsCommandBufferScheduledForDeletion(Mtl4CommandBuffer commandBuffer);
+
+bool mtl4CanImposeNormalMtlBarrierBetween(GpuStage before, GpuStage after, GpuHazardFlags hazards);
+MTLStages mtl4GpuToMtlStage(GpuStage stage, GpuHazardFlags hazards);
+MTL4VisibilityOptions mtl4GpuHazardsToMtlVisibilityOptions(GpuHazardFlags hazards);
 
 Mtl4CommandBufferMetadata* mtl4AcquireCommandBufferMetadataFrom(Mtl4CommandBuffer handle);
 void mtl4ReleaseCommandBufferMetadata(void);

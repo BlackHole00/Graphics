@@ -1,4 +1,5 @@
 #include "tables.h"
+#include "gpu/gpu.h"
 
 const MTLPixelFormat gMtl4GpuToMtlFormat[] = {
 	/*GPU_FORMAT_NONE=*/			MTLPixelFormatInvalid,
@@ -75,5 +76,4 @@ const size_t gMtl4GpuFormatPixelSize[] = {
 	/*GPU_FORMAT_BC4_UNORM=*/		8,	// Block size for 4x4 pixels
 	/*GPU_FORMAT_BC5_UNORM=*/		16,	// Block size for 4x4 pixels
 };
-
 

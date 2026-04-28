@@ -82,6 +82,8 @@ GpuTexture mtl4CreateTexture(const GpuTextureDesc* desc, void* ptrGpu, GpuResult
 				CMN_SET_RESULT(result, GPU_OUT_OF_GPU_MEMORY);
 				return 0;
 			}
+
+			cmnAtomicOr(&metadata->internalUsage, (Mtl4InternalAllocationUsages)MTL4_ALLOCATION_FOR_SINGLE_TEXTURE);
 		} else if (
 			cmnIsAlignedTo((uintptr_t)ptrGpu, expectedSizeAlign.align) &&
 			(metadata->size - offsetFromBase) >= expectedSizeAlign.size
@@ -114,6 +116,7 @@ GpuTexture mtl4CreateTexture(const GpuTextureDesc* desc, void* ptrGpu, GpuResult
 				return 0;
 			}
 
+			cmnAtomicOr(&metadata->internalUsage, (Mtl4InternalAllocationUsages)MTL4_ALLOCATION_FOR_TEXTURE_HEAP);
 		} else {
 			// The buffer is not big enough
 
