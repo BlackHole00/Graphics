@@ -28,7 +28,8 @@ void cmnDestroyKeyedChain(CmnKeyedChain<K, V, N>* chain, CmnAllocator allocator)
 		node = nextNode;
 	}
 
-	*chain = {};
+	chain->defaultValue = {};
+	chain->head = nullptr;
 }
 
 template <typename K, typename V, size_t N>

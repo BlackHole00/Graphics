@@ -13,13 +13,8 @@
 typedef CmnHandle Mtl4Texture;
 static_assert(sizeof(Mtl4Texture) == sizeof(GpuTexture), "Mtl4Texture and GpuTexture must be compatible");
 
-typedef struct Mtl4TextureViews {
-	id<MTLTexture> views[7];
-	GpuViewDesc viewsDescriptors[7];
-
-	struct Mtl4TextureViews* nextBucket;
-} Mtl4TextureViews;
-// typedef CmnKeyedChain<GpuViewDesc, id<MTLTexture>, 7> Mtl4TextureViews;
+typedef CmnKeyedChain<GpuViewDesc, id<MTLTexture>, 8> Mtl4TextureViews;
+static_assert(sizeof(CmnKeyedChainNode<GpuViewDesc, id<MTLTexture>, 8>) <= 192, "");
 
 typedef struct Mtl4TextureMetadata {
 	// Atomic, Settable once
@@ -30,9 +25,7 @@ typedef struct Mtl4TextureMetadata {
 	// Final
 	GpuTextureDesc		descriptor;
 
-	// Locked by relatedViewsMutex
-	Mtl4TextureViews*	relatedViews;
-	CmnRWMutex		relatedViewsMutex;
+	Mtl4TextureViews	relatedViews;
 } Mtl4TextureMetadata;
 
 typedef struct Mtl4TextureStorage {
@@ -61,8 +54,6 @@ bool mtl4IsTextureScheduledForDeletion(Mtl4Texture texture);
 Mtl4TextureMetadata* mtl4AcquireTextureMetadataFrom(Mtl4Texture texture);
 void mtl4ReleaseTextureMetadata(void);
 
-bool mtl4FindTextureViewIn(Mtl4TextureMetadata* metadata, const GpuViewDesc* desc, Mtl4TextureViews** bucket, size_t* index);
-
 inline Mtl4Texture mtl4GpuTextureToHadle(GpuTexture texture) {
 	return *(Mtl4Texture*)&texture;
 }
@@ -85,13 +76,32 @@ MTLTextureDescriptor* mtl4GpuTextureDescToMtl(const GpuTextureDesc* desc, MTLRes
 MTLTextureViewDescriptor* mtl4GpuViewDescToMtl(id<MTLTexture> referenceTexture, const GpuViewDesc* desc);
 
 void mtl4AssociateViewToTexture(Mtl4TextureMetadata* metadata, id<MTLTexture> view, const GpuViewDesc* desc, GpuResult* result);
-// NOTE: Not thread safe. Requires external locking.
+
+// NOTE: Requires deletion lock on gMtl4TextureStorage.sync
 void mtl4FreeAssociatedTextureViews(Mtl4TextureMetadata* metadata);
 
 // NOTE: Requires deletion lock on gMtl4TextureStorage.sync
 void mtl4FreeTexture(Mtl4Texture texture);
 // NOTE: Requires deletion lock on gMtl4TextureStorage.sync
 void mtl4DestroyTexture(Mtl4Texture texture);
+
+template <>
+struct CmnTypeTraits<GpuViewDesc> {
+	static bool eq(const GpuViewDesc& left, const GpuViewDesc& right) {
+		return memcmp(&left, &right, sizeof(GpuViewDesc)) == 0;
+	}
+
+	// cmp compares two values of type T.
+	static CmnCmp cmp(const GpuViewDesc& left, const GpuViewDesc& right) {
+		return (CmnCmp)memcmp(&left, &right, sizeof(GpuViewDesc));
+	}
+
+	// hash computes the hash code for type T.
+	static size_t hash(const GpuViewDesc& value) {
+		(void)value;
+		assert(false && "GpuViewDesc is not hashable");
+	}
+};
 
 #endif // MTL4_TEXTURES_H
 

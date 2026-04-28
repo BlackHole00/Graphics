@@ -24,7 +24,7 @@ void mtl4InitTextureStorage(GpuResult* result) {
 	}
 
 	gMtl4TextureStorage.textureMedatadaArena = cmnPageToArena(gMtl4TextureStorage.textureMetadataPage);
-	gMtl4TextureStorage.textureViewsPool = cmnPageToPool(gMtl4TextureStorage.textureViewsPage, sizeof(Mtl4TextureViews));
+	gMtl4TextureStorage.textureViewsPool = cmnPageToPool(gMtl4TextureStorage.textureViewsPage, 192);
 
 	CmnAllocator allocator;
 	allocator = cmnArenaAllocator(&gMtl4TextureStorage.textureMedatadaArena);
@@ -213,11 +213,10 @@ GpuTextureDescriptor mtl4TextureViewDescriptor(GpuTexture texture, const GpuView
 	}
 	defer (mtl4ReleaseTextureMetadata());
 
-	Mtl4TextureViews* viewsBucket;
-	size_t index;
-	bool didFindView = mtl4FindTextureViewIn(metadata, desc, &viewsBucket, &index);
+	bool didFindView;
+	id<MTLTexture> view = cmnGet(&metadata->relatedViews, *desc, &didFindView);
+
 	if (didFindView) {
-		id<MTLTexture> view = viewsBucket->views[index];
 		MTLResourceID resourceId = [view gpuResourceID];
 
 		CMN_SET_RESULT(result, GPU_SUCCESS);
@@ -251,41 +250,6 @@ GpuTextureDescriptor mtl4TextureViewDescriptor(GpuTexture texture, const GpuView
 
 GpuTextureDescriptor mtl4RWTextureViewDescriptor(GpuTexture texture, const GpuViewDesc* desc, GpuResult* result) {
 	return mtl4TextureViewDescriptor(texture, desc, result);
-}
-
-bool mtl4FindTextureViewIn(Mtl4TextureMetadata* metadata, const GpuViewDesc* desc, Mtl4TextureViews** bucket, size_t* index) {
-	CmnScopedReadRWMutex guard(&metadata->relatedViewsMutex);
-
-	Mtl4TextureViews* currentBucket = metadata->relatedViews;
-
-	size_t i;
-	for (;;) {
-		if (currentBucket == nullptr) {
-			*bucket = nullptr;
-			*index = 0;
-
-			return false;
-		}
-
-		i = 0;
-		while (
-			i < 7 &&
-			currentBucket->views[i] != nil &&
-			memcmp(&currentBucket->viewsDescriptors[i], desc, sizeof(GpuViewDesc))
-		) {
-			i++;
-		}
-
-		if (i < 7 && currentBucket->views[i] != nil) {
-			break;
-		}
-
-		currentBucket = currentBucket->nextBucket;
-	}
-
-	*bucket = currentBucket;
-	*index = i;
-	return true;
 }
 
 void mtl4FreeTexture(Mtl4Texture texture) {
@@ -357,63 +321,29 @@ MTLTextureViewDescriptor* mtl4GpuViewDescToMtl(id<MTLTexture> referenceTexture, 
 void mtl4AssociateViewToTexture(Mtl4TextureMetadata* metadata, id<MTLTexture> view, const GpuViewDesc* desc, GpuResult* result) {
 	CmnResult localResult;
 
-	CmnScopedWriteRWMutex guard(&metadata->relatedViewsMutex);
+	CmnAllocator poolAllocator = cmnPoolAllocator(&gMtl4TextureStorage.textureViewsPool);
 
-	// Find the first texture bucket free.
-	Mtl4TextureViews** viewsBucketPtr = &metadata->relatedViews;
-	for (;;) {
-		if (*viewsBucketPtr == nullptr) {
-			break;
-		}
-
-		if ((*viewsBucketPtr)->views[7 - 1] == nil) {
-			break;
-		}
-
-		viewsBucketPtr = &(*viewsBucketPtr)->nextBucket;
+	cmnInsert(&metadata->relatedViews, *desc, view, poolAllocator, &localResult);
+	if (localResult != CMN_SUCCESS) {
+		CMN_SET_RESULT(result, GPU_SUCCESS);
+		return;
 	}
-
-	// If there is no space, allocate a new bucket.
-	Mtl4TextureViews* viewsBucket = *viewsBucketPtr;
-	if (viewsBucket == nullptr) {
-		viewsBucket = cmnPoolAlloc<Mtl4TextureViews>(&gMtl4TextureStorage.textureViewsPool, &localResult);
-		if (localResult != CMN_SUCCESS) {
-			CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
-			return;
-		}
-
-		*viewsBucketPtr = viewsBucket;
-	}
-
-	// Set the first free location in the buffer with the texture
-	size_t i = 0;
-	while (viewsBucket->views[i] != nil) {
-		i++;
-	}
-
-	viewsBucket->views[i] = view;
-	memcpy(&viewsBucket->viewsDescriptors[i], desc, sizeof(GpuViewDesc));
 
 	CMN_SET_RESULT(result, GPU_SUCCESS);
 }
 
 void mtl4FreeAssociatedTextureViews(Mtl4TextureMetadata* metadata) {
-	CmnScopedWriteRWMutex guard(&metadata->relatedViewsMutex);
+	CmnKeyedChainIterator<GpuViewDesc, id<MTLTexture>, 8> iter;
+	cmnCreateKeyedChainIterator(&metadata->relatedViews, &iter);
 
-	Mtl4TextureViews* viewsBucket = metadata->relatedViews;
-
-	while (viewsBucket != nullptr) {
-		size_t i = 0;
-		while (i < 7 && viewsBucket->views[i] != nil) {
-			[viewsBucket->views[i] release];
-			i++;
-		}
-
-		Mtl4TextureViews* nextViews = viewsBucket->nextBucket;
-
-		cmnPoolFree(&gMtl4TextureStorage.textureViewsPool, viewsBucket);
-		viewsBucket = nextViews;
+	GpuViewDesc* key;
+	id<MTLTexture>* value;
+	while (cmnIterate(&iter, &key, &value)) {
+		[*value release];
 	}
+
+	CmnAllocator poolAllocator = cmnPoolAllocator(&gMtl4TextureStorage.textureViewsPool);
+	cmnDestroyKeyedChain(&metadata->relatedViews, poolAllocator);
 }
 
 void mtl4DestroyTexture(Mtl4Texture texture) {

@@ -15,11 +15,6 @@ typedef enum CmnCmp {
 	CMN_MORE	=  1,
 } CmnCmp;
 
-template <typename T>
-struct CmnTypeTraitsStaticAssert {
-	static const bool value = false;
-};
-
 inline size_t cmnHashInteger64(uint64_t value) {
 	uint64_t hash = value + 0x9e3779b97f4a7c15ULL;
 	hash = (hash ^ (hash >> 30)) * 0xbf58476d1ce4e5b9ULL;
@@ -36,21 +31,21 @@ struct CmnTypeTraits {
 	static bool eq(const T& left, const T& right) {
 		(void)left; (void)right;
 
-		static_assert(CmnTypeTraitsStaticAssert<T>::value, "Using type traits of an unknown type. Please implement CmnTypeTraits<T> for your custom data type.");
+		static_assert(false, "Using type traits of an unknown type. Please implement CmnTypeTraits<T> for your custom data type.");
 	}
 
 	// cmp compares two values of type T.
 	static CmnCmp cmp(const T& left, const T& right) {
 		(void)left; (void)right;
 
-		static_assert(CmnTypeTraitsStaticAssert<T>::value, "Using type traits of an unknown type. Please implement CmnTypeTraits<T> for your custom data type.");
+		static_assert(false, "Using type traits of an unknown type. Please implement CmnTypeTraits<T> for your custom data type.");
 	}
 
 	// hash computes the hash code for type T.
 	static size_t hash(const T& value) {
 		(void)value;
 
-		static_assert(CmnTypeTraitsStaticAssert<T>::value, "Using type traits of an unknown type. Please implement CmnTypeTraits<T> for your custom data type.");
+		static_assert(false, "Using type traits of an unknown type. Please implement CmnTypeTraits<T> for your custom data type.");
 	}
 };
 
