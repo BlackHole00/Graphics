@@ -101,6 +101,12 @@ int main(void) {
 	GpuBumpAllocator bumpAllocator;
 	createGpuBumpAllocator(&bumpAllocator, 1 * 1024 * 1024);
 
+	GpuSemaphore semaphore = gpuCreateSemaphore(0, &result);
+	if (result != GPU_SUCCESS) {
+		printf("Could not create a semaphore. Aborting.\n");
+		return -1;
+	}
+
 	FILE* f = fopen("image.png", "rb");
 	if (f == NULL) {
 		printf("Could not open image.png\n");
@@ -129,7 +135,6 @@ int main(void) {
 	textureDescriptor.sampleCount = 1;
 
 	GpuTextureSizeAlign sizeAlign = gpuTextureSizeAlign(&textureDescriptor, NULL);
-	printf("%lu %lu\n", sizeAlign.size, sizeAlign.align);
 
 	void* gpuTextureBuffer = gpuMalloc(sizeAlign.size + 1024, sizeAlign.align, GPU_MEMORY_GPU, NULL);
 	result = GPU_SUCCESS;
@@ -161,7 +166,10 @@ int main(void) {
 		return -1;
 	}
 
-	gpuSubmit(queue, &commandBuffer, 1, NULL);
+	// gpuSubmit(queue, &commandBuffer, 1, NULL);
+	gpuSubmitWithSignal(queue, &commandBuffer, 1, semaphore, 1, NULL);
+
+	gpuWaitSemaphore(semaphore, 1, NULL);
 
 	stbi_write_png("out.png", x, y, 4, downloadBuffer.cpu, x * 4);
 	stbi_image_free(data);

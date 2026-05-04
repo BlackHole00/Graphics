@@ -25,6 +25,7 @@ typedef enum GpuResult {
 	GPU_NO_SUCH_TEXTURE_FOUND,
 	GPU_NO_SUCH_QUEUE_FOUND,
 	GPU_NO_SUCH_COMMAND_BUFFER_FOUND,
+	GPU_NO_SUCH_SEMAPHORE_FOUND,
 	GPU_ALLOCATION_MEMORY_IS_GPU,
 	GPU_ALLOCATION_MEMORY_IS_CPU,
 
@@ -132,9 +133,9 @@ typedef enum GpuOp {
 } GpuOp;
 
 typedef enum GpuSignal {
-	SIGNAL_ATOMIC_SET,
-	SIGNAL_ATOMIC_MAX,
-	SIGNAL_ATOMIC_OR,
+	GPU_SIGNAL_ATOMIC_SET,
+	GPU_SIGNAL_ATOMIC_MAX,
+	GPU_SIGNAL_ATOMIC_OR,
 	// ...
 } GpuSignal;
 
@@ -233,13 +234,17 @@ typedef struct GpuLayer {
 		GpuResult* result
 	);
 
+	bool (*gpuCreateSemaphore)(uint64_t value, GpuResult* result);
+	bool (*gpuWaitSemaphore)(GpuSemaphore sema, uint64_t value, GpuResult* result);
+	bool (*gpuDestroySemaphore)(GpuSemaphore sema);
+
 	bool (*gpuMemCpy)(GpuCommandBuffer cb, void* destGpu, void* srcGpu, size_t size, GpuResult* result);
 	bool (*gpuCopyToTexture)(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTexture texture, GpuResult* result);
 	bool (*gpuCopyFromTexture)(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTexture texture, GpuResult* result);
 
 	bool (*gpuBarrier)(GpuCommandBuffer cb, GpuStage before, GpuStage after, GpuHazardFlags hazards, GpuResult* result);
 	bool (*gpuSignalAfter)(GpuCommandBuffer cb, GpuStage before, void* ptrGpu, uint64_t value, GpuSignal signal, GpuResult* result);
-	bool (*gpuWaitBefore)(GpuCommandBuffer cb, GpuStage after, void* ptrGpu, uint64_t value, GpuOp op, GpuSignal hazards, uint64_t mask, GpuResult* result);
+	bool (*gpuWaitBefore)(GpuCommandBuffer cb, GpuStage after, void* ptrGpu, uint64_t value, GpuOp op, GpuHazardFlags hazards, uint64_t mask, GpuResult* result);
 } GpuLayer;
 
 typedef struct GpuInitDesc {
@@ -298,6 +303,10 @@ void gpuSubmitWithSignal(
 	GpuResult* result
 );
 
+GpuSemaphore gpuCreateSemaphore(uint64_t value, GpuResult* result);
+void gpuWaitSemaphore(GpuSemaphore sema, uint64_t value, GpuResult* result);
+void gpuDestroySemaphore(GpuSemaphore sema);
+
 void gpuMemCpy(GpuCommandBuffer cb, void* destGpu, void* srcGpu, size_t size, GpuResult* result);
 void gpuCopyToTexture(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTexture texture, GpuResult* result);
 void gpuCopyFromTexture(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTexture texture, GpuResult* result);
@@ -306,11 +315,7 @@ void gpuSetActiveTextureHeapPtr(GpuCommandBuffer cb, void* ptrGpu, GpuResult* re
 
 void gpuBarrier(GpuCommandBuffer cb, GpuStage before, GpuStage after, GpuHazardFlags hazards, GpuResult* result);
 void gpuSignalAfter(GpuCommandBuffer cb, GpuStage before, void* ptrGpu, uint64_t value, GpuSignal signal, GpuResult* result);
-void gpuWaitBefore(GpuCommandBuffer cb, GpuStage after, void* ptrGpu, uint64_t value, GpuOp op, GpuSignal hazards, uint64_t mask, GpuResult* result);
-
-// void gpuBarrier(GpuCommandBuffer cb, STAGE before, STAGE after, HAZARD_FLAGS hazards = 0);
-// void gpuSignalAfter(GpuCommandBuffer cb, STAGE before, void *ptrGpu, uint64 value, SIGNAL signal);
-// void gpuWaitBefore(GpuCommandBuffer cb, STAGE after, void *ptrGpu, uint64 value, OP op, HAZARD_FLAGS hazards = 0, uint64 mask = ~0);
+void gpuWaitBefore(GpuCommandBuffer cb, GpuStage after, void* ptrGpu, uint64_t value, GpuOp op, GpuHazardFlags hazards, uint64_t mask, GpuResult* result);
 
 void gpuSetPipeline(GpuCommandBuffer cb, GpuPipeline pipeline);
 // void gpuSetDepthStencilState(GpuCommandBuffer cb, GpuDepthStencilState state);

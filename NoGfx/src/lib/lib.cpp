@@ -161,6 +161,20 @@ void gpuSubmitWithSignal(
 	GPU_LAYERED_CALL(gpuSubmitWithSignal, queue, commandBuffers, commandBufferCount, semaphore, value, result);
 }
 
+GpuSemaphore gpuCreateSemaphore(uint64_t value, GpuResult* result) {
+	GPU_LAYERED_CALL(gpuCreateSemaphore, value, result);
+
+	return {};
+}
+
+void gpuWaitSemaphore(GpuSemaphore sema, uint64_t value, GpuResult* result) {
+	GPU_LAYERED_CALL(gpuWaitSemaphore, sema, value, result);
+}
+
+void gpuDestroySemaphore(GpuSemaphore sema) {
+	GPU_LAYERED_CALL(gpuDestroySemaphore, sema);
+}
+
 void gpuMemCpy(GpuCommandBuffer cb, void* destGpu, void* srcGpu, size_t size, GpuResult* result) {
 	GPU_LAYERED_CALL(gpuMemCpy, cb, destGpu, srcGpu, size, result);
 }
@@ -176,3 +190,12 @@ void gpuCopyFromTexture(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTex
 void gpuBarrier(GpuCommandBuffer cb, GpuStage before, GpuStage after, GpuHazardFlags hazards, GpuResult* result) {
 	GPU_LAYERED_CALL(gpuBarrier, cb, before, after, hazards, result);
 }
+
+void gpuSignalAfter(GpuCommandBuffer cb, GpuStage before, void* ptrGpu, uint64_t value, GpuSignal signal, GpuResult* result) {
+	GPU_LAYERED_CALL(gpuSignalAfter, cb, before, ptrGpu, value, signal, result);
+}
+
+void gpuWaitBefore(GpuCommandBuffer cb, GpuStage after, void* ptrGpu, uint64_t value, GpuOp op, GpuHazardFlags hazards, uint64_t mask, GpuResult* result) {
+	GPU_LAYERED_CALL(gpuWaitBefore, cb, after, ptrGpu, value, op, hazards, mask, result);
+}
+

@@ -291,3 +291,40 @@ bool mtl4ValidateGpuTextureRWViewDescriptor(GpuTexture texture, const GpuViewDes
 	return mtl4ValidateGpuTextureViewDescriptor(texture, desc, result);
 }
 
+bool mtl4ValidateGpuSignalAfter(GpuCommandBuffer cb, GpuStage before, void* ptrGpu, uint64_t value, GpuSignal signal, GpuResult* result) {
+	(void)cb;
+	(void)before;
+	(void)ptrGpu;
+	(void)value;
+
+	if (signal != GPU_SIGNAL_ATOMIC_SET) {
+		CMN_SET_RESULT(result, GPU_UNSUPPORTED_OPERATION);
+		return false;
+	}
+
+	CMN_SET_RESULT(result, GPU_SUCCESS);
+	return true;
+}
+
+bool mtl4ValidateGpuWaitBefore(GpuCommandBuffer cb, GpuStage after, void* ptrGpu, uint64_t value, GpuOp op, GpuHazardFlags hazards, uint64_t mask, GpuResult* result) {
+	(void)cb;
+	(void)after;
+	(void)ptrGpu;
+	(void)value;
+	(void)hazards;
+
+	if (op != GPU_OP_EQUAL) {
+		CMN_SET_RESULT(result, GPU_UNSUPPORTED_OPERATION);
+		return false;
+	}
+
+	if (mask != (uint64_t)~0) {
+		CMN_SET_RESULT(result, GPU_UNSUPPORTED_OPERATION);
+		return false;
+	}
+
+	CMN_SET_RESULT(result, GPU_SUCCESS);
+	return true;
+}
+
+

@@ -55,11 +55,17 @@ typedef struct GpuBaseLayer {
 		GpuResult* result
 	);
 
+	GpuSemaphore (*gpuCreateSemaphore)(uint64_t value, GpuResult* result);
+	void (*gpuWaitSemaphore)(GpuSemaphore sema, uint64_t value, GpuResult* result);
+	void (*gpuDestroySemaphore)(GpuSemaphore sema);
+
 	void (*gpuMemCpy)(GpuCommandBuffer cb, void* destGpu, void* srcGpu, size_t size, GpuResult* result);
 	void (*gpuCopyToTexture)(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTexture texture, GpuResult* result);
 	void (*gpuCopyFromTexture)(GpuCommandBuffer cb, void* destGpu, void* srcGpu, GpuTexture texture, GpuResult* result);
 
 	void (*gpuBarrier)(GpuCommandBuffer cb, GpuStage before, GpuStage after, GpuHazardFlags hazards, GpuResult* result);
+	void (*gpuSignalAfter)(GpuCommandBuffer cb, GpuStage before, void* ptrGpu, uint64_t value, GpuSignal signal, GpuResult* result);
+	void (*gpuWaitBefore)(GpuCommandBuffer cb, GpuStage after, void* ptrGpu, uint64_t value, GpuOp op, GpuHazardFlags hazards, uint64_t mask, GpuResult* result);
 } GpuBaseLayer;
 
 typedef struct {

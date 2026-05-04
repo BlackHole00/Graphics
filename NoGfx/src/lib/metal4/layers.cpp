@@ -7,6 +7,7 @@
 #include <lib/metal4/pipelines.h>
 #include <lib/metal4/queue.h>
 #include <lib/metal4/command_buffers.h>
+#include <lib/metal4/semaphores.h>
 #include <lib/metal4/validation.h>
 
 GpuBaseLayer gMtl4BaseLayer = {
@@ -29,10 +30,15 @@ GpuBaseLayer gMtl4BaseLayer = {
 	/*gpuStartCommandEncoding=*/	mtl4StartCommandEncoding,
 	/*gpuSubmit=*/			mtl4Submit,
 	/*gpuSubmitWithSignal=*/	mtl4SubmitWithSignal,
+	/*gpuCreateSemaphore=*/		mtl4CreateSemaphore,
+	/*gpuWaitSemaphore=*/		mtl4WaitSemaphore,
+	/*gpuDestroySemaphore=*/	mtl4DestroySemaphore,
 	/*gpuMemCpy=*/			mtl4MemCpy,
 	/*gpuCopyToTexture=*/		mtl4CopyToTexture,
 	/*gpuCopyFromTexture=*/		mtl4CopyFromTexture,
 	/*gpuBarrier=*/			mtl4Barrier,
+	/*gpuSignalAfter=*/		mtl4SignalAfter,
+	/*gpuWaitBefore=*/		mtl4WaitBefore,
 };
 
 GpuLayer gMtl4ValidationLayer = {
@@ -55,9 +61,14 @@ GpuLayer gMtl4ValidationLayer = {
 	/*gpuStartCommandEncoding=*/	nullptr,
 	/*gpuSubmit=*/			nullptr,
 	/*gpuSubmitWithSignal=*/	nullptr,
+	/*gpuCreateSemaphore=*/		nullptr,
+	/*gpuWaitSemaphore=*/		nullptr,
+	/*gpuDestroySemaphore=*/	nullptr,
 	/*gpuMemCpy=*/			nullptr,
 	/*gpuCopyToTexture=*/		nullptr,
 	/*gpuCopyFromTexture=*/		nullptr,
 	/*gpuBarrier=*/			nullptr,
+	/*gpuSignalAfter=*/		mtl4ValidateGpuSignalAfter,
+	/*gpuWaitBefore=*/		mtl4ValidateGpuWaitBefore,
 };
 
