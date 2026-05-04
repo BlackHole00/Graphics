@@ -120,6 +120,7 @@ TestRecord gNoGfxTests[] = {
 	{ "Check GPU concurrent pipeline stress", 			checkGpuConcurrentPipelineStress },
 	{ "Check GPU deferred allocation deletion threshold flush", 	checkGpuDeferredAllocationDeletionThresholdFlush },
 	{ "Check GPU deferred texture deletion threshold flush", 	checkGpuDeferredTextureDeletionThresholdFlush },
+	{ "Check basic signal-based synchronization",			gpuTestSignalWritingOnGpuPtr },
 };
 
 int main(void) {

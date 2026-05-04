@@ -20,6 +20,8 @@ void mtl4InitSemaphoreStorage(GpuResult* result) {
 		CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
 		return;
 	}
+
+	CMN_SET_RESULT(result, GPU_SUCCESS);
 }
 
 void mtl4FiniSemaphoreStorage(void) {

@@ -131,6 +131,8 @@ typedef struct Mtl4AllocationStorage {
 	CmnPool		miscPool;
 	CmnArena	miscArena;
 
+	id<MTLResidencySet>	residencySet;
+
 	// Contains a direct mapping for addresses of GPU_MEMORY_DEFAULT or GPU_MEMORY_READBACK allocations.
 	// Used for fast lookups, but does not support addresses with offsets.
 	CmnPointerMap	<Mtl4AllocationHandle>				cpuAllocationMap;

@@ -108,6 +108,8 @@ GpuTexture mtl4CreateTexture(const GpuTextureDesc* desc, void* ptrGpu, GpuResult
 				backingHeap = cmnAtomicLoad(&metadata->associatedTextureHeap);
 			}
 
+			[gMtl4AllocationStorage.residencySet addAllocation:backingHeap];
+
 			texture = [backingHeap newTextureWithDescriptor:textureDescriptor];
 			if (texture == nil) {
 				[backingHeap release];

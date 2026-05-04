@@ -324,6 +324,8 @@ void gpuSetPipeline(GpuCommandBuffer cb, GpuPipeline pipeline);
 void gpuDispatch(GpuCommandBuffer cb, void* dataGpu, uint32_t gridDimensions[3]);
 void gpuDispatchIndirect(GpuCommandBuffer cb, void* dataGpu, void* gridDimensionsGpu);
 
+void gpuDebugForceBufferSynchronication(void* ptr);
+
 // void gpuBeginRenderPass(GpuCommandBuffer cb, GpuRenderPassDesc desc);
 // void gpuEndRenderPass(GpuCommandBuffer cb);
 

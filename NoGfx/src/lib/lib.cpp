@@ -199,3 +199,4 @@ void gpuWaitBefore(GpuCommandBuffer cb, GpuStage after, void* ptrGpu, uint64_t v
 	GPU_LAYERED_CALL(gpuWaitBefore, cb, after, ptrGpu, value, op, hazards, mask, result);
 }
 
+

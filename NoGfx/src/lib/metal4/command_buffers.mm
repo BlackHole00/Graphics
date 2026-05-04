@@ -57,7 +57,7 @@ void mtl4FiniCommandBufferStorage(void) {
 GpuCommandBuffer mtl4StartCommandEncoding(GpuQueue queue, GpuResult* result) {
 	(void)queue;
 
-	Mtl4CommandBuffer commandBuffer = mtl4CreateCommandBuffer(result);
+	Mtl4CommandBuffer commandBuffer = mtl4CreateCommandBuffer(mtl4GpuQueueToHandle(queue), result);
 	return mtl4HandleToGpuCommandBuffer(commandBuffer);
 }
 
@@ -78,10 +78,16 @@ void mtl4SubmitRaw(
 		return;
 	}
 
+	Mtl4FenceStorage* fenceStorage = mtl4FenceStorageOf(queueHandle);
+	if (fenceStorage == nullptr) {
+		CMN_SET_RESULT(result, GPU_NO_SUCH_QUEUE_FOUND);
+		return;
+	}
+
 	CMN_SET_RESULT(result, GPU_SUCCESS);
 
 	// TODO: Switch thread local arena.
-	id<MTL4CommandBuffer>* metalCommandBuffers = cmnHeapAlloc<id<MTL4CommandBuffer>>(commandBufferCount, &localResult);
+	id<MTL4CommandBuffer>* metalCommandBuffers = cmnHeapAlloc<id<MTL4CommandBuffer>>(commandBufferCount + 1, &localResult);
 	defer (cmnHeapFree(metalCommandBuffers));
 	size_t validCommandBufferCount = 0;
 
@@ -110,19 +116,23 @@ void mtl4SubmitRaw(
 	}
 
 	if (validCommandBufferCount > 0) {
-		[metalQueue commit:metalCommandBuffers count:validCommandBufferCount];
-		if (semaphore != 0) {
-			Mtl4Semaphore semaphoreHandle = mtl4GpuSemaphoreToHandle(semaphore);
-			Mtl4SemaphoreMetadata* metadata = mtl4AcquireSemaphoreMetadataFrom(semaphoreHandle);
-			if (metadata == nullptr) {
-				CMN_SET_RESULT(result, GPU_NO_SUCH_SEMAPHORE_FOUND);
-				return;
-			}
-			defer (mtl4ReleaseSemaphoreMetadata());
+		id<MTL4CommandBuffer> gpuFenceUpdates =  mtl4GetGpuUpdatesCommands(fenceStorage, result);
+		metalCommandBuffers[validCommandBufferCount] = gpuFenceUpdates;
 
-			[metalQueue signalEvent:metadata->event value:value];
+		[metalQueue addResidencySet:gMtl4AllocationStorage.residencySet];
+		[metalQueue commit:metalCommandBuffers count:validCommandBufferCount + 1];
+	}
+
+	if (semaphore != 0) {
+		Mtl4Semaphore semaphoreHandle = mtl4GpuSemaphoreToHandle(semaphore);
+		Mtl4SemaphoreMetadata* metadata = mtl4AcquireSemaphoreMetadataFrom(semaphoreHandle);
+		if (metadata == nullptr) {
+			CMN_SET_RESULT(result, GPU_NO_SUCH_SEMAPHORE_FOUND);
+			return;
 		}
+		defer (mtl4ReleaseSemaphoreMetadata());
 
+		[metalQueue signalEvent:metadata->event value:value];
 	}
 
 	// NOTE: Result here is GPU_SUCCESS if all the command buffers were valid.
@@ -369,8 +379,6 @@ void mtl4Barrier(GpuCommandBuffer cb, GpuStage before, GpuStage after, GpuHazard
 void mtl4SignalAfter(GpuCommandBuffer cb, GpuStage before, void* ptrGpu, uint64_t value, GpuSignal signal, GpuResult* result) {
 	assert(signal == GPU_SIGNAL_ATOMIC_SET && "The only supported signal operation is GPU_SIGNAL_ATOMIC_SET.");
 
-	GpuResult localResult;
-
 	Mtl4CommandBuffer handle = mtl4GpuCommandBufferToHandle(cb);
 	Mtl4CommandBufferMetadata* metadata = mtl4AcquireCommandBufferMetadataFrom(handle);
 	if (metadata == nullptr) {
@@ -379,33 +387,10 @@ void mtl4SignalAfter(GpuCommandBuffer cb, GpuStage before, void* ptrGpu, uint64_
 	}
 	defer (mtl4ReleaseCommandBufferMetadata());
 
-	// TODO: Make signal value visible to shaders.
-	if (mtl4IsStageCompute(before)) {
-		id<MTLFence> fence = mtl4GetOrCreateComputeFence(metadata, ptrGpu, value, &localResult);
-		if (localResult != GPU_SUCCESS) {
-			CMN_SET_RESULT(result, localResult);
-			return;
-		}
-		
-		MTLStages mtlComputeStages = mtl4GpuToMtlStage(before) & (MTLStageBlit | MTLStageDispatch);
-		[metadata->computeEncoder updateFence:fence afterEncoderStages:mtlComputeStages];
+	Mtl4FenceStorage* fenceStorage = mtl4FenceStorageOf(metadata->relatedQueue);
+	assert(fenceStorage != nullptr);
 
-		// [metadata->computeEncoder endEncoding];
-		// metadata->computeEncoder = [metadata->commandBuffer computeCommandEncoder];
-	}
-	if (mtl4IsStageRender(before)) {
-		id<MTLFence> fence = mtl4GetOrCreateComputeFence(metadata, ptrGpu, value, &localResult);
-		if (localResult != GPU_SUCCESS) {
-			CMN_SET_RESULT(result, localResult);
-			return;
-		}
-		
-		MTLStages mtlRenderStages = mtl4GpuToMtlStage(before) & (MTLStageTile | MTLStageFragment | MTLStageVertex);
-		[metadata->renderEncoder updateFence:fence afterEncoderStages:mtlRenderStages];
-
-		// [metadata->renderEncoder endEncoding];
-		// metadata->renderEncoder = [metadata->commandBuffer];
-	}
+	mtl4SignalFence(fenceStorage, metadata, before, ptrGpu, value, result);
 }
 
 void mtl4WaitBefore(GpuCommandBuffer cb, GpuStage after, void* ptrGpu, uint64_t value, GpuOp op, GpuHazardFlags hazards, uint64_t mask, GpuResult* result) {
@@ -413,8 +398,6 @@ void mtl4WaitBefore(GpuCommandBuffer cb, GpuStage after, void* ptrGpu, uint64_t 
 	assert(op == GPU_OP_EQUAL && "The only supported wait operation is GPU_OP_EQUAL.");
 	assert(mask == ~(uint64_t)0 && "The only supported mask is ~0.");
 
-	GpuResult localResult;
-
 	Mtl4CommandBuffer handle = mtl4GpuCommandBufferToHandle(cb);
 	Mtl4CommandBufferMetadata* metadata = mtl4AcquireCommandBufferMetadataFrom(handle);
 	if (metadata == nullptr) {
@@ -423,38 +406,18 @@ void mtl4WaitBefore(GpuCommandBuffer cb, GpuStage after, void* ptrGpu, uint64_t 
 	}
 	defer (mtl4ReleaseCommandBufferMetadata());
 
-	// NOTE: If a fence is never updated, but waited for, the Metal runtime does ignore it. It is safe to create
-	//	new fences, even if there aren't yet been signaled. (And it is also required in the case where the
-	//	fence is waited for before signaling it).
-	id<MTLFence> computeFence = mtl4GetOrCreateComputeFence(metadata, ptrGpu, value, &localResult);
-	if (localResult != GPU_SUCCESS) {
-		CMN_SET_RESULT(result, localResult);
-		return;
-	}
-	id<MTLFence> renderFence = mtl4GetOrCreateRenderFence(metadata, ptrGpu, value, &localResult);
-	if (localResult != GPU_SUCCESS) {
-		CMN_SET_RESULT(result, localResult);
-		return;
-	}
+	Mtl4FenceStorage* fenceStorage = mtl4FenceStorageOf(metadata->relatedQueue);
+	assert(fenceStorage != nullptr);
 
-	if (mtl4IsStageCompute(after)) {
-		MTLStages mtlComputeStages = mtl4GpuToMtlStage(after) & (MTLStageBlit | MTLStageDispatch);
-
-		[metadata->computeEncoder waitForFence:computeFence beforeEncoderStages:mtlComputeStages];
-		[metadata->computeEncoder waitForFence:renderFence beforeEncoderStages:mtlComputeStages];
-	}
-	if (mtl4IsStageRender(after)) {
-		MTLStages mtlRenderStages = mtl4GpuToMtlStage(after) & (MTLStageTile | MTLStageFragment | MTLStageVertex);
-
-		[metadata->renderEncoder waitForFence:computeFence beforeEncoderStages:mtlRenderStages];
-		[metadata->renderEncoder waitForFence:renderFence beforeEncoderStages:mtlRenderStages];
-	}
+	// mtl4SignalFence(fenceStorage, metadata, after, ptrGpu, value, result);
+	mtl4WaitFence(fenceStorage, metadata, after, ptrGpu, value, result);
 }
 
-Mtl4CommandBuffer mtl4CreateCommandBuffer(GpuResult* result) {
+Mtl4CommandBuffer mtl4CreateCommandBuffer(Mtl4Queue relatedQueue, GpuResult* result) {
 	CmnResult localResult;
 
 	Mtl4CommandBufferMetadata metadata = {};
+	metadata.relatedQueue = relatedQueue;
 
 	metadata.commandBuffer = [gMtl4Context.device newCommandBuffer];
 	if (metadata.commandBuffer == nil) {
@@ -570,43 +533,6 @@ MTL4VisibilityOptions mtl4GpuHazardsToMtlVisibilityOptions(GpuHazardFlags hazard
 	}
 
 	return options;
-}
-
-id<MTLFence> mtl4GetOrCreateFenceIn(CmnKeyedChain<Mtl4FenceId, id<MTLFence>, 10>* chain, void* ptrGpu, uint64_t value, GpuResult* result) {
-	CmnResult localResult;
-
-	Mtl4FenceId fenceId = { ptrGpu, value };
-
-	bool didFindFence;
-	id<MTLFence> fence = cmnGet(chain, fenceId, &didFindFence);
-
-	if (!didFindFence) {
-		fence = [gMtl4Context.device newFence];
-		if (fence == nil) {
-			CMN_SET_RESULT(result, GPU_OUT_OF_GPU_MEMORY);
-			return nil;
-		}
-
-		cmnInsert(chain, fenceId, fence, gMtl4CommandBufferStorage.poolAllocator, &localResult);
-		if (localResult != CMN_SUCCESS) {
-			[fence release];
-
-			CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
-			return nil;
-		}
-	}
-
-	CMN_SET_RESULT(result, GPU_SUCCESS);
-	return fence;
-	
-}
-
-id<MTLFence> mtl4GetOrCreateComputeFence(Mtl4CommandBufferMetadata* metadata, void* ptrGpu, uint64_t value, GpuResult* result) {
-	return mtl4GetOrCreateFenceIn(&metadata->computeFences, ptrGpu, value, result);
-}
-
-id<MTLFence> mtl4GetOrCreateRenderFence(Mtl4CommandBufferMetadata* metadata, void* ptrGpu, uint64_t value, GpuResult* result) {
-	return mtl4GetOrCreateFenceIn(&metadata->renderFences, ptrGpu, value, result);
 }
 
 Mtl4CommandBufferMetadata* mtl4AcquireCommandBufferMetadataFrom(Mtl4CommandBuffer handle) {

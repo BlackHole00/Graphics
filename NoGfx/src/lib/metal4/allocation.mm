@@ -7,9 +7,9 @@
 Mtl4AllocationStorage gMtl4AllocationStorage;
 
 static MTLResourceOptions gMtl4ResourceOptionsFor[] = {
-	/*GPU_MEMORY_DEFAULT=*/		MTLStorageModeShared | MTLResourceCPUCacheModeWriteCombined | MTLResourceHazardTrackingModeUntracked,
-	/*GPU_MEMORY_GPU=*/		MTLStorageModePrivate | MTLResourceHazardTrackingModeUntracked,
-	/*GPU_MEMORY_READBACK=*/	MTLStorageModeShared | MTLResourceCPUCacheModeDefaultCache | MTLResourceHazardTrackingModeUntracked
+	/*GPU_MEMORY_DEFAULT=*/		MTLResourceStorageModeShared | MTLResourceCPUCacheModeWriteCombined | MTLResourceHazardTrackingModeUntracked,
+	/*GPU_MEMORY_GPU=*/		MTLResourceStorageModePrivate | MTLResourceHazardTrackingModeUntracked,
+	/*GPU_MEMORY_READBACK=*/	MTLResourceStorageModeShared | MTLResourceCPUCacheModeDefaultCache | MTLResourceHazardTrackingModeUntracked
 };
 
 void mtl4InitAllocationStorage(GpuResult* result) {
@@ -22,21 +22,21 @@ void mtl4InitAllocationStorage(GpuResult* result) {
 	gMtl4AllocationStorage.miscPoolPage = cmnCreatePage(32 * 1024 * 1024, CMN_PAGE_READABLE | CMN_PAGE_WRITABLE, &localResult);
 	if (localResult != CMN_SUCCESS) {
 		CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
-		goto on_error_cleanup;
+		return;
 	}
 
 	// Preallocate for more than 512k buffers
 	gMtl4AllocationStorage.miscArenaPage = cmnCreatePage(32 * 1024 * 1024, CMN_PAGE_READABLE | CMN_PAGE_WRITABLE, &localResult);
 	if (localResult != CMN_SUCCESS) {
 		CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
-		goto on_error_cleanup;
+		return;
 	}
 
 	// Preallocate for more than 512k buffers
 	gMtl4AllocationStorage.addressRangeMapPage = cmnCreatePage(16 * 1024 * 1024, CMN_PAGE_READABLE | CMN_PAGE_WRITABLE, &localResult);
 	if (localResult != CMN_SUCCESS) {
 		CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
-		goto on_error_cleanup;
+		return;
 	}
 
 	gMtl4AllocationStorage.miscPool = cmnPageToPool(
@@ -58,32 +58,29 @@ void mtl4InitAllocationStorage(GpuResult* result) {
 	);
 	if (localResult != CMN_SUCCESS) {
 		CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
-		goto on_error_cleanup;
+		return;
 	}
 
 	cmnCreatePointerMap(&gMtl4AllocationStorage.cpuAllocationMap, 1024, {}, cmnHeapAllocator(), &localResult);
 	if (localResult != CMN_SUCCESS) {
 		CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
-		goto on_error_cleanup;
+		return;
 	}
 
 	cmnCreateElementPool(&gMtl4AllocationStorage.gpuAllocationMap, miscArenaAllocator, &localResult);
 	if (localResult != CMN_SUCCESS) {
 		CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
-		goto on_error_cleanup;
+		return;
 	}
 
 	cmnCreateHandleMap(&gMtl4AllocationStorage.allocations, miscArenaAllocator, {}, &localResult);
 	if (localResult != CMN_SUCCESS) {
 		CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
-		goto on_error_cleanup;
+		return;
 	}
 
 	CMN_SET_RESULT(result, GPU_SUCCESS);
 	return;
-
-on_error_cleanup:
-	mtl4FiniAllocationStorage();
 }
 
 void mtl4FiniAllocationStorage(void) {
@@ -110,6 +107,8 @@ id<MTLBuffer> mtl4AllocateBuffer(size_t size, size_t align, GpuMemory memory, Gp
 		CMN_SET_RESULT(result, GPU_OUT_OF_GPU_MEMORY);
 		return nil;
 	}
+
+	[gMtl4AllocationStorage.residencySet addAllocation:buffer];
 
 	CMN_SET_RESULT(result, GPU_SUCCESS);
 	return buffer;
@@ -482,6 +481,7 @@ void mtl4EnsureBackingBufferIsAllocated(Mtl4AllocationMetadata* metadata, GpuRes
 
 	// NOTE: Another thread could have set this up before us. If so, let's use the other thread buffer.
 	if (!cmnAtomicCompareExchangeStrong(&metadata->buffer, (id<MTLBuffer>)nil, buffer)) {
+		[gMtl4AllocationStorage.residencySet removeAllocation:buffer];
 		[buffer release];
 	}
 
@@ -498,7 +498,7 @@ void mtl4EnsureBackingBufferIsAllocated(Mtl4GpuAddress address, GpuResult* resul
 	}
 	defer (mtl4ReleaseAllocationMetadata());
 
-	mtl4EnsureBackingBufferIsAllocated(address, result);
+	mtl4EnsureBackingBufferIsAllocated(metadata, result);
 }
 
 void mtl4MarkAsContainingSignals(Mtl4AllocationMetadata* metadata, GpuResult* result) {
@@ -557,15 +557,26 @@ void mtl4DestroyAllocation(Mtl4AllocationHandle handle) {
 
 	mtl4FreeAssociatedTextures(metadata);
 
+	[gMtl4AllocationStorage.residencySet removeAllocation:metadata->buffer];
+
 	if (metadata->buffer != nil) {
 		[metadata->buffer release];
 	}
 
+	[gMtl4AllocationStorage.residencySet removeAllocation:metadata->associatedTextureHeap];
 	[metadata->associatedTextureHeap release];
 
 	cmnRemove(&gMtl4AllocationStorage.cpuAddressRangeMap, range);
 	cmnRemove(&gMtl4AllocationStorage.cpuAllocationMap, (uintptr_t)ptr);
 	cmnRemove(&gMtl4AllocationStorage.gpuAllocationMap, metadata->assignedGpuAddress.allocationIdentifier);
 	cmnRemove(&gMtl4AllocationStorage.allocations, handle);
+}
+
+void gpuDebugForceBufferSynchronication(void* ptr) {
+	Mtl4AllocationMetadata* metadata = mtl4AcquireAllocationMetadataFrom(ptr, true);
+	if (metadata == nullptr) {
+		return;
+	}
+	defer (mtl4ReleaseAllocationMetadata());
 }
 

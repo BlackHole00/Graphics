@@ -21,11 +21,6 @@ typedef enum Mtl4CommandBufferStatus {
 	MTL4_COMMAND_BUFFER_SUBMITTED,
 } Mtl4CommandBufferStatus;
 
-typedef struct Mtl4FenceId {
-	void* ptrGpu;
-	uint64_t value;
-} Mtl4FenceId;
-
 // NOTE: Encoding a command encoder is not thread safe: It can happen from any thread, but sequential encoding
 //	is expected. The synchronization is thus expected from the user.
 typedef struct Mtl4CommandBufferMetadata {
@@ -39,11 +34,7 @@ typedef struct Mtl4CommandBufferMetadata {
 
 	Mtl4Pipeline	boundPipeline;
 	void*		boundTextureHeap;
-
-	CmnKeyedChain<Mtl4FenceId, id<MTLFence>, 10>	computeFences;
-	CmnKeyedChain<Mtl4FenceId, id<MTLFence>, 10>	renderFences;
 } Mtl4CommandBufferMetadata;
-static_assert(sizeof(CmnKeyedChainNode<Mtl4FenceId, id<MTLFence>, 10>) <= MTL4_COMMANDBUFFERSTORAGE_POOLSIZE, "A fence list node should fit into the pool allocator.");
 
 typedef struct Mtl4CommandBufferStorage {
 	CmnPage		arenaPage;
@@ -85,7 +76,7 @@ void mtl4Barrier(GpuCommandBuffer cb, GpuStage before, GpuStage after, GpuHazard
 void mtl4SignalAfter(GpuCommandBuffer cb, GpuStage before, void* ptrGpu, uint64_t value, GpuSignal signal, GpuResult* result);
 void mtl4WaitBefore(GpuCommandBuffer cb, GpuStage after, void* ptrGpu, uint64_t value, GpuOp op, GpuHazardFlags hazards, uint64_t mask, GpuResult* result);
 
-Mtl4CommandBuffer mtl4CreateCommandBuffer(GpuResult* result);
+Mtl4CommandBuffer mtl4CreateCommandBuffer(Mtl4Queue relatedQueue, GpuResult* result);
 // NOTE: Requires deletion-lock on gMtl4CommandBufferStorage.sync.
 void mtl4DestroyCommandBuffer(Mtl4CommandBuffer commandBuffer);
 bool mtl4IsCommandBufferScheduledForDeletion(Mtl4CommandBuffer commandBuffer);
@@ -97,9 +88,6 @@ bool mtl4CanImposeNormalMtlBarrierBetween(GpuStage before, GpuStage after, GpuHa
 MTLStages mtl4GpuToMtlStage(GpuStage stage);
 MTL4VisibilityOptions mtl4GpuHazardsToMtlVisibilityOptions(GpuHazardFlags hazards);
 
-id<MTLFence> mtl4GetOrCreateComputeFence(Mtl4CommandBufferMetadata* metadata, void* ptrGpu, uint64_t value, GpuResult* result);
-id<MTLFence> mtl4GetOrCreateRenderFence(Mtl4CommandBufferMetadata* metadata, void* ptrGpu, uint64_t value, GpuResult* result);
-
 Mtl4CommandBufferMetadata* mtl4AcquireCommandBufferMetadataFrom(Mtl4CommandBuffer handle);
 void mtl4ReleaseCommandBufferMetadata(void);
 
@@ -109,23 +97,6 @@ inline Mtl4CommandBuffer mtl4GpuCommandBufferToHandle(GpuCommandBuffer commandBu
 inline GpuCommandBuffer mtl4HandleToGpuCommandBuffer(Mtl4CommandBuffer handle) {
 	return *(GpuCommandBuffer*)&handle;
 }
-
-template <>
-struct CmnTypeTraits<Mtl4FenceId> {
-	static bool eq(const Mtl4FenceId& left, const Mtl4FenceId& right) {
-		return left.ptrGpu == right.ptrGpu && left.value == right.value;
-	}
-
-	static CmnCmp cmp(const Mtl4FenceId& left, const Mtl4FenceId& right) {
-		(void)left; (void)right;
-		assert(false && "Unimplemented.");
-	}
-
-	static size_t hash(const Mtl4FenceId& value) {
-		(void)value;
-		assert(false && "Unimplemented.");
-	}
-};
 
 #endif // MTL4_COMMAND_BUFFERS_H
 

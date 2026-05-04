@@ -35,19 +35,32 @@ void mtl4FiniQueueStorage(void) {
 
 GpuQueue mtl4CreateQueue(GpuResult* result) {
 	CmnResult localResult;
+	GpuResult localGpuResult;
 
-	id<MTL4CommandQueue> queue = [gMtl4Context.device newMTL4CommandQueue];
-	if (queue == nil) {
+	Mtl4QueueMetadata metadata = {};
+
+	metadata.queue = [gMtl4Context.device newMTL4CommandQueue];
+	if (metadata.queue == nil) {
 		CMN_SET_RESULT(result, GPU_COUND_NOT_CREATE_QUEUE);
+		return {};
+	}
+
+	mtl4CreateFenceStorage(&metadata.fences, metadata.queue, &localGpuResult);
+	if (localGpuResult != GPU_SUCCESS) {
+		[metadata.queue release];
+		mtl4DestroyFenceStorage(&metadata.fences);
+
+		CMN_SET_RESULT(result, localGpuResult);
 		return {};
 	}
 
 	{
 		CmnScopedWriteRWMutex guard(&gMtl4QueueStorage.mutex);
 
-		Mtl4Queue handle = cmnInsert(&gMtl4QueueStorage.queues, queue, &localResult);
+		Mtl4Queue handle = cmnInsert(&gMtl4QueueStorage.queues, metadata, &localResult);
 		if (localResult != CMN_SUCCESS) {
-			[queue release];
+			[metadata.queue release];
+			mtl4DestroyFenceStorage(&metadata.fences);
 
 			CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
 			return {};
@@ -62,11 +75,23 @@ id<MTL4CommandQueue> mtl4Mtl4QueueOf(Mtl4Queue queue) {
 	CmnScopedReadRWMutex guard(&gMtl4QueueStorage.mutex);
 
 	bool wasHandleValid;
-	id<MTL4CommandQueue> metalQueue = cmnGet(&gMtl4QueueStorage.queues, queue, &wasHandleValid);
+	Mtl4QueueMetadata* metadata = &cmnGet(&gMtl4QueueStorage.queues, queue, &wasHandleValid);
 	if (!wasHandleValid) {
 		return nil;
 	}
 
-	return metalQueue;
+	return metadata->queue;
+}
+
+Mtl4FenceStorage* mtl4FenceStorageOf(Mtl4Queue queue) {
+	CmnScopedReadRWMutex guard(&gMtl4QueueStorage.mutex);
+
+	bool wasHandleValid;
+	Mtl4QueueMetadata* metadata = &cmnGet(&gMtl4QueueStorage.queues, queue, &wasHandleValid);
+	if (!wasHandleValid) {
+		return nil;
+	}
+
+	return &metadata->fences;
 }
 

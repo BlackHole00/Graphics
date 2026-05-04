@@ -81,7 +81,7 @@
 #endif
 
 #ifdef __OBJC__
-	// Source language includes Objective-C extensions.
+	// Source language is Objective-C.
 	#define CMN_LANGUAGE_OBJECTIVEC 1
 
 	#if defined(CMN_LANGUAGE_CPP)

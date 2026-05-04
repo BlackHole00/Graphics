@@ -1,6 +1,7 @@
 #include "device.h"
 
 #include <lib/metal4/context.h>
+#include <lib/metal4/allocation.h>
 #include <lib/metal4/pipelines.h>
 #include <lib/metal4/command_buffers.h>
 
@@ -91,6 +92,12 @@ void mtl4SelectDevice(GpuDeviceId deviceId, GpuResult* result) {
 	gMtl4Context.selectedDeviceId = deviceId;
 
 	GpuResult localResult;
+
+	MTLResidencySetDescriptor* residencySetDescriptor = [MTLResidencySetDescriptor new];
+	defer ([residencySetDescriptor release]);
+
+	gMtl4AllocationStorage.residencySet = [gMtl4Context.device
+		newResidencySetWithDescriptor:residencySetDescriptor error:nil];
 
 	mtl4InitPipelineStorage(&localResult);
 	if (localResult != GPU_SUCCESS) {
