@@ -64,7 +64,8 @@ GpuTexture mtl4CreateTexture(const GpuTextureDesc* desc, void* ptrGpu, GpuResult
 	
 	MTLTextureDescriptor* textureDescriptor = mtl4GpuTextureDescToMtl(
 		desc,
-		MTLResourceStorageModePrivate | MTLResourceHazardTrackingModeUntracked
+		// MTLResourceStorageModePrivate | MTLResourceHazardTrackingModeUntracked
+		MTLResourceStorageModePrivate
 	);
 	defer ([textureDescriptor release]);
 
@@ -92,7 +93,8 @@ GpuTexture mtl4CreateTexture(const GpuTextureDesc* desc, void* ptrGpu, GpuResult
 			MTLHeapDescriptor* heapDescriptor = [MTLHeapDescriptor new];
 			defer ([heapDescriptor release]);
 
-			heapDescriptor.resourceOptions = MTLResourceStorageModePrivate | MTLResourceHazardTrackingModeUntracked;
+			// heapDescriptor.resourceOptions = MTLResourceStorageModePrivate | MTLResourceHazardTrackingModeUntracked;
+			heapDescriptor.resourceOptions = MTLResourceStorageModePrivate;
 			heapDescriptor.size = metadata->size;
 
 			backingHeap = [gMtl4Context.device newHeapWithDescriptor:heapDescriptor];
@@ -172,7 +174,8 @@ GpuTextureSizeAlign mtl4TextureSizeAlign(const GpuTextureDesc* desc, GpuResult* 
 
 	MTLTextureDescriptor* textureDescriptor = mtl4GpuTextureDescToMtl(
 		desc,
-		MTLResourceStorageModePrivate | MTLResourceHazardTrackingModeUntracked
+		// MTLResourceStorageModePrivate | MTLResourceHazardTrackingModeUntracked
+		MTLResourceStorageModePrivate
 	);
 
 	MTLSizeAndAlign sizeNAlign = [gMtl4Context.device heapTextureSizeAndAlignWithDescriptor:textureDescriptor];

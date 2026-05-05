@@ -116,11 +116,8 @@ void mtl4SubmitRaw(
 	}
 
 	if (validCommandBufferCount > 0) {
-		id<MTL4CommandBuffer> gpuFenceUpdates =  mtl4GetGpuUpdatesCommands(fenceStorage, result);
-		metalCommandBuffers[validCommandBufferCount] = gpuFenceUpdates;
-
 		[metalQueue addResidencySet:gMtl4AllocationStorage.residencySet];
-		[metalQueue commit:metalCommandBuffers count:validCommandBufferCount + 1];
+		[metalQueue commit:metalCommandBuffers count:validCommandBufferCount];
 	}
 
 	if (semaphore != 0) {
@@ -341,36 +338,21 @@ void mtl4Barrier(GpuCommandBuffer cb, GpuStage before, GpuStage after, GpuHazard
 	MTLStages metalAfter = mtl4GpuToMtlStage(after);
 	MTL4VisibilityOptions metalVisibilityOptions = mtl4GpuHazardsToMtlVisibilityOptions(hazards);
 
-	if (mtl4CanImposeNormalMtlBarrierBetween(before, after, hazards)) {
-		[metadata->computeEncoder
-			barrierAfterEncoderStages:metalBefore
-			beforeEncoderStages:metalAfter
-			visibilityOptions:metalVisibilityOptions];
-	} else {
-		// TODO: Check if also the renderEncoder needs [endEncoding].
+	// TODO: Figure out render stuff...
 
-		if(before & GPU_STAGE_PIXEL_SHADER || before & GPU_STAGE_RASTER_COLOR_OUT) {
-			// NOTE: The user is asking for a consumer barrier (it is consuming the result of a previous
-			//	renderpass).
+	if (mtl4IsStageCompute(before)) {
+		[metadata->computeEncoder endEncoding];
+		metadata->computeEncoder = [metadata->commandBuffer computeCommandEncoder];
+	}
+	if (mtl4IsStageRender(before)) {
+		assert(false && "Unimplemented.");
+	}
 
-			[metadata->computeEncoder endEncoding];
-
-			metadata->computeEncoder = [metadata->commandBuffer computeCommandEncoder];
-			[metadata->computeEncoder barrierAfterQueueStages:metalBefore
-				beforeStages:metalAfter
-				visibilityOptions:metalVisibilityOptions];
-		} else {
-			// NOTE: The user is asking for a producer barrier (it is producing the data requires for the
-			//	next renderpass).
-
-			[metadata->computeEncoder
-				barrierAfterStages:metalBefore
-				beforeQueueStages:metalAfter
-				visibilityOptions:metalVisibilityOptions];
-			[metadata->computeEncoder endEncoding];
-
-			metadata->computeEncoder = [metadata->commandBuffer computeCommandEncoder];
-		}
+	if (mtl4IsStageCompute(after)) {
+		[metadata->computeEncoder barrierAfterQueueStages:metalBefore beforeStages:metalAfter visibilityOptions:metalVisibilityOptions];
+	}
+	if (mtl4IsStageRender(after)) {
+		assert(false && "Unimplemented.");
 	}
 
 	CMN_SET_RESULT(result, GPU_SUCCESS);

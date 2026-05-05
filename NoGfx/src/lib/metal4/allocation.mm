@@ -6,10 +6,15 @@
 
 Mtl4AllocationStorage gMtl4AllocationStorage;
 
+// static MTLResourceOptions gMtl4ResourceOptionsFor[] = {
+// 	/*GPU_MEMORY_DEFAULT=*/		MTLResourceStorageModeShared | MTLResourceCPUCacheModeWriteCombined | MTLResourceHazardTrackingModeUntracked,
+// 	/*GPU_MEMORY_GPU=*/		MTLResourceStorageModePrivate | MTLResourceHazardTrackingModeUntracked,
+// 	/*GPU_MEMORY_READBACK=*/	MTLResourceStorageModeShared | MTLResourceCPUCacheModeDefaultCache | MTLResourceHazardTrackingModeUntracked
+// };
 static MTLResourceOptions gMtl4ResourceOptionsFor[] = {
-	/*GPU_MEMORY_DEFAULT=*/		MTLResourceStorageModeShared | MTLResourceCPUCacheModeWriteCombined | MTLResourceHazardTrackingModeUntracked,
-	/*GPU_MEMORY_GPU=*/		MTLResourceStorageModePrivate | MTLResourceHazardTrackingModeUntracked,
-	/*GPU_MEMORY_READBACK=*/	MTLResourceStorageModeShared | MTLResourceCPUCacheModeDefaultCache | MTLResourceHazardTrackingModeUntracked
+	/*GPU_MEMORY_DEFAULT=*/		MTLResourceStorageModeShared,
+	/*GPU_MEMORY_GPU=*/		MTLResourceStorageModePrivate,
+	/*GPU_MEMORY_READBACK=*/	MTLResourceStorageModeShared | MTLResourceCPUCacheModeDefaultCache,
 };
 
 void mtl4InitAllocationStorage(GpuResult* result) {
@@ -571,12 +576,3 @@ void mtl4DestroyAllocation(Mtl4AllocationHandle handle) {
 	cmnRemove(&gMtl4AllocationStorage.gpuAllocationMap, metadata->assignedGpuAddress.allocationIdentifier);
 	cmnRemove(&gMtl4AllocationStorage.allocations, handle);
 }
-
-void gpuDebugForceBufferSynchronication(void* ptr) {
-	Mtl4AllocationMetadata* metadata = mtl4AcquireAllocationMetadataFrom(ptr, true);
-	if (metadata == nullptr) {
-		return;
-	}
-	defer (mtl4ReleaseAllocationMetadata());
-}
-

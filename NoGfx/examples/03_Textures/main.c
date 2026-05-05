@@ -27,8 +27,8 @@ typedef struct GpuBumpAllocator {
 	uint32_t	offset;
 } GpuBumpAllocator;
 
-void createGpuBumpAllocator(GpuBumpAllocator* allocator, size_t size) {
-	allocator->cpu = (uint8_t*)gpuMalloc(size, 16, GPU_MEMORY_DEFAULT, NULL);
+void createGpuBumpAllocator(GpuBumpAllocator* allocator, size_t size, GpuMemory memory) {
+	allocator->cpu = (uint8_t*)gpuMalloc(size, 16, memory, NULL);
 	allocator->gpu = (uint8_t*)gpuHostToDevicePointer(allocator->cpu, NULL);
 	allocator->offset = 0;
 	allocator->size = size;
@@ -99,7 +99,7 @@ int main(void) {
 	printf("Using device `%s`.\n", devices[0].name);
 
 	GpuBumpAllocator bumpAllocator;
-	createGpuBumpAllocator(&bumpAllocator, 1 * 1024 * 1024);
+	createGpuBumpAllocator(&bumpAllocator, 1 * 1024 * 1024, GPU_MEMORY_READBACK);
 
 	GpuSemaphore semaphore = gpuCreateSemaphore(0, &result);
 	if (result != GPU_SUCCESS) {
@@ -115,13 +115,20 @@ int main(void) {
 	}
 
 	int x, y, channels;
-	uint8_t* data = stbi_load_from_file(f, &x, &y, &channels, 4);
-	assert(channels == 4);
+	const int outputChannels = 4;
+	uint8_t* data = stbi_load_from_file(f, &x, &y, &channels, outputChannels);
+	assert(data != NULL);
 
 	fclose(f);
 
-	GpuAllocation gpuTempData = bumpAlloc(&bumpAllocator, x * y * channels);
-	memcpy(gpuTempData.cpu, data, x * y * channels);
+	size_t imageSize = (size_t)x * (size_t)y * (size_t)outputChannels;
+	GpuAllocation gpuTempData = bumpAlloc(&bumpAllocator, imageSize);
+	memcpy(gpuTempData.cpu, data, imageSize);
+	printf("STBI bytes: %02x %02x %02x %02x %02x %02x %02x %02x\n",
+		data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
+	printf("Staging bytes: %02x %02x %02x %02x %02x %02x %02x %02x\n",
+		gpuTempData.cpu[0], gpuTempData.cpu[1], gpuTempData.cpu[2], gpuTempData.cpu[3],
+		gpuTempData.cpu[4], gpuTempData.cpu[5], gpuTempData.cpu[6], gpuTempData.cpu[7]);
 
 	GpuTextureDesc textureDescriptor = {};
 	textureDescriptor.type = GPU_TEXTURE_2D;
@@ -137,7 +144,6 @@ int main(void) {
 	GpuTextureSizeAlign sizeAlign = gpuTextureSizeAlign(&textureDescriptor, NULL);
 
 	void* gpuTextureBuffer = gpuMalloc(sizeAlign.size + 1024, sizeAlign.align, GPU_MEMORY_GPU, NULL);
-	result = GPU_SUCCESS;
 	GpuTexture texture = gpuCreateTexture(&textureDescriptor, gpuTextureBuffer, &result);
 	if (result != GPU_SUCCESS) {
 		printf("Failed to create texture. Got error %d.\n", result);
@@ -148,28 +154,35 @@ int main(void) {
 	GpuQueue queue = gpuCreateQueue(NULL);
 
 	GpuCommandBuffer commandBuffer = gpuStartCommandEncoding(queue, NULL);
-	result = GPU_SUCCESS;
-	gpuCopyToTexture(commandBuffer, gpuTextureBuffer, gpuTempData.gpu, texture, &result);
-	if (result != GPU_SUCCESS) {
-		printf("Failed to copy to texture. Got error %d.\n", result);
-		gpuDeinit();
-		return -1;
+	GpuResult copyResult = GPU_SUCCESS;
+	gpuCopyToTexture(commandBuffer, gpuTextureBuffer, gpuTempData.gpu, texture, &copyResult);
+	if (copyResult != GPU_SUCCESS) {
+		printf("gpuCopyToTexture failed with error %d.\n", copyResult);
 	}
-
-	GpuAllocation downloadBuffer = bumpAlloc(&bumpAllocator, x * y * channels);
-	gpuBarrier(commandBuffer, GPU_STAGE_TRANSFER, GPU_STAGE_TRANSFER, GPU_HAZARD_NONE, NULL);
-	result = GPU_SUCCESS;
-	gpuCopyFromTexture(commandBuffer, downloadBuffer.gpu, gpuTextureBuffer, texture, &result);
-	if (result != GPU_SUCCESS) {
-		printf("Failed to copy from texture. Got error %d.\n", result);
-		gpuDeinit();
-		return -1;
-	}
-
-	// gpuSubmit(queue, &commandBuffer, 1, NULL);
 	gpuSubmitWithSignal(queue, &commandBuffer, 1, semaphore, 1, NULL);
-
 	gpuWaitSemaphore(semaphore, 1, NULL);
+
+	GpuAllocation downloadBuffer;
+	downloadBuffer.cpu = (uint8_t*)gpuMalloc(imageSize, 16, GPU_MEMORY_READBACK, NULL);
+	downloadBuffer.gpu = (uint8_t*)gpuHostToDevicePointer(downloadBuffer.cpu, NULL);
+
+	commandBuffer = gpuStartCommandEncoding(queue, NULL);
+	copyResult = GPU_SUCCESS;
+	gpuCopyFromTexture(commandBuffer, downloadBuffer.gpu, gpuTextureBuffer, texture, &copyResult);
+	if (copyResult != GPU_SUCCESS) {
+		printf("gpuCopyFromTexture failed with error %d.\n", copyResult);
+	}
+	gpuSubmitWithSignal(queue, &commandBuffer, 1, semaphore, 2, NULL);
+	gpuWaitSemaphore(semaphore, 2, NULL);
+
+	commandBuffer = gpuStartCommandEncoding(queue, NULL);
+	gpuMemCpy(commandBuffer, downloadBuffer.gpu, gpuTempData.gpu, imageSize, &copyResult);
+	gpuSubmitWithSignal(queue, &commandBuffer, 1, semaphore, 3, NULL);
+	gpuWaitSemaphore(semaphore, 3, NULL);
+
+	printf("Memcpy bytes: %02x %02x %02x %02x %02x %02x %02x %02x\n",
+		downloadBuffer.cpu[0], downloadBuffer.cpu[1], downloadBuffer.cpu[2], downloadBuffer.cpu[3],
+		downloadBuffer.cpu[4], downloadBuffer.cpu[5], downloadBuffer.cpu[6], downloadBuffer.cpu[7]);
 
 	stbi_write_png("out.png", x, y, 4, downloadBuffer.cpu, x * 4);
 	stbi_image_free(data);
