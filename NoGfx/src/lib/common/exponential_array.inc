@@ -1,35 +1,35 @@
-template <typename T, size_t N>
-void cmnCreateExponentialArray(CmnExponentialArray<T, N>* array, CmnAllocator backingAllocator, CmnResult* result) {
+template <typename T, size_t N, size_t S>
+void cmnCreateExponentialArray(CmnExponentialArray<T, N, S>* array, CmnAllocator backingAllocator, CmnResult* result) {
 	array->backingAllocator	= backingAllocator;
 	memset(array->buckets, 0, sizeof(array->buckets));
 	array->length		= 0;
 	array->last_filled_bucket = 0;
 
-	array->buckets[0]	= cmnAlloc<T>(array->backingAllocator, CMN_EXPONENTIALARRAY_BASE_BUCKET_LEN, result);
+	array->buckets[0]	= cmnAlloc<T>(array->backingAllocator, (1ULL << S), result);
 }
 
-template <typename T, size_t N>
-bool cmnAppend(CmnExponentialArray<T, N>* array, const T& value, CmnResult* result) {
+template <typename T, size_t N, size_t S>
+bool cmnAppend(CmnExponentialArray<T, N, S>* array, const T& value, CmnResult* result) {
 	size_t idx = array->length;
 
-	if (!cmnResize(array, array->length + 1, result)) {
+	if (!cmnResize<T, N, S>(array, array->length + 1, result)) {
 		return false;
 	}
 
-	cmnSet<T, N>(array, idx, value);
+	cmnSet<T, N, S>(array, idx, value);
 	CMN_SET_RESULT(result, CMN_SUCCESS);
 	return true;
 }
 
-template <typename T, size_t N>
-bool cmnResize(CmnExponentialArray<T, N>* array, size_t length, CmnResult* result) {
+template <typename T, size_t N, size_t S>
+bool cmnResize(CmnExponentialArray<T, N, S>* array, size_t length, CmnResult* result) {
 	if (array->length >= length) {
 		CMN_SET_RESULT(result, CMN_SUCCESS);
 		return true;
 	}
 
 	size_t bucketIndex, elementIndex;
-	cmnDecomposeExponentialArrayIndex(length, &bucketIndex, &elementIndex);
+	cmnDecomposeExponentialArrayIndex(length, S, &bucketIndex, &elementIndex);
 
 	if (bucketIndex >= N) {
 		CMN_SET_RESULT(result, CMN_OUT_OF_MEMORY);
@@ -48,9 +48,16 @@ bool cmnResize(CmnExponentialArray<T, N>* array, size_t length, CmnResult* resul
 			continue;
 		}
 
+		size_t allocCount;
+		if (i == 0) {
+			allocCount = (1ULL << S);
+		} else {
+			allocCount = (1ULL << (S + i - 1));
+		}
+
 		array->buckets[i] = cmnAlloc<T>(
 			array->backingAllocator,
-			1 << (CMN_EXPONENTIALARRAY_BASE_BUCKET_LEN_BITS + i - 1),
+			allocCount,
 			result
 		);
 		if (array->buckets[i] == nullptr) {
@@ -66,28 +73,28 @@ bool cmnResize(CmnExponentialArray<T, N>* array, size_t length, CmnResult* resul
 	return true;
 }
 
-template <typename T, size_t N>
-void cmnSet(CmnExponentialArray<T, N>* array, size_t index, const T& value) {
+template <typename T, size_t N, size_t S>
+void cmnSet(CmnExponentialArray<T, N, S>* array, size_t index, const T& value) {
 	assert(index <= array->length);
 
 	size_t bucketIndex, elementIndex;
-	cmnDecomposeExponentialArrayIndex(index, &bucketIndex, &elementIndex);
+	cmnDecomposeExponentialArrayIndex(index, S, &bucketIndex, &elementIndex);
 
 	array->buckets[bucketIndex][elementIndex] = value;
 }
 
-template <typename T, size_t N>
-T& cmnGet(CmnExponentialArray<T, N>* array, size_t index) {
+template <typename T, size_t N, size_t S>
+T& cmnGet(CmnExponentialArray<T, N, S>* array, size_t index) {
 	assert(index <= array->length);
 
 	size_t bucketIndex, elementIndex;
-	cmnDecomposeExponentialArrayIndex(index, &bucketIndex, &elementIndex);
+	cmnDecomposeExponentialArrayIndex(index, S, &bucketIndex, &elementIndex);
 
 	return array->buckets[bucketIndex][elementIndex];
 }
 
-template <typename T, size_t N>
-T& cmnLast(CmnExponentialArray<T, N>* array) {
+template <typename T, size_t N, size_t S>
+T& cmnLast(CmnExponentialArray<T, N, S>* array) {
 	assert(array->length > 0);
 
 	return (*array)[array->length - 1];
@@ -102,8 +109,8 @@ void cmnPop(CmnExponentialArray<T, N>* array) {
 	array->length--;
 }
 
-inline void cmnDecomposeExponentialArrayIndex(size_t index, size_t* bucketIndex, size_t* elementIndex) {
-	size_t start = CMN_EXPONENTIALARRAY_BASE_BUCKET_LEN_BITS;
+inline void cmnDecomposeExponentialArrayIndex(size_t index, size_t firstBucketBitCount, size_t* bucketIndex, size_t* elementIndex) {
+	size_t start = firstBucketBitCount;
 
 	size_t indexShift = index >> start;
 

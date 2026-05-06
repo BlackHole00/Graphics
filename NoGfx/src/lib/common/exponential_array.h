@@ -11,15 +11,10 @@
 	#panic CmnExponentialArray requires a 64 bit architecture.
 #endif
 
-// Base bucket length used by CmnExponentialArray.
-#define CMN_EXPONENTIALARRAY_BASE_BUCKET_LEN 32
-// Number of bits used to represent the base bucket length.
-#define CMN_EXPONENTIALARRAY_BASE_BUCKET_LEN_BITS 5
-// Pointer size in bits assumed by the implementation.
 #define CMN_EXPONENTIALARRAY_POINTER_SIZE 64
 
 
-template <typename T, size_t N>
+template <typename T, size_t N = 15, size_t S = 5>
 struct CmnExponentialArray;
 
 
@@ -33,7 +28,7 @@ struct CmnExponentialArray;
 // Results:
 // - CMN_SUCCESS: Initialization succeeded.
 // - CMN_OUT_OF_MEMORY: Backing allocator ran out of memory.
-template <typename T, size_t N> void cmnCreateExponentialArray(CmnExponentialArray<T, N>* array, CmnAllocator backingAllocator, CmnResult* result);
+template <typename T, size_t N, size_t S> void cmnCreateExponentialArray(CmnExponentialArray<T, N, S>* array, CmnAllocator backingAllocator, CmnResult* result);
 
 // Changes the logical length of an exponential array.
 //
@@ -48,7 +43,7 @@ template <typename T, size_t N> void cmnCreateExponentialArray(CmnExponentialArr
 //
 // Returns:
 // - true on success.
-template <typename T, size_t N> bool cmnResize(CmnExponentialArray<T, N>* array, size_t length, CmnResult* result);
+template <typename T, size_t N, size_t S> bool cmnResize(CmnExponentialArray<T, N, S>* array, size_t length, CmnResult* result);
 
 // Writes value at index.
 //
@@ -56,7 +51,7 @@ template <typename T, size_t N> bool cmnResize(CmnExponentialArray<T, N>* array,
 // - array: Target array.
 // - index: Destination index.
 // - value: Value to store.
-template <typename T, size_t N> void cmnSet(CmnExponentialArray<T, N>* array, size_t index, const T& value);
+template <typename T, size_t N, size_t S> void cmnSet(CmnExponentialArray<T, N, S>* array, size_t index, const T& value);
 
 // Returns the value reference at index.
 //
@@ -66,7 +61,7 @@ template <typename T, size_t N> void cmnSet(CmnExponentialArray<T, N>* array, si
 //
 // Returns:
 // - Mutable reference to stored value.
-template <typename T, size_t N>   T& cmnGet(CmnExponentialArray<T, N>* array, size_t index);
+template <typename T, size_t N, size_t S>   T& cmnGet(CmnExponentialArray<T, N, S>* array, size_t index);
 
 // Appends value at the end of the array.
 //
@@ -81,7 +76,7 @@ template <typename T, size_t N>   T& cmnGet(CmnExponentialArray<T, N>* array, si
 //
 // Returns:
 // - true on success.
-template <typename T, size_t N> bool cmnAppend(CmnExponentialArray<T, N>* array, const T& value, CmnResult* result);
+template <typename T, size_t N, size_t S> bool cmnAppend(CmnExponentialArray<T, N, S>* array, const T& value, CmnResult* result);
 
 // Returns a reference to the last logical element.
 //
@@ -90,13 +85,13 @@ template <typename T, size_t N> bool cmnAppend(CmnExponentialArray<T, N>* array,
 //
 // Returns:
 // - Mutable reference to the last element.
-template <typename T, size_t N> T& cmnLast(CmnExponentialArray<T, N>* array);
+template <typename T, size_t N, size_t S> T& cmnLast(CmnExponentialArray<T, N, S>* array);
 
 // Removes the last logical element.
 //
 // Inputs:
 // - array: Target array.
-template <typename T, size_t N> void cmnPop(CmnExponentialArray<T, N>* array);
+template <typename T, size_t N, size_t S> void cmnPop(CmnExponentialArray<T, N, S>* array);
 
 // Maps a linear index to bucket and element indices.
 //
@@ -104,11 +99,11 @@ template <typename T, size_t N> void cmnPop(CmnExponentialArray<T, N>* array);
 // - index: Linear index.
 // - bucketIndex: Output bucket index.
 // - elementIndex: Output index within bucket.
-inline void cmnDecomposeExponentialArrayIndex(size_t index, size_t* bucketIndex, size_t* elementIndex);
+inline void cmnDecomposeExponentialArrayIndex(size_t index, size_t firstBucketBitCount, size_t* bucketIndex, size_t* elementIndex);
 
 
 // Array-like container backed by exponentially growing buckets.
-template <typename T, size_t N = 15>
+template <typename T, size_t N, size_t S>
 struct CmnExponentialArray {
 	CmnAllocator	backingAllocator;
 
@@ -118,11 +113,11 @@ struct CmnExponentialArray {
 	size_t last_filled_bucket;
 
 	const T& operator[](size_t index) const {
-		return cmnGet<T, N>((CmnExponentialArray<T, N>*)this, index);
+		return cmnGet<T, N, S>((CmnExponentialArray<T, N, S>*)this, index);
 	}
 
 	T& operator[](size_t index) {
-		return cmnGet<T, N>(this, index);
+		return cmnGet<T, N, S>(this, index);
 	}
 };
 

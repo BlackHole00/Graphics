@@ -21,7 +21,7 @@ enum C_Material_Texture {
 };
 
 struct C_Material {
-	metal::array<metal::texture2d<float>, C_MATERIAL_COUNT> textures;
+	metal::array<uint64_t, C_MATERIAL_COUNT> textures;
 };
 
 
@@ -76,7 +76,9 @@ fragment float4 f_main(
 	constant C_Material& material = instance.material;
 
 	constexpr metal::sampler s(metal::filter::nearest, metal::mag_filter::linear, metal::min_filter::linear);
-	constant metal::texture2d<float>& texture = material.textures[C_MATERIAL_BASE_COLOR];
+	// constant metal::texture2d<float>& texture = material.textures[C_MATERIAL_BASE_COLOR];
+	constant uint64_t& textureId = material.textures[C_MATERIAL_BASE_COLOR];
+	constant metal::texture2d<float>& texture = reinterpret_cast<constant metal::texture2d<float>&>(textureId);
 
 	float4 sample = texture.sample(s, in.uv);
 

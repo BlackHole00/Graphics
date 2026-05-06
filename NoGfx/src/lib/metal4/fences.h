@@ -5,81 +5,47 @@
 
 #include <lib/common/page.h>
 #include <lib/common/hash_map.h>
-#include <lib/common/handle_map.h>
+#include <lib/common/pointer_map.h>
 #include <lib/common/storage_sync.h>
 
 #include <Metal/Metal.h>
 
 struct Mtl4CommandBufferMetadata;
 
-typedef CmnHandle Mtl4FenceHandle;
-
-typedef struct Mtl4FenceMetadata {
-	// Signaled after
-	// id<MTLFence>	gpuPtrUpdatedFence;
-	id<MTLFence>	computeWriteGpuPtrFence;
-	// id<MTLFence>	renderWriteGpuPtrFence;
-} Mtl4FenceMetadata;
-
-typedef struct Mtl4FenceId {
-	void*		gpuPtr;
-	uint64_t 	value;
-} Mtl4FenceId;
-
-typedef struct Mtl4FenceStorage {
+typedef struct Mtl4EventStorage {
 	CmnPage		page;
 	CmnArena	arena;
 
-	id<MTLBuffer>			fenceUploadBuffer;
-	uint64_t			fenceUploadBufferSize;
-	uint64_t			fenceUploadBufferUsed;
+	id<MTLBuffer>	signaledValuesUploadBuffer;
+	uint64_t	uploadBufferSize;
+	uint64_t	uploadBufferUsed;
 
-	CmnHashMap	<Mtl4FenceId, Mtl4FenceHandle>	lookup;
-
-	CmnHandleMap	<Mtl4FenceMetadata>	fences;
+	CmnPointerMap	<id<MTLEvent>>	lookup;
 	CmnStorageSync	sync;
-} Mtl4FenceStorage;
-extern Mtl4FenceStorage gMtl4FenceStorage;
+} Mtl4EventStorage;
+extern Mtl4EventStorage gMtl4EventStorage;
 
-void mtl4InitFenceStorage(GpuResult* result);
-void mtl4FiniFenceStorage(void);
+void mtl4InitEventStorage(GpuResult* result);
+void mtl4FiniEventStorage(void);
 
-Mtl4FenceHandle mtl4FenceHandleFrom(void* gpuPtr, uint64_t value, bool* didFindFence);
+id<MTLEvent> mtl4AcquireEventOf(void* gpuPtr);
+id<MTLEvent> mtl4AcquireOrCreateEventFor(void* gpuPtr, GpuResult* result);
+void mtl4ReleaseEvent(void);
 
-Mtl4FenceMetadata* mtl4AcquireFenceMetadataFrom(void* gpuPtr, uint64_t value);
-Mtl4FenceMetadata* mtl4AcquireOrCreateFenceMetadataFor(void* gpuPtr, uint64_t value, GpuResult* result);
-
-void mtl4SignalFence(
-	Mtl4CommandBufferMetadata* commandBuffer,
-	GpuStage after,
-	void* gpuPtr,
-	uint64_t value,
-	GpuResult* result
-);
-void mtl4WaitFence(
+void mtl4SignalEvent(
 	Mtl4CommandBufferMetadata* commandBuffer,
 	GpuStage before,
 	void* gpuPtr,
 	uint64_t value,
 	GpuResult* result
 );
-
-template <>
-struct CmnTypeTraits<Mtl4FenceId> {
-	static bool eq(const Mtl4FenceId& left, const Mtl4FenceId& right) {
-		return left.gpuPtr == right.gpuPtr && left.value == right.value;
-	}
-
-	static CmnCmp cmp(const Mtl4FenceId& left, const Mtl4FenceId& right) {
-		(void)left; (void)right;
-		assert(false && "Unimplemented.");
-	}
-
-	static size_t hash(const Mtl4FenceId& value) {
-		return cmnHashInteger64((uintptr_t)value.gpuPtr) ^ cmnHashInteger64(value.value);
-	}
-};
-
+void mtl4WaitEvent(
+	Mtl4CommandBufferMetadata* commandBuffer,
+	GpuStage after,
+	void* gpuPtr,
+	uint64_t value,
+	GpuResult* result
+);
 
 #endif // MTL4_FENCES_H
 

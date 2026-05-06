@@ -8,18 +8,17 @@ check_things :: proc() {
 	device := MTL.CreateSystemDefaultDevice()
 	defer device->release()
 
-	buffer := device->newBufferWithLength(64, { .CPUCacheModeWriteCombined })
-	defer buffer->release()
+	for i in 0..<1024 {
+		buffer := device->newBufferWithLength(768, { .CPUCacheModeWriteCombined })
+		// defer buffer->release()
 
-	cpu_ptr := buffer->contents()
-	gpu_ptr := buffer->gpuAddress()
+		cpu_ptr := buffer->contents()
+		gpu_ptr := buffer->gpuAddress()
 
-	log.infof("%64b %64b %64b", cpu_ptr, cast(rawptr)cast(uintptr)gpu_ptr, cast(uintptr)cpu_ptr ~ cast(uintptr)gpu_ptr)
+		log.infof("%64b %64b", cpu_ptr, cast(rawptr)cast(uintptr)gpu_ptr)
+		log.infof("%16x %16x", cpu_ptr, cast(rawptr)cast(uintptr)gpu_ptr)
+	}
 
-	buffer2 := device->newBufferWithLength_options(64, { .CPUCacheModeWriteCombined })
-	defer buffer2->release()
-
-	data := (cast(^u32)buffer2->contents())^
 }
 
 main :: proc() {

@@ -31,6 +31,9 @@ typedef enum GpuResult {
 
 	GPU_PIPELINE_IR_VALIDATION_FAILED,
 
+	GPU_TOO_MANY_UNSUBMITTED_COMMAND_BUFFERS,
+	GPU_ALREADY_SUBMITTED,
+
 	GPU_COUND_NOT_CREATE_QUEUE,
 	GPU_COUND_NOT_CREATE_COMMAND_BUFFER,
 
@@ -141,7 +144,7 @@ typedef enum GpuSignal {
 	// ...
 } GpuSignal;
 
-#define GPU_MASK_ALL (~(uint64_t)0)
+#define GPU_DEFAULT_WAIT_MASK (~(uint64_t)0)
 
 typedef size_t GpuDeviceId;
 typedef uint64_t GpuTexture;
@@ -150,24 +153,27 @@ typedef uint64_t GpuQueue;
 typedef uint64_t GpuCommandBuffer;
 typedef uint64_t GpuSemaphore;
 
+typedef struct GpuDeviceCapabilites {
+	const GpuSignal* supportedSignals;
+	size_t supportedSignalCount;
+
+	const GpuOp* supportedWaitOps;
+	size_t supportedWaitOpCount;
+
+	bool supportsArbitraryWaitMask;
+	bool gpuReadableSignals;
+	bool gpuWritableSignals;
+
+	// TODO: more capabilities...
+} GpuDeviceCapabilites;
+
 typedef struct GpuDeviceInfo {
 	GpuDeviceId identifier;
 	const char* name;
 	const char* vendor;
 	GpuDeviceType type;
 
-	struct {
-		GpuSignal* supportedSignals;
-		size_t supportedSignalCount;
-
-		GpuOp* supportedWaitOps;
-		size_t supportedWaitOpCount;
-
-		bool supportsArbitraryWaitMask;
-		bool gpuWritableSignals;
-
-		// TODO: more capabilities...
-	} capabilities;
+	GpuDeviceCapabilites capabilities;
 
 	// TODO: limits...
 } GpuDeviceInfo;

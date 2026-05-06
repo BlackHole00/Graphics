@@ -43,6 +43,22 @@ int main(void) {
 			info->vendor,
 			info->type == GPU_INTEGRATED ? "Integrated" : "Dedicated"
 		);
+
+		printf("\t\t- supportedSignals: [");
+		for (size_t j = 0; j < info->capabilities.supportedSignalCount; j++) {
+			printf(" 0x%02x", info->capabilities.supportedSignals[j]);
+		}
+		printf(" ]\n");
+
+		printf("\t\t- supportedWaitOps: [");
+		for (size_t j = 0; j < info->capabilities.supportedWaitOpCount; j++) {
+			printf(" 0x%02x", info->capabilities.supportedWaitOps[j]);
+		}
+		printf(" ]\n");
+
+		printf("\t\t- supportsArbitratyWaitMask: %d\n", info->capabilities.supportsArbitraryWaitMask);
+		printf("\t\t- gpuReadableSignals: %d\n", info->capabilities.gpuReadableSignals);
+		printf("\t\t- gpuWritableSignals: %d\n", info->capabilities.gpuWritableSignals);
 	}
 
 	if (devices_count <= 0) {

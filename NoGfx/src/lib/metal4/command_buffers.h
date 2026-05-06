@@ -2,17 +2,19 @@
 #define MTL4_COMMAND_BUFFERS_H
 
 #include <lib/common/page.h>
-#include <lib/common/handle_map.h>
-#include <lib/common/storage_sync.h>
-#include <lib/common/keyed_chain.h>
+#include <lib/common/static_handle_map.h>
 #include <lib/metal4/pipelines.h>
 #include <lib/metal4/queue.h>
+#include <lib/metal4/semaphores.h>
 
 #include <gpu/gpu.h>
 #include <Metal/Metal.h>
 
 // NOTE: Make a single pool element fit in 2 cache lines
 #define MTL4_COMMANDBUFFERSTORAGE_POOLSIZE 256
+
+#define MTL4_COMMANDBUFFER_INTERNAL_MEMORY_SIZE 512 * 1024
+#define MTL4_MAX_PARALLEL_COMMANDBUFFER_ENCODINGS 16
 
 typedef CmnHandle Mtl4CommandBuffer;
 
@@ -21,32 +23,70 @@ typedef enum Mtl4CommandBufferStatus {
 	MTL4_COMMAND_BUFFER_SUBMITTED,
 } Mtl4CommandBufferStatus;
 
+// typedef enum Mtl4EncodedCommandType {
+// 	MTL4_COMMAND_COMMIT_TO_QUEUE,
+// 	MTL4_COMMAND_SIGNAL_EVENT,
+// 	MTL4_COMMAND_WAIT_EVENT,
+// } Mtl4EncodedCommandType;
+
+// typedef struct Mtl4EncodedCommandCommit {
+// 	id<MTL4CommandBuffer> commandBuffer;
+// } Mtl4CommitEncodedCommand;
+
+// typedef struct Mtl4EncodedCommandSignalEvent {
+// 	id<MTLEvent>	event;
+// 	uint64_t	value;
+// } Mtl4EncodedCommandSignalEvent;
+
+// typedef struct Mtl4EncodedCommandWaitEvent {
+// 	id<MTLEvent>	event;
+// 	uint64_t	value;
+// } Mtl4EncodedCommandWaitEvent;
+
+// typedef struct Mtl4EncodedCommand {
+// 	Mtl4EncodedCommandType	type;
+// 	union {
+// 		Mtl4EncodedCommandCommit	commit;
+// 		Mtl4EncodedCommandSignalEvent	signal;
+// 		Mtl4EncodedCommandWaitEvent	wait;
+// 	};
+// } Mtl4EncodedCommand;
+
 // NOTE: Encoding a command encoder is not thread safe: It can happen from any thread, but sequential encoding
 //	is expected. The synchronization is thus expected from the user.
 typedef struct Mtl4CommandBufferMetadata {
+	// // Arena of 512 KB. Allocated from gMlt4CommandBufferStorage.commandBuffersMemoryPool
+	// CmnArena	arena;
+
 	Mtl4CommandBufferStatus	status;
+
+	id<MTL4CommandQueue>		queue;
+	id<MTLSharedEvent>		submitEvent;
+	id<MTL4CommandAllocator>	commandAllocator;
 
 	id<MTL4CommandBuffer>		commandBuffer;
 	id<MTL4ComputeCommandEncoder>	computeEncoder;
 	id<MTL4RenderCommandEncoder>	renderEncoder;
 
-	Mtl4Pipeline	boundPipeline;
-	void*		boundTextureHeap;
+	// NOTE: Enough space for 128 encoded commands
+	// CmnExponentialArray<Mtl4EncodedCommand, 4, 4>	encodedCommands;
 } Mtl4CommandBufferMetadata;
 
 typedef struct Mtl4CommandBufferStorage {
-	CmnPage		arenaPage;
-	CmnPage		poolPage;
+	// CmnPage		commandBufferMemory;
+	// // NOTE: Each command buffer acquires 512 KB for temporary data encoding.
+	// //	The pool consists of slots of 512 KB.
+	// CmnPool		commandBufferMemoryPool;
 
-	CmnArena	arena;
-	CmnAllocator	arenaAllocator;
-	CmnPool		pool;
-	CmnAllocator	poolAllocator;
+	id<MTLSharedEvent>		submitEvents[MTL4_MAX_PARALLEL_COMMANDBUFFER_ENCODINGS];
+	id<MTL4CommandAllocator>	commandAllocators[MTL4_MAX_PARALLEL_COMMANDBUFFER_ENCODINGS];
+	id<MTL4CommandQueue>		queues[MTL4_MAX_PARALLEL_COMMANDBUFFER_ENCODINGS];
 
-	id<MTL4CommandAllocator>	commandAllocator;
+	// Atomic
+	uint64_t submitCount;
 
-	CmnHandleMap	<Mtl4CommandBufferMetadata>	commandBuffers;
-	CmnStorageSync	sync;
+	CmnStaticHandleMap<Mtl4CommandBufferMetadata, MTL4_MAX_PARALLEL_COMMANDBUFFER_ENCODINGS> commandBuffers;
+	CmnRWMutex	commandBuffersMutex;
 } Mtl4CommandBufferStorage;
 extern Mtl4CommandBufferStorage gMtl4CommandBufferStorage;
 
@@ -74,20 +114,22 @@ void mtl4Barrier(GpuCommandBuffer cb, GpuStage before, GpuStage after, GpuHazard
 void mtl4SignalAfter(GpuCommandBuffer cb, GpuStage before, void* ptrGpu, uint64_t value, GpuSignal signal, GpuResult* result);
 void mtl4WaitBefore(GpuCommandBuffer cb, GpuStage after, void* ptrGpu, uint64_t value, GpuOp op, GpuHazardFlags hazards, uint64_t mask, GpuResult* result);
 
-Mtl4CommandBuffer mtl4CreateCommandBuffer(GpuResult* result);
+bool mtl4AcquireResourcesForNewCommandBuffer(Mtl4CommandBuffer* handle, id<MTL4CommandQueue>* queue, id<MTL4CommandAllocator>* mtlAllocator, id<MTLSharedEvent>* submitEvent);
 // NOTE: Requires deletion-lock on gMtl4CommandBufferStorage.sync.
-void mtl4DestroyCommandBuffer(Mtl4CommandBuffer commandBuffer);
+void mtl4ReleaseCommandBufferResources(Mtl4CommandBuffer handle);
 bool mtl4IsCommandBufferScheduledForDeletion(Mtl4CommandBuffer commandBuffer);
+
+void mtl4SubmitSingleBuffer(GpuQueue queue, GpuCommandBuffer commandBuffer, Mtl4SemaphoreMetadata* semaphore, uint64_t value, GpuResult* result);
 
 bool mtl4IsStageCompute(GpuStage stage);
 bool mtl4IsStageRender(GpuStage stage);
 
-bool mtl4CanImposeNormalMtlBarrierBetween(GpuStage before, GpuStage after, GpuHazardFlags hazards);
 MTLStages mtl4GpuToMtlStage(GpuStage stage);
+MTLStages mtl4GpuToMtlComputeStage(GpuStage stage);
+MTLStages mtl4GpuToMtlFragmentStage(GpuStage stage);
 MTL4VisibilityOptions mtl4GpuHazardsToMtlVisibilityOptions(GpuHazardFlags hazards);
 
 Mtl4CommandBufferMetadata* mtl4AcquireCommandBufferMetadataFrom(Mtl4CommandBuffer handle);
-void mtl4ReleaseCommandBufferMetadata(void);
 
 inline Mtl4CommandBuffer mtl4GpuCommandBufferToHandle(GpuCommandBuffer commandBuffer) {
 	return *(Mtl4CommandBuffer*)&commandBuffer;

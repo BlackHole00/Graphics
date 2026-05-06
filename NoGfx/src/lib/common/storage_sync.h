@@ -4,6 +4,7 @@
 #include <lib/common/futex.h>
 #include <lib/common/rw_mutex.h>
 #include <lib/common/handle_map.h>
+#include <lib/common/pointer_map.h>
 
 // State machine used by CmnStorageSync.
 typedef enum CmnStorageSyncState {
@@ -54,6 +55,9 @@ void cmnStorageSyncUnlockRead(CmnStorageSync* sync);
 // Acquires a resource referenced by handle and marks the storage as in-use when valid.
 template <typename T>
 T* cmnStorageSyncAcquireResource(CmnHandleMap<T>* map, CmnStorageSync* sync, CmnHandle handle, bool* wasHandleValid);
+
+template <typename T>
+T* cmnStorageSyncAcquireResource(CmnPointerMap<T>* map, CmnStorageSync* sync, uintptr_t ptr, bool* wasHandleValid);
 
 // Releases a previously acquired resource use marker.
 void cmnStorageSyncReleaseResource(CmnStorageSync* sync);

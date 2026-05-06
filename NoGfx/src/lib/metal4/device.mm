@@ -6,6 +6,19 @@
 #include <lib/metal4/command_buffers.h>
 #include <lib/metal4/fences.h>
 
+static const GpuSignal gMtl4SupportedSignals[] = { GPU_SIGNAL_ATOMIC_MAX };
+static const GpuOp gMtl4SupportedWaitOps[] = { GPU_OP_GREATER_EQUAL };
+
+static const GpuDeviceCapabilites gMtl4CommonDeviceCapabilites = {
+	/*supportedSignals=*/		&gMtl4SupportedSignals[0],
+	/*supportedSignalCount=*/	CMN_COUNT_OF(gMtl4SupportedSignals),
+	/*supportedWaitOps=*/		&gMtl4SupportedWaitOps[0],
+	/*supportedWaitOpCount=*/	CMN_COUNT_OF(gMtl4SupportedWaitOps),
+	/*supportsArbitraryWaitMask=*/	false,
+	/*gpuReadableSignals=*/		true,
+	/*gpuWritableSignals=*/		false,
+};
+
 bool mtl4CheckDeviceSuitability(id<MTLDevice> device) {
 	return device.hasUnifiedMemory &&
 		[device supportsFamily:MTLGPUFamilyMetal4];
@@ -55,6 +68,8 @@ void mtl4PrepareAvailableDevicesList(GpuResult* result) {
 		deviceInfo->identifier = deviceId;
 		// TODO: Apple describes the M-series GPUs as high power, even if they are integrated :*(
 		deviceInfo->type = mtlDevice.isLowPower ? GPU_INTEGRATED : GPU_DEDICATED;
+
+		deviceInfo->capabilities = gMtl4CommonDeviceCapabilites;
 
 		// Keep an owned reference so the device remains valid after the temporary NSArray is released.
 		suitableMtlDevices[deviceId] = [mtlDevice retain];
@@ -117,11 +132,11 @@ void mtl4SelectDevice(GpuDeviceId deviceId, GpuResult* result) {
 		return;
 	}
 
-	mtl4InitFenceStorage(&localResult);
+	mtl4InitEventStorage(&localResult);
 	if (localResult != GPU_SUCCESS) {
 		mtl4FiniPipelineStorage();
 		mtl4FiniCommandBufferStorage();
-		mtl4FiniFenceStorage();
+		mtl4FiniEventStorage();
 
 		CMN_SET_RESULT(result, localResult);
 		return;
