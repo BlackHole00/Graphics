@@ -46,7 +46,7 @@ typedef enum GpuBackend {
 	GPU_NONE = 0,
 	GPU_METAL_4,
 	GPU_VULKAN,
-	// ... 
+	// ...
 } GpuBackend;
 
 typedef enum GpuDeviceType {
@@ -113,13 +113,15 @@ typedef enum GpuStage {
 	GPU_STAGE_PIXEL_SHADER = 0x8,
 	GPU_STAGE_VERTEX_SHADER = 0x10,
 } GpuStage;
+typedef size_t GpuStageFlags; // bitfield of GpuStage
 
-typedef enum GpuHazardFlags {
+typedef enum GpuHazard {
 	GPU_HAZARD_NONE = 0,
 	GPU_HAZARD_DRAW_ARGUMENTS = 0x1,
 	GPU_HAZARD_DESCRIPTORS = 0x2,
 	GPU_HAZARD_DEPTH_STENCIL = 0x4
-} GpuHazardFlags;
+} GpuHazard;
+typedef size_t GpuHazardFlags; // bitfield of GpuHazard
 
 typedef enum GpuOp {
 	GPU_OP_NEVER = 0,
@@ -133,7 +135,7 @@ typedef enum GpuOp {
 } GpuOp;
 
 typedef enum GpuSignal {
-	GPU_SIGNAL_ATOMIC_SET,
+	GPU_SIGNAL_ATOMIC_SET = 0,
 	GPU_SIGNAL_ATOMIC_MAX,
 	GPU_SIGNAL_ATOMIC_OR,
 	// ...
@@ -153,7 +155,21 @@ typedef struct GpuDeviceInfo {
 	const char* name;
 	const char* vendor;
 	GpuDeviceType type;
-	// TODO: device capabilities, limits, etc...
+
+	struct {
+		GpuSignal* supportedSignals;
+		size_t supportedSignalCount;
+
+		GpuOp* supportedWaitOps;
+		size_t supportedWaitOpCount;
+
+		bool supportsArbitraryWaitMask;
+		bool gpuWritableSignals;
+
+		// TODO: more capabilities...
+	} capabilities;
+
+	// TODO: limits...
 } GpuDeviceInfo;
 
 typedef struct GpuTextureDesc { 

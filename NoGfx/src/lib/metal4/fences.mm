@@ -5,84 +5,64 @@
 #include <lib/metal4/context.h>
 #include <lib/metal4/allocation.h>
 
-void mtl4CreateFenceStorage(Mtl4FenceStorage* storage, id<MTL4CommandQueue> queue, GpuResult* result) {
+Mtl4FenceStorage gMtl4FenceStorage;
+
+void mtl4InitFenceStorage(GpuResult* result) {
 	CmnResult localResult;
 
-	*storage = {};
+	gMtl4FenceStorage = {};
 
-	storage->page = cmnCreatePage(1024 * 1024, CMN_PAGE_READABLE | CMN_PAGE_WRITABLE, &localResult);
+	gMtl4FenceStorage.page = cmnCreatePage(1024 * 1024, CMN_PAGE_READABLE | CMN_PAGE_WRITABLE, &localResult);
 	if (localResult != CMN_SUCCESS) {
 		CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
 		return;
 	}
 
-	storage->arena = cmnPageToArena(storage->page);
+	gMtl4FenceStorage.arena = cmnPageToArena(gMtl4FenceStorage.page);
 
-	cmnCreateHandleMap(&storage->fences, cmnArenaAllocator(&storage->arena), {}, nullptr);
+	cmnCreateHandleMap(&gMtl4FenceStorage.fences, cmnArenaAllocator(&gMtl4FenceStorage.arena), {}, nullptr);
 
-	cmnCreateHashMap(&storage->lookup, 1024, {}, cmnHeapAllocator(), &localResult);
+	cmnCreateHashMap(&gMtl4FenceStorage.lookup, 1024, {}, cmnHeapAllocator(), &localResult);
 	if (localResult != CMN_SUCCESS) {
 		CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
 		return;
 	}
 
-	storage->referenceCommandQueue = queue;
+	gMtl4FenceStorage.fenceUploadBuffer = [gMtl4Context.device newBufferWithLength:1024*1024 options:MTLResourceStorageModeShared | MTLResourceCPUCacheModeDefaultCache];
+	gMtl4FenceStorage.fenceUploadBufferSize = 1024 * 1024;
+	gMtl4FenceStorage.fenceUploadBufferUsed = 0;
 
-	storage->allocator = [gMtl4Context.device newCommandAllocator];
-	if (storage->allocator == nil) {
+	if (gMtl4FenceStorage.fenceUploadBuffer == nil) {
 		CMN_SET_RESULT(result, GPU_OUT_OF_GPU_MEMORY);
 		return;
 	}
-
-	storage->gpuPtrUpdateCommands = [gMtl4Context.device newCommandBuffer];
-	if (storage->gpuPtrUpdateCommands == nil) {
-		CMN_SET_RESULT(result, GPU_OUT_OF_GPU_MEMORY);
-		return;
-	}
-
-	[storage->gpuPtrUpdateCommands beginCommandBufferWithAllocator:storage->allocator];
-
-	storage->gpuPtrUpdateEncoder = [storage->gpuPtrUpdateCommands computeCommandEncoder];
-	if (storage->gpuPtrUpdateCommands == nil) {
-		CMN_SET_RESULT(result, GPU_OUT_OF_GPU_MEMORY);
-		return;
-	}
-
-	storage->fenceUploadBuffer = [gMtl4Context.device
-		newBufferWithLength:1024 * 1024
-		options:MTLResourceStorageModeShared | MTLResourceCPUCacheModeDefaultCache];
-	storage->fenceUploadBufferSize = 1024 * 1024;
-	storage->fenceUploadBufferUsed = 0;
-	memset(storage->fenceUploadBuffer.contents, 0xF0, 1024 * 1024);
 
 	CMN_SET_RESULT(result, GPU_SUCCESS);
 	return;
 }
 
-void mtl4DestroyFenceStorage(Mtl4FenceStorage* storage) {
-	cmnDestroyPage(storage->page);
+void mtl4FiniFenceStorage() {
+	cmnDestroyPage(gMtl4FenceStorage.page);
+	[gMtl4FenceStorage.fenceUploadBuffer release];
 
-	[storage->gpuPtrUpdateCommands release];
-	[storage->allocator release];
-
-	*storage = {};
+	gMtl4FenceStorage = {};
 }
 
-Mtl4FenceHandle mtl4FenceHandleFrom(Mtl4FenceStorage* storage, void* gpuPtr, uint64_t value, bool* didFindFence) {
-	CmnScopedStorageSyncLockRead guard(&storage->sync);
+Mtl4FenceHandle mtl4FenceHandleFrom(void* gpuPtr, uint64_t value, bool* didFindFence) {
+	CmnScopedStorageSyncLockRead guard(&gMtl4FenceStorage.sync);
 	
 	Mtl4FenceId fenceId = { gpuPtr, value };
-	return cmnGet(&storage->lookup, fenceId, didFindFence);
+	return cmnGet(&gMtl4FenceStorage.lookup, fenceId, didFindFence);
 }
 
-Mtl4FenceMetadata* mtl4AcquireFenceMetadataFrom(Mtl4FenceStorage* storage, void* gpuPtr, uint64_t value) {
+Mtl4FenceMetadata* mtl4AcquireFenceMetadataFrom(void* gpuPtr, uint64_t value) {
 	bool didFindFence;
-	Mtl4FenceHandle handle = mtl4FenceHandleFrom(storage, gpuPtr, value, &didFindFence);
+	Mtl4FenceHandle handle = mtl4FenceHandleFrom(gpuPtr, value, &didFindFence);
 	if (!didFindFence) {
 		return nullptr;
 	}
 
-	Mtl4FenceMetadata* metadata = cmnStorageSyncAcquireResource(&storage->fences, &storage->sync, handle, &didFindFence);
+	Mtl4FenceMetadata* metadata = cmnStorageSyncAcquireResource(&gMtl4FenceStorage.fences, &gMtl4FenceStorage.sync, handle, &didFindFence);
 	if (!didFindFence) {
 		return nullptr;
 	}
@@ -90,10 +70,10 @@ Mtl4FenceMetadata* mtl4AcquireFenceMetadataFrom(Mtl4FenceStorage* storage, void*
 	return metadata;
 }
 
-Mtl4FenceMetadata* mtl4AcquireOrCreateFenceMetadataFor(Mtl4FenceStorage* storage, void* gpuPtr, uint64_t value, GpuResult* result) {
+Mtl4FenceMetadata* mtl4AcquireOrCreateFenceMetadataFor(void* gpuPtr, uint64_t value, GpuResult* result) {
 	CmnResult localResult;
 
-	Mtl4FenceMetadata* metadata = mtl4AcquireFenceMetadataFrom(storage, gpuPtr, value);
+	Mtl4FenceMetadata* metadata = mtl4AcquireFenceMetadataFrom(gpuPtr, value);
 	if (metadata != nil) {
 		CMN_SET_RESULT(result, GPU_SUCCESS);
 		return metadata;
@@ -101,158 +81,112 @@ Mtl4FenceMetadata* mtl4AcquireOrCreateFenceMetadataFor(Mtl4FenceStorage* storage
 
 	Mtl4FenceMetadata newMetadata;
 
-	newMetadata.gpuPtrUpdatedFence = [gMtl4Context.device newFence];
-	if (newMetadata.gpuPtrUpdatedFence == nil) {
-		CMN_SET_RESULT(result, GPU_OUT_OF_GPU_MEMORY);
-		return metadata;
-	}
+	// newMetadata.gpuPtrUpdatedFence = [gMtl4Context.device newFence];
+	// if (newMetadata.gpuPtrUpdatedFence == nil) {
+	// 	CMN_SET_RESULT(result, GPU_OUT_OF_GPU_MEMORY);
+	// 	return metadata;
+	// }
 
 	newMetadata.computeWriteGpuPtrFence = [gMtl4Context.device newFence];
 	if (newMetadata.computeWriteGpuPtrFence == nil) {
-		[newMetadata.gpuPtrUpdatedFence release];
+		// [newMetadata.gpuPtrUpdatedFence release];
 
 		CMN_SET_RESULT(result, GPU_OUT_OF_GPU_MEMORY);
 		return metadata;
 	}
 
-	newMetadata.renderWriteGpuPtrFence = [gMtl4Context.device newFence];
-	if (newMetadata.renderWriteGpuPtrFence == nil) {
-		[newMetadata.computeWriteGpuPtrFence release];
-		[newMetadata.gpuPtrUpdatedFence release];
+	// newMetadata.renderWriteGpuPtrFence = [gMtl4Context.device newFence];
+	// if (newMetadata.renderWriteGpuPtrFence == nil) {
+	// 	[newMetadata.computeWriteGpuPtrFence release];
+	// 	[newMetadata.gpuPtrUpdatedFence release];
 
-		CMN_SET_RESULT(result, GPU_OUT_OF_GPU_MEMORY);
-		return metadata;
-	}
+	// 	CMN_SET_RESULT(result, GPU_OUT_OF_GPU_MEMORY);
+	// 	return metadata;
+	// }
 
-	CmnScopedStorageSyncLockWrite guard(&storage->sync);
+	CmnScopedStorageSyncLockWrite guard(&gMtl4FenceStorage.sync);
 
 	Mtl4FenceId fenceId = { gpuPtr, value };
 
 	bool containsFence;
-	Mtl4FenceHandle fenceHandle = cmnGet(&storage->lookup, fenceId, &containsFence);
+	Mtl4FenceHandle fenceHandle = cmnGet(&gMtl4FenceStorage.lookup, fenceId, &containsFence);
 	if (containsFence) {
 		// NOTE: Some other thread beated us on time.
 
-		metadata = &cmnGet(&storage->fences, fenceHandle, &containsFence);
+		metadata = &cmnGet(&gMtl4FenceStorage.fences, fenceHandle, &containsFence);
 		assert(containsFence && "Something is horrendously wrong here.");
 
-		cmnStorageSyncMarkAsUsingResources(&storage->sync);
+		cmnStorageSyncMarkAsUsingResources(&gMtl4FenceStorage.sync);
 
-		[newMetadata.gpuPtrUpdatedFence release];
+		// [newMetadata.gpuPtrUpdatedFence release];
 		[newMetadata.computeWriteGpuPtrFence release];
-		[newMetadata.renderWriteGpuPtrFence release];
+		// [newMetadata.renderWriteGpuPtrFence release];
 
 		CMN_SET_RESULT(result, GPU_SUCCESS);
 		return metadata;
 	} else {
-		fenceHandle = cmnInsert(&storage->fences, newMetadata, &localResult);
+		fenceHandle = cmnInsert(&gMtl4FenceStorage.fences, newMetadata, &localResult);
 		if (localResult != CMN_SUCCESS) {
-			[newMetadata.gpuPtrUpdatedFence release];
+			// [newMetadata.gpuPtrUpdatedFence release];
 			[newMetadata.computeWriteGpuPtrFence release];
-			[newMetadata.renderWriteGpuPtrFence release];
+			// [newMetadata.renderWriteGpuPtrFence release];
 
 			CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
 			return metadata;
 		}
 
-		cmnInsert(&storage->lookup, fenceId, fenceHandle, &localResult);
+		cmnInsert(&gMtl4FenceStorage.lookup, fenceId, fenceHandle, &localResult);
 		if (localResult != CMN_SUCCESS) {
-			cmnRemove(&storage->fences, fenceHandle);
+			cmnRemove(&gMtl4FenceStorage.fences, fenceHandle);
 
-			[newMetadata.gpuPtrUpdatedFence release];
+			// [newMetadata.gpuPtrUpdatedFence release];
 			[newMetadata.computeWriteGpuPtrFence release];
-			[newMetadata.renderWriteGpuPtrFence release];
+			// [newMetadata.renderWriteGpuPtrFence release];
 
 			CMN_SET_RESULT(result, GPU_OUT_OF_CPU_MEMORY);
 			return metadata;
 		}
 
-		metadata = &cmnGet(&storage->fences, fenceHandle, &containsFence);
+		metadata = &cmnGet(&gMtl4FenceStorage.fences, fenceHandle, &containsFence);
 		assert(containsFence && "Something is horrendously wrong here.");
 
-		cmnStorageSyncMarkAsUsingResources(&storage->sync);
+		cmnStorageSyncMarkAsUsingResources(&gMtl4FenceStorage.sync);
 
 		CMN_SET_RESULT(result, GPU_SUCCESS)
 		return metadata;
 	}
 }
 
-void mtl4ReleaseFenceMetadata(Mtl4FenceStorage* storage) {
-	cmnStorageSyncReleaseResource(&storage->sync);
+void mtl4ReleaseFenceMetadata(void) {
+	cmnStorageSyncReleaseResource(&gMtl4FenceStorage.sync);
+}
+
+size_t mtl4UploadFenceValue(uint64_t value) {
+	uintptr_t values = (uintptr_t)[gMtl4FenceStorage.fenceUploadBuffer contents];
+
+	size_t valueOffset;
+	for (;;) {
+		valueOffset = cmnAtomicLoad(&gMtl4FenceStorage.fenceUploadBufferUsed);
+		if (valueOffset >= gMtl4FenceStorage.fenceUploadBufferSize) {
+			valueOffset = 0;
+		}
+
+		if (cmnAtomicCompareExchangeStrong<uint64_t>(
+			&gMtl4FenceStorage.fenceUploadBufferUsed,
+			valueOffset,
+			valueOffset + sizeof(uint64_t)
+		)) {
+			break;
+		}
+	}
+
+	uint64_t* valuePtr = (uint64_t*)(values + valueOffset);
+	*valuePtr = value;
+
+	return valueOffset;
 }
 
 void mtl4SignalFence(
-	Mtl4FenceStorage* storage,
-	Mtl4CommandBufferMetadata* commandBuffer,
-	GpuStage after,
-	void* gpuPtr,
-	uint64_t value,
-	GpuResult* result
-) {
-	GpuResult localResult;
-
-	Mtl4FenceMetadata* metadata = mtl4AcquireOrCreateFenceMetadataFor(storage, gpuPtr, value, &localResult);
-	if (localResult != GPU_SUCCESS) {
-		CMN_SET_RESULT(result, localResult);
-		return;
-	}
-	defer (mtl4ReleaseFenceMetadata(storage));
-
-	Mtl4AllocationMetadata* allocation = mtl4AcquireAllocationMetadataFromGpuPtr(gpuPtr);
-	if (allocation == nullptr || !(allocation->internalUsage & MTL4_ALLOCATION_COMMITTED)) {
-		CMN_SET_RESULT(result, GPU_NO_SUCH_ALLOCATION_FOUND);
-		return;
-	}
-	defer (mtl4ReleaseAllocationMetadata());
-
-	MTLStages mtlComputeStages = mtl4GpuToMtlStage(after) & (MTLStageBlit | MTLStageDispatch);
-	MTLStages mtlRenderStages = mtl4GpuToMtlStage(after) & (MTLStageTile | MTLStageFragment | MTLStageVertex);
-
-	if (mtl4IsStageCompute(after)) {
-		[commandBuffer->computeEncoder updateFence:metadata->computeWriteGpuPtrFence afterEncoderStages:mtlComputeStages];
-		[storage->gpuPtrUpdateEncoder waitForFence:metadata->computeWriteGpuPtrFence beforeEncoderStages:MTLStageBlit];
-	}
-	if (mtl4IsStageRender(after)) {
-		[commandBuffer->renderEncoder updateFence:metadata->renderWriteGpuPtrFence afterEncoderStages:mtlRenderStages];
-		[storage->gpuPtrUpdateEncoder waitForFence:metadata->renderWriteGpuPtrFence beforeEncoderStages:MTLStageBlit];
-	}
-
-	// Use current offset before incrementing (ring-buffer allocation).
-	size_t uploadBufferOffset = storage->fenceUploadBufferUsed;
-	storage->fenceUploadBufferUsed += sizeof(uint64_t);
-	if (storage->fenceUploadBufferUsed >= storage->fenceUploadBufferSize) {
-		storage->fenceUploadBufferUsed = 0;
-	}
-		
-	size_t offsetFromBase = mtl4GpuAddressOffsetFromBase(gpuPtr);
-
-	// *(uint64_t*)((uintptr_t)[storage->fenceUploadBuffer contents] + uploadBufferOffset) = value;
-
-	// [storage->gpuPtrUpdateEncoder
-	// 	copyFromBuffer:storage->fenceUploadBuffer
-	// 	sourceOffset:uploadBufferOffset
-	// 	toBuffer:allocation->buffer
-	// 	destinationOffset:offsetFromBase
-	// 	size:sizeof(uint64_t)];
-	[storage->gpuPtrUpdateEncoder
-	 	barrierAfterEncoderStages:MTLStageDispatch | MTLStageBlit | MTLStageAccelerationStructure
-	 	beforeEncoderStages:MTLStageDispatch | MTLStageBlit | MTLStageAccelerationStructure
-	 	visibilityOptions:MTL4VisibilityOptionDevice | MTL4VisibilityOptionResourceAlias];
-	[storage->gpuPtrUpdateEncoder
-		copyFromBuffer:storage->fenceUploadBuffer
-		sourceOffset:0
-		toBuffer:allocation->buffer
-		destinationOffset:0
-		size:allocation->buffer.allocatedSize];
-	[storage->gpuPtrUpdateEncoder
-	 	barrierAfterEncoderStages:MTLStageDispatch | MTLStageBlit | MTLStageAccelerationStructure
-	 	beforeEncoderStages:MTLStageDispatch | MTLStageBlit | MTLStageAccelerationStructure
-	 	visibilityOptions:MTL4VisibilityOptionDevice | MTL4VisibilityOptionResourceAlias];
-	[storage->gpuPtrUpdateEncoder updateFence:metadata->gpuPtrUpdatedFence afterEncoderStages:MTLStageBlit];
-}
-
-void mtl4WaitFence(
-	Mtl4FenceStorage* storage,
 	Mtl4CommandBufferMetadata* commandBuffer,
 	GpuStage before,
 	void* gpuPtr,
@@ -261,47 +195,86 @@ void mtl4WaitFence(
 ) {
 	GpuResult localResult;
 
-	Mtl4FenceMetadata* metadata = mtl4AcquireOrCreateFenceMetadataFor(storage, gpuPtr, value, &localResult);
+	Mtl4FenceMetadata* metadata = mtl4AcquireOrCreateFenceMetadataFor(gpuPtr, value, &localResult);
 	if (localResult != GPU_SUCCESS) {
 		CMN_SET_RESULT(result, localResult);
 		return;
 	}
-	defer (mtl4ReleaseFenceMetadata(storage));
+	defer (mtl4ReleaseFenceMetadata());
 
-	MTLStages mtlComputeStages = mtl4GpuToMtlStage(before) & (MTLStageBlit | MTLStageDispatch);
-	MTLStages mtlRenderStages = mtl4GpuToMtlStage(before) & (MTLStageTile | MTLStageFragment | MTLStageVertex);
-
-	if (mtl4IsStageCompute(before)) {
-		[commandBuffer->computeEncoder waitForFence:metadata->gpuPtrUpdatedFence beforeEncoderStages:mtlComputeStages];
+	Mtl4AllocationMetadata* allocation = mtl4AcquireAllocationMetadataFromGpuPtr(gpuPtr);
+	if (allocation == nullptr) {
+		CMN_SET_RESULT(result, GPU_NO_SUCH_ALLOCATION_FOUND);
+		return;
 	}
-	if (mtl4IsStageRender(before)) {
-		[commandBuffer->renderEncoder waitForFence:metadata->gpuPtrUpdatedFence beforeEncoderStages:mtlRenderStages];
+	defer (mtl4ReleaseAllocationMetadata());
+
+	mtl4EnsureBackingBufferIsAllocated(allocation, &localResult);
+	if (localResult != GPU_SUCCESS) {
+		CMN_SET_RESULT(result, localResult);
+		return;
 	}
 
-	CMN_SET_RESULT(result, GPU_SUCCESS);
+	uintptr_t gpuPtrOffsetFromBase = mtl4GpuAddressOffsetFromBase(gpuPtr);
+
+	MTLStages mtlStages	= mtl4GpuToMtlStage(before);
+
+	size_t fenceUploadValueOffset = mtl4UploadFenceValue(value);
+
+	if ([commandBuffer->computeEncoder stages] != 0) {
+		[commandBuffer->computeEncoder endEncoding];
+		commandBuffer->computeEncoder = [commandBuffer->commandBuffer computeCommandEncoder];
+	}
+
+	[commandBuffer->computeEncoder barrierAfterQueueStages:mtlStages beforeStages:MTLStageBlit visibilityOptions:MTL4VisibilityOptionNone];
+	[commandBuffer->computeEncoder
+		copyFromBuffer:gMtl4FenceStorage.fenceUploadBuffer
+		sourceOffset:fenceUploadValueOffset
+		toBuffer:allocation->buffer
+		destinationOffset:gpuPtrOffsetFromBase
+		size:sizeof(uint64_t)];
+	[commandBuffer->computeEncoder updateFence:metadata->computeWriteGpuPtrFence afterEncoderStages:MTLStageBlit];
+	[commandBuffer->computeEncoder endEncoding];
+
+	commandBuffer->computeEncoder = [commandBuffer->commandBuffer computeCommandEncoder];
+	[commandBuffer->computeEncoder waitForFence:metadata->computeWriteGpuPtrFence beforeEncoderStages:MTLStageBlit];
+	// [commandBuffer->computeEncoder
+	//  	barrierAfterQueueStages:MTLStageBlit
+	//  	beforeStages:MTLStageBlit | MTLStageDispatch | MTLStageAccelerationStructure
+	//  	visibilityOptions:MTL4VisibilityOptionDevice | MTL4VisibilityOptionResourceAlias];
 }
 
-id<MTL4CommandBuffer> mtl4GetGpuUpdatesCommands(Mtl4FenceStorage* storage, GpuResult* result) {
-	[storage->gpuPtrUpdateEncoder endEncoding];
-	[storage->gpuPtrUpdateCommands endCommandBuffer];
+void mtl4WaitFence(
+	Mtl4CommandBufferMetadata* commandBuffer,
+	GpuStage after,
+	void* gpuPtr,
+	uint64_t value,
+	GpuResult* result
+) {
+	GpuResult localResult;
 
-	id<MTL4CommandBuffer> commandBuffer = storage->gpuPtrUpdateCommands;
-
-	storage->gpuPtrUpdateCommands = [gMtl4Context.device newCommandBuffer];
-	if (storage->gpuPtrUpdateCommands == nil) {
-		CMN_SET_RESULT(result, GPU_OUT_OF_GPU_MEMORY);
-		return commandBuffer;
+	Mtl4FenceMetadata* metadata = mtl4AcquireOrCreateFenceMetadataFor(gpuPtr, value, &localResult);
+	if (localResult != GPU_SUCCESS) {
+		CMN_SET_RESULT(result, localResult);
+		return;
 	}
+	defer (mtl4ReleaseFenceMetadata());
 
-	[storage->gpuPtrUpdateCommands beginCommandBufferWithAllocator:storage->allocator];
+	MTLStages mtlComputeStages = mtl4GpuToMtlStage(after) & (MTLStageBlit | MTLStageDispatch);
+	// MTLStages mtlRenderStages = mtl4GpuToMtlStage(after) & (MTLStageTile | MTLStageFragment | MTLStageVertex);
 
-	storage->gpuPtrUpdateEncoder = [storage->gpuPtrUpdateCommands computeCommandEncoder];
-	if (storage->gpuPtrUpdateCommands == nil) {
-		CMN_SET_RESULT(result, GPU_OUT_OF_GPU_MEMORY);
-		return commandBuffer;
+	if (mtl4IsStageCompute(after)) {
+		if ([commandBuffer->computeEncoder stages] != 0) {
+			[commandBuffer->computeEncoder endEncoding];
+			commandBuffer->computeEncoder = [commandBuffer->commandBuffer computeCommandEncoder];
+		}
+
+		[commandBuffer->computeEncoder waitForFence:metadata->computeWriteGpuPtrFence beforeEncoderStages:mtlComputeStages];
 	}
+	// if (mtl4IsStageRender(after)) {
+	// 	[commandBuffer->renderEncoder waitForFence:metadata->gpuPtrUpdatedFence beforeEncoderStages:mtlRenderStages];
+	// }
 
 	CMN_SET_RESULT(result, GPU_SUCCESS);
-	return commandBuffer;
 }
 

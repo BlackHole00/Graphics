@@ -30,6 +30,8 @@ typedef struct {
 	GpuDeviceId	selectedDeviceId;
 
 	// id<MTLBuffer>	frameArena;
+
+	id<MTL4CommandQueue>	queue;
 } Mtl4Context;
 extern Mtl4Context gMtl4Context;
 

@@ -3,44 +3,13 @@
 
 #include <gpu/gpu.h>
 
-#include <lib/common/page.h>
-#include <lib/common/handle_map.h>
-#include <lib/common/rw_mutex.h>
-#include <lib/metal4/fences.h>
-
 #include <Metal/Metal.h>
 
-typedef CmnHandle Mtl4Queue;
-
-typedef struct Mtl4QueueMetadata {
-	id<MTL4CommandQueue>	queue;
-	Mtl4FenceStorage	fences;
-} Mtl4QueueMetadata;
-
-typedef struct Mtl4QueueStorage {
-	CmnPage		page;
-	CmnArena	arena;
-
-	// NOTE: Mtl4Queues are 1:1 matching with MTL4CommandQueues.
-	CmnHandleMap	<Mtl4QueueMetadata>	queues;
-	CmnRWMutex	mutex;
-} Mtl4QueueStorage;
-extern Mtl4QueueStorage gMtl4QueueStorage;
-
-void mtl4InitQueueStorage(GpuResult* result);
-void mtl4FiniQueueStorage(void);
+#define MTL4_QUEUE_HANDLE (GpuQueue)(0x0BADCAFE0BADCAFE)
 
 GpuQueue mtl4CreateQueue(GpuResult* result);
+id<MTL4CommandQueue> mtl4Queue(void);
 
-id<MTL4CommandQueue> mtl4Mtl4QueueOf(Mtl4Queue queue);
-Mtl4FenceStorage* mtl4FenceStorageOf(Mtl4Queue queue);
-
-inline Mtl4Queue mtl4GpuQueueToHandle(GpuQueue queue) {
-	return *(Mtl4Queue*)&queue;
-}
-
-inline GpuQueue mtl4HandleToGpuQueue(Mtl4Queue handle) {
-	return *(GpuQueue*)&handle;
-}
+bool mtl4IsQueueValid(GpuQueue queue);
 
 #endif // MTL4_QUEUE_H

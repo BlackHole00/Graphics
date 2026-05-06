@@ -6,6 +6,7 @@
 #include <lib/metal4/context.h>
 #include <lib/metal4/tables.h>
 #include <lib/metal4/allocation.h>
+#include <lib/metal4/fences.h>
 #include <lib/metal4/semaphores.h>
 
 Mtl4CommandBufferStorage gMtl4CommandBufferStorage;
@@ -57,7 +58,7 @@ void mtl4FiniCommandBufferStorage(void) {
 GpuCommandBuffer mtl4StartCommandEncoding(GpuQueue queue, GpuResult* result) {
 	(void)queue;
 
-	Mtl4CommandBuffer commandBuffer = mtl4CreateCommandBuffer(mtl4GpuQueueToHandle(queue), result);
+	Mtl4CommandBuffer commandBuffer = mtl4CreateCommandBuffer(result);
 	return mtl4HandleToGpuCommandBuffer(commandBuffer);
 }
 
@@ -69,22 +70,13 @@ void mtl4SubmitRaw(
 	uint64_t value,
 	GpuResult* result
 ) {
+	(void)queue;
+
 	CmnResult localResult;
 
-	Mtl4Queue queueHandle = mtl4GpuQueueToHandle(queue);
-	id<MTL4CommandQueue> metalQueue = mtl4Mtl4QueueOf(queueHandle);
-	if (metalQueue == nil) {
-		CMN_SET_RESULT(result, GPU_NO_SUCH_QUEUE_FOUND);
-		return;
-	}
-
-	Mtl4FenceStorage* fenceStorage = mtl4FenceStorageOf(queueHandle);
-	if (fenceStorage == nullptr) {
-		CMN_SET_RESULT(result, GPU_NO_SUCH_QUEUE_FOUND);
-		return;
-	}
-
 	CMN_SET_RESULT(result, GPU_SUCCESS);
+
+	id<MTL4CommandQueue> metalQueue = mtl4Queue();
 
 	// TODO: Switch thread local arena.
 	id<MTL4CommandBuffer>* metalCommandBuffers = cmnHeapAlloc<id<MTL4CommandBuffer>>(commandBufferCount + 1, &localResult);
@@ -369,10 +361,7 @@ void mtl4SignalAfter(GpuCommandBuffer cb, GpuStage before, void* ptrGpu, uint64_
 	}
 	defer (mtl4ReleaseCommandBufferMetadata());
 
-	Mtl4FenceStorage* fenceStorage = mtl4FenceStorageOf(metadata->relatedQueue);
-	assert(fenceStorage != nullptr);
-
-	mtl4SignalFence(fenceStorage, metadata, before, ptrGpu, value, result);
+	mtl4SignalFence(metadata, before, ptrGpu, value, result);
 }
 
 void mtl4WaitBefore(GpuCommandBuffer cb, GpuStage after, void* ptrGpu, uint64_t value, GpuOp op, GpuHazardFlags hazards, uint64_t mask, GpuResult* result) {
@@ -388,18 +377,13 @@ void mtl4WaitBefore(GpuCommandBuffer cb, GpuStage after, void* ptrGpu, uint64_t 
 	}
 	defer (mtl4ReleaseCommandBufferMetadata());
 
-	Mtl4FenceStorage* fenceStorage = mtl4FenceStorageOf(metadata->relatedQueue);
-	assert(fenceStorage != nullptr);
-
-	// mtl4SignalFence(fenceStorage, metadata, after, ptrGpu, value, result);
-	mtl4WaitFence(fenceStorage, metadata, after, ptrGpu, value, result);
+	mtl4WaitFence(metadata, after, ptrGpu, value, result);
 }
 
-Mtl4CommandBuffer mtl4CreateCommandBuffer(Mtl4Queue relatedQueue, GpuResult* result) {
+Mtl4CommandBuffer mtl4CreateCommandBuffer(GpuResult* result) {
 	CmnResult localResult;
 
 	Mtl4CommandBufferMetadata metadata = {};
-	metadata.relatedQueue = relatedQueue;
 
 	metadata.commandBuffer = [gMtl4Context.device newCommandBuffer];
 	if (metadata.commandBuffer == nil) {
@@ -407,7 +391,8 @@ Mtl4CommandBuffer mtl4CreateCommandBuffer(Mtl4Queue relatedQueue, GpuResult* res
 		return {};
 	}
 
-	[metadata.commandBuffer beginCommandBufferWithAllocator:gMtl4CommandBufferStorage.commandAllocator];
+	id<MTL4CommandAllocator> commandAllocator = [gMtl4Context.device newCommandAllocator];
+	[metadata.commandBuffer beginCommandBufferWithAllocator:commandAllocator];
 
 	metadata.computeEncoder = [metadata.commandBuffer computeCommandEncoder];
 	if (metadata.computeEncoder == nil) {

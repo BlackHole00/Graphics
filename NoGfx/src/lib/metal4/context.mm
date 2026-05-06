@@ -57,12 +57,6 @@ void mtl4Init(const GpuInitDesc* desc, GpuResult* result) {
 		goto on_error_cleanup;
 	}
 
-	mtl4InitQueueStorage(&localResult);
-	if (localResult != GPU_SUCCESS) {
-		CMN_SET_RESULT(result, localResult);
-		goto on_error_cleanup;
-	}
-
 	mtl4InitSemaphoreStorage(&localResult);
 	if (localResult != GPU_SUCCESS) {
 		CMN_SET_RESULT(result, localResult);
@@ -91,7 +85,6 @@ void mtl4Deinit(void) {
 	mtl4FiniSemaphoreStorage();
 	mtl4FiniCommandBufferStorage();
 	mtl4FiniPipelineStorage();
-	mtl4FiniQueueStorage();
 	mtl4FiniTextureStorage();
 	mtl4FiniAllocationStorage();
 	mtl4FiniDeletionManager();

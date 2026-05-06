@@ -26,8 +26,6 @@ typedef enum Mtl4CommandBufferStatus {
 typedef struct Mtl4CommandBufferMetadata {
 	Mtl4CommandBufferStatus	status;
 
-	Mtl4Queue			relatedQueue;
-
 	id<MTL4CommandBuffer>		commandBuffer;
 	id<MTL4ComputeCommandEncoder>	computeEncoder;
 	id<MTL4RenderCommandEncoder>	renderEncoder;
@@ -76,7 +74,7 @@ void mtl4Barrier(GpuCommandBuffer cb, GpuStage before, GpuStage after, GpuHazard
 void mtl4SignalAfter(GpuCommandBuffer cb, GpuStage before, void* ptrGpu, uint64_t value, GpuSignal signal, GpuResult* result);
 void mtl4WaitBefore(GpuCommandBuffer cb, GpuStage after, void* ptrGpu, uint64_t value, GpuOp op, GpuHazardFlags hazards, uint64_t mask, GpuResult* result);
 
-Mtl4CommandBuffer mtl4CreateCommandBuffer(Mtl4Queue relatedQueue, GpuResult* result);
+Mtl4CommandBuffer mtl4CreateCommandBuffer(GpuResult* result);
 // NOTE: Requires deletion-lock on gMtl4CommandBufferStorage.sync.
 void mtl4DestroyCommandBuffer(Mtl4CommandBuffer commandBuffer);
 bool mtl4IsCommandBufferScheduledForDeletion(Mtl4CommandBuffer commandBuffer);

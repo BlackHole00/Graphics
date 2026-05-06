@@ -4,6 +4,7 @@
 #include <lib/metal4/allocation.h>
 #include <lib/metal4/pipelines.h>
 #include <lib/metal4/command_buffers.h>
+#include <lib/metal4/fences.h>
 
 bool mtl4CheckDeviceSuitability(id<MTLDevice> device) {
 	return device.hasUnifiedMemory &&
@@ -111,6 +112,16 @@ void mtl4SelectDevice(GpuDeviceId deviceId, GpuResult* result) {
 	if (localResult != GPU_SUCCESS) {
 		mtl4FiniPipelineStorage();
 		mtl4FiniCommandBufferStorage();
+
+		CMN_SET_RESULT(result, localResult);
+		return;
+	}
+
+	mtl4InitFenceStorage(&localResult);
+	if (localResult != GPU_SUCCESS) {
+		mtl4FiniPipelineStorage();
+		mtl4FiniCommandBufferStorage();
+		mtl4FiniFenceStorage();
 
 		CMN_SET_RESULT(result, localResult);
 		return;
