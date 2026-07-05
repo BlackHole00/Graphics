@@ -186,6 +186,32 @@
                 // "MTL_CAPTURE_ENABLED": "1"
             },
             "cwd": "${workspaceFolder}/perf/boids"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Perf_drawcalls",
+            "program": "${workspaceFolder}/perf/drawcalls/drawcalls",
+            "args": [],
+            "env": {
+                "MTL_DEBUG_LAYER": "1",
+                // "MTL_DEBUG_LAYER_WARNING_MODE": "nslog",
+                // "MTL_CAPTURE_ENABLED": "1"
+            },
+            "cwd": "${workspaceFolder}/perf/drawcalls"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Perf_mandelbrot",
+            "program": "${workspaceFolder}/perf/mandelbrot/drawcalls",
+            "args": [],
+            "env": {
+                "MTL_DEBUG_LAYER": "1",
+                // "MTL_DEBUG_LAYER_WARNING_MODE": "nslog",
+                // "MTL_CAPTURE_ENABLED": "1"
+            },
+            "cwd": "${workspaceFolder}/perf/mandelbrot"
         }
     ]
 }

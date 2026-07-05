@@ -68,9 +68,10 @@ struct {
 	GpuSemaphore		presentEvent;
 	long			frameCount;
 
-	FrameTimer		previousFrameWaitTimer;
-	FrameTimer		uploadTimer;
-	FrameTimer		drawTimer;
+	Timer			waitTimer;
+	Timer			uploadTimer;
+	Timer			encodeTimer;
+	Timer			presentTimer;
 } gRenderer;
 
 GpuResult gResult;
@@ -173,17 +174,28 @@ void initRenderer(void) {
 
 	gRenderer.presentEvent = gpuCreateSemaphore(0, &gResult); CHECK_RES();
 
-	frameTimerInit(&gRenderer.previousFrameWaitTimer, "previous frame wait");
-	frameTimerInit(&gRenderer.uploadTimer, "boid data upload");
-	frameTimerInit(&gRenderer.drawTimer, "boid draw");
+	createTimer(&gRenderer.waitTimer, "Wait", "./timings/wait.nogfx.csv", true);
+	createTimer(&gRenderer.uploadTimer, "Upload", "./timings/upload.nogfx.csv", true);
+	createTimer(&gRenderer.encodeTimer, "Encode", "./timings/encode.nogfx.csv", true);
+	createTimer(&gRenderer.presentTimer, "Present", "./timings/present.nogfx.csv", true);
+}
+
+void finiRenderer(void) {
+	destroyTimer(&gRenderer.waitTimer);
+	destroyTimer(&gRenderer.uploadTimer);
+	destroyTimer(&gRenderer.encodeTimer);
+	destroyTimer(&gRenderer.presentTimer);
 }
 
 void draw(void) {
-	double previousFrameWaitStart = frameTimerNowSeconds();
-	if (gRenderer.frameCount > 3) {
+	startTimer(&gRenderer.waitTimer);
+	// if (gRenderer.frameCount > 3) {
+	// 	gpuWaitSemaphore(gRenderer.presentEvent, gRenderer.frameCount, &gResult); CHECK_RES();
+	// }
+	if (gRenderer.frameCount > 1) {
 		gpuWaitSemaphore(gRenderer.presentEvent, gRenderer.frameCount, &gResult); CHECK_RES();
 	}
-	frameTimerRecord(&gRenderer.previousFrameWaitTimer, frameTimerNowSeconds() - previousFrameWaitStart);
+	stopTimer(&gRenderer.waitTimer);
 
 	int frameId = gRenderer.frameCount % 3;
 
@@ -192,17 +204,17 @@ void draw(void) {
 
 
 	GpuBoid* gpuBoids = (GpuBoid*)gRenderer.boids[frameId].cpu;
-	double uploadStart = frameTimerNowSeconds();
+	startTimer(&gRenderer.uploadTimer);
 	for (int i = 0; i < gState.boidCount; i++) {
 		gpuBoids[i][0] = gState.boids[i].x;
 		gpuBoids[i][1] = gState.boids[i].y;
 		gpuBoids[i][2] = gState.boids[i].dx;
 		gpuBoids[i][3] = gState.boids[i].dy;
 	}
-	frameTimerRecord(&gRenderer.uploadTimer, frameTimerNowSeconds() - uploadStart);
+	stopTimer(&gRenderer.uploadTimer);
 
 
-	double drawStart = frameTimerNowSeconds();
+	startTimer(&gRenderer.encodeTimer);
 	GpuCommandBuffer commandBuffer = gpuStartCommandEncoding(gRenderer.queue, &gResult); CHECK_RES();
 
 	GpuRenderTarget surfaceTarget = {};
@@ -228,13 +240,11 @@ void draw(void) {
 	gpuEndRenderPass(commandBuffer, &gResult); CHECK_RES();
 
 	gpuSubmitWithSignal(gRenderer.queue, &commandBuffer, 1, gRenderer.presentEvent, ++gRenderer.frameCount, &gResult); CHECK_RES();
+	stopTimer(&gRenderer.encodeTimer);
+
+	startTimer(&gRenderer.presentTimer);
 	gpuPresent(gRenderer.queue, gRenderer.surface, &gResult); CHECK_RES();
-
-	frameTimerRecord(&gRenderer.drawTimer, frameTimerNowSeconds() - drawStart);
-
-	frameTimerPrintAndReset(&gRenderer.previousFrameWaitTimer);
-	frameTimerPrintAndReset(&gRenderer.uploadTimer);
-	frameTimerPrintAndReset(&gRenderer.drawTimer);
+	stopTimer(&gRenderer.presentTimer);
 }
 
 #endif

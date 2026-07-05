@@ -6,16 +6,6 @@
 #include <Metal/Metal.h>
 #include <QuartzCore/QuartzCore.h>
 
-typedef float Vertex[2];
-
-typedef float GpuBoid[4];
-
-const Vertex BOID_VERTICES[] = {
-	{ -5, -5 },
-	{  5, -5 },
-	{  0,  5 }
-};
-
 uint8_t* readEntireFile(const char* file, size_t* fileLength) {
 	FILE* handle = fopen(file, "rb");
 	if (handle == NULL) {
@@ -37,6 +27,22 @@ uint8_t* readEntireFile(const char* file, size_t* fileLength) {
 	return buffer;
 }
 
+typedef struct {
+	id<MTLBuffer>		buffer;
+	size_t			offset;
+	void*			cpu;
+	uintptr_t		gpu;
+} MTLAllocation;
+
+typedef struct {
+	id<MTLHeap>		heap;
+	id<MTLBuffer>		buffer;
+	MTLResourceOptions	resourceOptions;
+	size_t			size;
+	size_t			offset;
+	uintptr_t		cpu;
+	uintptr_t		gpu;
+} MTLBumpAllocator;
 
 struct {
 	NSView*			view;
@@ -49,8 +55,9 @@ struct {
 	id<MTL4ArgumentTable>	argumentTable;
 
 	id<MTLResidencySet>	residencySet;
-	id<MTLHeap>		heap;
-	id<MTLBuffer>		boids[3];
+	MTLBumpAllocator	bumpAllocator;
+	id<MTLHeap>		privateHeap;
+
 	id<MTLBuffer>		vertices;
 
 	id<MTLRenderPipelineState>	renderPSO;
@@ -61,23 +68,72 @@ struct {
 	long			frameCount;
 
 	Timer			waitTimer;
-	Timer			uploadTimer;
 	Timer			encodeTimer;
 	Timer			presentTimer;
 } gRenderer;
 
-void finiRenderer(void) {
-	destroyTimer(&gRenderer.waitTimer);
-	destroyTimer(&gRenderer.uploadTimer);
-	destroyTimer(&gRenderer.encodeTimer);
-	destroyTimer(&gRenderer.presentTimer);
+
+void MTLCreateBump(MTLBumpAllocator* allocator, size_t size, MTLResourceOptions options) {
+	MTLHeapDescriptor* heapDesc = [[MTLHeapDescriptor new] autorelease];
+	heapDesc.resourceOptions = options;
+	heapDesc.type = MTLHeapTypePlacement;
+	heapDesc.size = size;
+
+	allocator->heap = [gRenderer.device newHeapWithDescriptor:heapDesc];
+	allocator->offset = 0;
+	allocator->size = size;
+
+	allocator->buffer	= [allocator->heap newBufferWithLength:16 options:options offset:0];
+	allocator->gpu		= [allocator->buffer gpuAddress];
+	allocator->cpu	= (uintptr_t)[allocator->buffer contents];
+}
+
+MTLAllocation MTLBumpAlloc(MTLBumpAllocator* allocator, size_t bytes) {
+	if (allocator->offset + bytes >= allocator->size) {
+		allocator->offset = 0;
+	}
+
+	MTLAllocation alloc;
+	alloc.cpu = allocator->cpu ? (void*)(allocator->cpu + allocator->offset) : 0;
+	alloc.gpu = allocator->gpu + allocator->offset;
+	alloc.buffer = allocator->buffer;
+	alloc.offset = allocator->offset;
+
+	allocator->offset += bytes;
+
+	return alloc;
+}
+
+MTLAllocation MTLBumpAllocAligned(MTLBumpAllocator* allocator, size_t bytes, size_t align) {
+	if (align == 0) {
+		align = 1;
+	}
+
+	if (allocator->offset + bytes >= allocator->size) {
+		allocator->offset = 0;
+	}
+
+	size_t mask = align - 1;
+	size_t alignedOffset = (allocator->offset + mask) & ~mask;
+
+	MTLAllocation alloc;
+	alloc.cpu = allocator->cpu ? (void*)(allocator->cpu + alignedOffset) : 0;
+	alloc.gpu = allocator->gpu + alignedOffset;
+	alloc.buffer = allocator->buffer;
+	alloc.offset = alignedOffset;
+
+	allocator->offset += bytes;
+
+	return alloc;
 }
 
 void initRenderer(void) { @autoreleasepool {
-	createTimer(&gRenderer.waitTimer, "Wait", "./timings/wait.metal.csv", true);
-	createTimer(&gRenderer.uploadTimer, "Upload", "./timings/upload.metal.csv", true);
-	createTimer(&gRenderer.encodeTimer, "Encode", "./timings/encode.metal.csv", true);
-	createTimer(&gRenderer.presentTimer, "Present", "./timings/present.metal.csv", true);
+	printf("Using Metal 4 rendererer.\n");
+
+	createTimer(&gRenderer.waitTimer, "Wait", "./timings/wait.metal4.csv", false);
+	createTimer(&gRenderer.encodeTimer, "Encode", "./timings/encode.metal4.csv", false);
+	createTimer(&gRenderer.presentTimer, "Present", "./timings/present.metal4.csv", false);
+
 
 	gRenderer.device = MTLCreateSystemDefaultDevice();
 
@@ -94,20 +150,14 @@ void initRenderer(void) { @autoreleasepool {
 
 
 	MTLHeapDescriptor* heapDesc = [[MTLHeapDescriptor new] autorelease];
-	heapDesc.size = sizeof(GpuBoid) * BOID_PRESERVE * 4;
-	heapDesc.resourceOptions = MTLResourceStorageModeShared | MTLResourceHazardTrackingModeTracked;
+	heapDesc.size = 1024 * 16;
+	heapDesc.resourceOptions = MTLResourceStorageModePrivate | MTLResourceHazardTrackingModeTracked;
 
-	gRenderer.heap = [gRenderer.device newHeapWithDescriptor:heapDesc];
+	gRenderer.privateHeap = [gRenderer.device newHeapWithDescriptor:heapDesc];
 
-	gRenderer.boids[0] = [gRenderer.heap newBufferWithLength:sizeof(GpuBoid) * BOID_PRESERVE options:MTLResourceStorageModeShared | MTLResourceHazardTrackingModeTracked];
-	gRenderer.boids[1] = [gRenderer.heap newBufferWithLength:sizeof(GpuBoid) * BOID_PRESERVE options:MTLResourceStorageModeShared | MTLResourceHazardTrackingModeTracked];
-	gRenderer.boids[2] = [gRenderer.heap newBufferWithLength:sizeof(GpuBoid) * BOID_PRESERVE options:MTLResourceStorageModeShared | MTLResourceHazardTrackingModeTracked];
+	MTLCreateBump(&gRenderer.bumpAllocator, 1024 * 1024 * 16, MTLResourceStorageModeShared | MTLResourceHazardTrackingModeTracked);
 
-	gRenderer.vertices = [gRenderer.heap newBufferWithLength:sizeof(Vertex) * 3 options:MTLResourceStorageModeShared | MTLResourceHazardTrackingModeTracked];
-	memcpy([gRenderer.vertices contents], &BOID_VERTICES[0], sizeof(Vertex) * 3);
-
-	assert(gRenderer.boids[0] != NULL && gRenderer.boids[1] != NULL && gRenderer.boids[2] != NULL && gRenderer.vertices != NULL);
-
+	gRenderer.vertices = [gRenderer.privateHeap newBufferWithLength:sizeof(Vertex) * 3 options:MTLResourceStorageModePrivate | MTLResourceHazardTrackingModeTracked];
 
 	gRenderer.commandAllocator = [gRenderer.device newCommandAllocator];
 
@@ -116,10 +166,11 @@ void initRenderer(void) { @autoreleasepool {
 	gRenderer.compiler = [gRenderer.device newCompilerWithDescriptor:compilerDesc error:nil];
 
 	size_t irSize;
-	uint8_t* ir = readEntireFile("boids.metallib", &irSize);
+	uint8_t* ir = readEntireFile("./triangle.metallib", &irSize);
 
 	dispatch_data_t data = dispatch_data_create(ir, irSize, dispatch_get_main_queue(), NULL);
 	id<MTLLibrary> library = [gRenderer.device newLibraryWithData:data error:nil];
+	assert(library != NULL);
 
 	MTL4LibraryFunctionDescriptor* vertexBaseFunction = [[MTL4LibraryFunctionDescriptor new] autorelease];
 	vertexBaseFunction.name = @"vertexMain";
@@ -151,7 +202,8 @@ void initRenderer(void) { @autoreleasepool {
 	residencySetDesc.initialCapacity = 1;
 
 	gRenderer.residencySet = [gRenderer.device newResidencySetWithDescriptor:residencySetDesc error:nil];
-	[gRenderer.residencySet addAllocation:gRenderer.heap];
+	[gRenderer.residencySet addAllocation:gRenderer.privateHeap];
+	[gRenderer.residencySet addAllocation:gRenderer.bumpAllocator.heap];
 	[gRenderer.residencySet commit];
 
 
@@ -168,35 +220,39 @@ void initRenderer(void) { @autoreleasepool {
 
 	gRenderer.presentEvent = [gRenderer.device newSharedEvent];
 	gRenderer.presentEvent.signaledValue = 0;
+
+
+	id<MTLSharedEvent> setupDoneEvent = [[gRenderer.device newSharedEvent] autorelease];
+
+
+	MTLAllocation vertexUpload = MTLBumpAlloc(&gRenderer.bumpAllocator, sizeof(TRIANGLE_VERTICES));
+	memcpy(vertexUpload.cpu, &TRIANGLE_VERTICES[0], sizeof(TRIANGLE_VERTICES));
+
+	id<MTL4CommandBuffer> uploadCb = [[gRenderer.device newCommandBuffer] autorelease];
+	[uploadCb beginCommandBufferWithAllocator:gRenderer.commandAllocator];
+
+	id<MTL4ComputeCommandEncoder> compute = [uploadCb computeCommandEncoder];
+	[compute copyFromBuffer:vertexUpload.buffer sourceOffset:vertexUpload.offset toBuffer:gRenderer.vertices destinationOffset:0 size:sizeof(TRIANGLE_VERTICES)];
+	[compute endEncoding];
+
+	[uploadCb endCommandBuffer];
+
+	[gRenderer.queue commit:&uploadCb count:1];
+	[gRenderer.queue signalEvent:setupDoneEvent value:1];
+	[setupDoneEvent waitUntilSignaledValue:1 timeoutMS:-1];
 }}
+
+void finiRenderer() {}
 
 void draw(void) { @autoreleasepool {
 	startTimer(&gRenderer.waitTimer);
-	// if (gRenderer.frameCount > 3) {
-	// 	[gRenderer.presentEvent waitUntilSignaledValue:gRenderer.frameCount timeoutMS:-1];
-	// }
-	if (gRenderer.frameCount > 1) {
+	if (gRenderer.frameCount > 3) {
 		[gRenderer.presentEvent waitUntilSignaledValue:gRenderer.frameCount timeoutMS:-1];
 	}
-	stopTimer(&gRenderer.waitTimer);
+	stopTimerF(&gRenderer.waitTimer, ",%lld", gState.activeTriangles);
 
-	int frameId = gRenderer.frameCount % 3;
 
 	id<CAMetalDrawable> drawable = [gRenderer.layer nextDrawable];
-
-	GpuBoid* gpuBoids = (GpuBoid*)[gRenderer.boids[frameId] contents];
-	startTimer(&gRenderer.uploadTimer);
-	for (int i = 0; i < gState.boidCount; i++) {
-		gpuBoids[i][0] = gState.boids[i].x;
-		gpuBoids[i][1] = gState.boids[i].y;
-		gpuBoids[i][2] = gState.boids[i].dx;
-		gpuBoids[i][3] = gState.boids[i].dy;
-	}
-	stopTimer(&gRenderer.uploadTimer);
-
-	startTimer(&gRenderer.encodeTimer);
-	id<MTL4CommandBuffer> commandBuffer = [[gRenderer.device newCommandBuffer] autorelease];
-	[commandBuffer beginCommandBufferWithAllocator:gRenderer.commandAllocator];
 
 	MTL4RenderPassDescriptor* renderPassDesc = [[MTL4RenderPassDescriptor new] autorelease];
 	renderPassDesc.colorAttachments[0].texture = drawable.texture;
@@ -204,14 +260,26 @@ void draw(void) { @autoreleasepool {
 	renderPassDesc.colorAttachments[0].loadAction = MTLLoadActionClear;
 	renderPassDesc.colorAttachments[0].storeAction = MTLStoreActionStore;
 
+
+	startTimer(&gRenderer.encodeTimer);
+
+	[gRenderer.commandAllocator reset];
+	id<MTL4CommandBuffer> commandBuffer = [[gRenderer.device newCommandBuffer] autorelease];
+	[commandBuffer beginCommandBufferWithAllocator:gRenderer.commandAllocator];
+
 	id<MTL4RenderCommandEncoder> renderpass = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDesc];
 
-	[gRenderer.argumentTable setAddress:[gRenderer.boids[frameId] gpuAddress] atIndex:0];
-	[gRenderer.argumentTable setAddress:[gRenderer.vertices gpuAddress] atIndex:1];
-
-	[renderpass setArgumentTable:gRenderer.argumentTable atStages:MTLRenderStageVertex];
 	[renderpass setRenderPipelineState:gRenderer.renderPSO];
-	[renderpass drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3 instanceCount:gState.boidCount];
+	for (int i = 0; i < gState.activeTriangles; i++) {
+		MTLAllocation drawArgs = MTLBumpAlloc(&gRenderer.bumpAllocator, sizeof(Position2));
+		*(Position2*)drawArgs.cpu = gState.triangles[i];
+
+		[gRenderer.argumentTable setAddress:drawArgs.gpu atIndex:0];
+		[gRenderer.argumentTable setAddress:[gRenderer.vertices gpuAddress] atIndex:1];
+
+		[renderpass setArgumentTable:gRenderer.argumentTable atStages:MTLRenderStageVertex];
+		[renderpass drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3 instanceCount:1];
+	}
 
 	[renderpass endEncoding];
 
@@ -220,12 +288,12 @@ void draw(void) { @autoreleasepool {
 	[gRenderer.queue waitForDrawable:drawable];
 	[gRenderer.queue commit:&commandBuffer count: 1];
 	[gRenderer.queue signalEvent:gRenderer.presentEvent value:++gRenderer.frameCount];
-	stopTimer(&gRenderer.encodeTimer);
+	stopTimerF(&gRenderer.encodeTimer, ",%lld", gState.activeTriangles);
 
 	startTimer(&gRenderer.presentTimer);
 	[gRenderer.queue signalDrawable:drawable];
 	[drawable present];
-	stopTimer(&gRenderer.presentTimer);
+	stopTimerF(&gRenderer.presentTimer, ",%lld", gState.activeTriangles);
 } }
 
 #endif

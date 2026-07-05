@@ -60,7 +60,7 @@ void stopTimerF(Timer* timer, const char* fmt, ...) {
 	fprintf(timer->outputFile, "\n");
 
 	if (timer->printToStdout) {
-		printf("%s: %lld - %lld ns\n", timer->name, timer->measureCount, elapsed);
+		printf("%s: %lld - %lld ns", timer->name, timer->measureCount, elapsed);
 		vprintf(fmt, args);
 		printf("\n");
 	}

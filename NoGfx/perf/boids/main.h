@@ -10,7 +10,7 @@
 #include "timer.h"
 
 #define BOID_PRESERVE 1024 * 512
-#define BOID_COUNT 1024 * 3
+#define BOID_COUNT 1024 * 2
 #define WINDOW_WIDTH 640
 #define WINDOW_HEIGHT 480
 
@@ -36,6 +36,9 @@ typedef struct {
 
 	Boid* boids;
 	int boidCount;
-	FrameTimer updateTimer;
+
+	Timer updateTimer;
+
+	int frameCount;
 } State;
 extern State gState;

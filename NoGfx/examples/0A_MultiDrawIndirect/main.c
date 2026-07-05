@@ -69,7 +69,7 @@ typedef struct GpuBumpAllocator {
 	uint32_t	offset;
 } GpuBumpAllocator;
 
-void createGpuBumpAllocator(GpuBumpAllocator* allocator, size_t size, GpuMemory memory) {
+void gpuCreateBump(GpuBumpAllocator* allocator, size_t size, GpuMemory memory) {
 	allocator->cpu = (uint8_t*)gpuMalloc(size, 16, memory, NULL);
 	allocator->gpu = (uint8_t*)gpuHostToDevicePointer(allocator->cpu, NULL);
 	allocator->offset = 0;
@@ -97,7 +97,7 @@ typedef struct GpuArena {
 	size_t		offset;
 } GpuArena;
 
-void createGpuArena(GpuArena* arena, size_t size, GpuMemory memory) {
+void gpuCreateArena(GpuArena* arena, size_t size, GpuMemory memory) {
 	if (memory == GPU_MEMORY_GPU) {
 		arena->cpu = 0;
 		arena->gpu = (uint8_t*)gpuMalloc(size, 16, GPU_MEMORY_GPU, NULL);
@@ -239,9 +239,9 @@ void init(void) {
 		exit(-1);
 	}
 
-	createGpuBumpAllocator(&gGpuContext.bump, 16 * 1024 * 1024, GPU_MEMORY_DEFAULT);
-	createGpuArena(&gGpuContext.gpuArena, 16 * 1024 * 1024, GPU_MEMORY_GPU);
-	createGpuArena(&gGpuContext.cpuArena, 16 * 1024 * 1024, GPU_MEMORY_DEFAULT);
+	gpuCreateBump(&gGpuContext.bump, 16 * 1024 * 1024, GPU_MEMORY_DEFAULT);
+	gpuCreateArena(&gGpuContext.gpuArena, 16 * 1024 * 1024, GPU_MEMORY_GPU);
+	gpuCreateArena(&gGpuContext.cpuArena, 16 * 1024 * 1024, GPU_MEMORY_DEFAULT);
 }
 
 void initBuffers(void) {

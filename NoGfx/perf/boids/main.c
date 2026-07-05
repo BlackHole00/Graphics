@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <mach/mach.h>
+#include <mach/thread_policy.h>
 
 #include "main.h"
 #include "renderer.h"
@@ -118,19 +120,21 @@ void init(void) {
 		initBoid(&gState.boids[i]);
 	}
 
-	frameTimerInit(&gState.updateTimer, "boid update");
+	createTimer(&gState.updateTimer, "boid update", "./timings/logic.csv", true);
 
 	initRenderer();
 }
 
 void fini(void) {
+	finiRenderer();
+
 	free(gState.boids);
 
 	RGFW_deinit();
 }
 
 void tick(void) {
-	double updateStart = frameTimerNowSeconds();
+	startTimer(&gState.updateTimer);
 	for (int i = 0; i < gState.boidCount; i++) {
 		Boid* boid = &gState.boids[i];
 
@@ -143,11 +147,24 @@ void tick(void) {
 		boid->x += boid->dx;
 		boid->y += boid->dy;
 	}
-	frameTimerRecord(&gState.updateTimer, frameTimerNowSeconds() - updateStart);
-	frameTimerPrintAndReset(&gState.updateTimer);
+	stopTimer(&gState.updateTimer);
+
+	gState.frameCount++;
+	if (gState.frameCount == 5301) {
+		RGFW_window_setShouldClose(gState.window, true);
+	}
 }
 
 int main(void) {
+	thread_extended_policy_data_t extendedPolicy = {};
+	extendedPolicy.timeshare = 0;
+	thread_policy_set(
+		mach_thread_self(),
+		THREAD_EXTENDED_POLICY,
+		(thread_policy_t)&extendedPolicy,
+		THREAD_EXTENDED_POLICY_COUNT
+	);
+
 	init();
 
 	RGFW_window_show(gState.window);
