@@ -264,11 +264,10 @@ void draw(void) { @autoreleasepool {
 
 	id<CAMetalDrawable> drawable = [gRenderer.layer nextDrawable];
 
-	// [gRenderer.commandAllocator reset];
+	startTimer(&gRenderer.encodeTimer);
 	id<MTL4CommandBuffer> commandBuffer = [[gRenderer.device newCommandBuffer] autorelease];
 	[commandBuffer beginCommandBufferWithAllocator:gRenderer.commandAllocator];
 
-	startTimer(&gRenderer.encodeTimer);
 	MTL4RenderPassDescriptor* renderPassDesc = [[MTL4RenderPassDescriptor new] autorelease];
 	renderPassDesc.colorAttachments[0].texture = drawable.texture;
 	renderPassDesc.colorAttachments[0].clearColor = MTLClearColorMake(0.2, 0.1, 1.5, 0.0);
@@ -297,53 +296,6 @@ void draw(void) { @autoreleasepool {
 	[gRenderer.queue signalDrawable:drawable];
 	[drawable present];
 	stopTimer(&gRenderer.presentTimer);
-
-	// startTimer(&gRenderer.waitTimer);
-	// if (gRenderer.frameCount > 1) {
-	// 	[gRenderer.presentEvent waitUntilSignaledValue:gRenderer.frameCount timeoutMS:-1];
-	// }
-	// stopTimer(&gRenderer.waitTimer);
-
-
-	// id<CAMetalDrawable> drawable = [gRenderer.layer nextDrawable];
-
-
-	// id<MTL4CommandBuffer> commandBuffer = [[gRenderer.device newCommandBuffer] autorelease];
-	// [commandBuffer beginCommandBufferWithAllocator:gRenderer.commandAllocator];
-
-	// startTimer(&gRenderer.encodeTimer);
-	// MTL4RenderPassDescriptor* renderPassDesc = [[MTL4RenderPassDescriptor new] autorelease];
-	// renderPassDesc.colorAttachments[0].texture = drawable.texture;
-	// renderPassDesc.colorAttachments[0].clearColor = MTLClearColorMake(0.2, 0.1, 0.15, 1.0);
-	// renderPassDesc.colorAttachments[0].loadAction = MTLLoadActionClear;
-	// renderPassDesc.colorAttachments[0].storeAction = MTLStoreActionStore;
-
-	// id<MTL4RenderCommandEncoder> renderpass = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDesc];
-
-	// [renderpass setRenderPipelineState:gRenderer.renderPSO];
-	// MTLAllocation drawArgs = MTLBumpAlloc(&gRenderer.bumpAllocator, sizeof(Position2));
-	// *(float*)drawArgs.cpu = gState.frameCount / 100.0;
-
-	// [gRenderer.vertexArgumentTable setAddress:[gRenderer.vertices gpuAddress] atIndex:0];
-	// [gRenderer.fragmentArgumentTable setAddress:drawArgs.gpu atIndex:0];
-
-	// [renderpass setArgumentTable:gRenderer.vertexArgumentTable atStages:MTLRenderStageVertex];
-	// // [renderpass setArgumentTable:gRenderer.fragmentArgumentTable atStages:MTLRenderStageFragment];
-	// [renderpass drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3 instanceCount:1];
-
-	// [renderpass endEncoding];
-
-	// [commandBuffer endCommandBuffer];
-	// stopTimer(&gRenderer.encodeTimer);
-
-	// [gRenderer.queue waitForDrawable:drawable];
-	// [gRenderer.queue commit:&commandBuffer count: 1];
-	// [gRenderer.queue signalEvent:gRenderer.presentEvent value:++gRenderer.frameCount];
-
-	// startTimer(&gRenderer.presentTimer);
-	// // [gRenderer.queue signalDrawable:drawable];
-	// [drawable present];
-	// stopTimer(&gRenderer.presentTimer);
 } }
 
 #endif

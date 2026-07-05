@@ -84,10 +84,10 @@ void draw(void) { @autoreleasepool {
 	renderPassDesc.colorAttachments[0].loadAction = MTLLoadActionClear;
 	renderPassDesc.colorAttachments[0].storeAction = MTLStoreActionStore;
 
+	startTimer(&gRenderer.encodeTimer);
+
 	id<MTL4CommandBuffer> commandBuffer = [[gRenderer.device newCommandBuffer] autorelease];
 	[commandBuffer beginCommandBufferWithAllocator:gRenderer.commandAllocator];
-
-	startTimer(&gRenderer.encodeTimer);
 
 	id<MTL4RenderCommandEncoder> renderpass = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDesc];
 	[renderpass endEncoding];

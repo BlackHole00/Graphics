@@ -263,7 +263,6 @@ void draw(void) { @autoreleasepool {
 
 	startTimer(&gRenderer.encodeTimer);
 
-	[gRenderer.commandAllocator reset];
 	id<MTL4CommandBuffer> commandBuffer = [[gRenderer.device newCommandBuffer] autorelease];
 	[commandBuffer beginCommandBufferWithAllocator:gRenderer.commandAllocator];
 
