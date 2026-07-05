@@ -17,10 +17,6 @@ enum WaitOp : uint {
 };
 
 struct WaitTask {
-	// An atomically increasing number. Every time it changes triggers a check for the thread to exit.
-	device atomic_uint*	signalSeq;
-	// The first number we need to wait before starting to checking for the thread to exit.
-	uint			initialSignalSeq;
 	// The location of the signal.
 	device atomic_uint*	signalNumber;
 	// The user wait number.
@@ -36,20 +32,7 @@ kernel void waitFor(
 		return;
 	}
 
-	uint waitingForSignalSeq = waitTask.initialSignalSeq + 1;
-
 	for (;;) {
-		uint currentSignalSeq;
-		for (;;) {
-			currentSignalSeq = atomic_load_explicit(waitTask.signalSeq, memory_order_relaxed);
-			if (currentSignalSeq >= waitingForSignalSeq) {
-				waitingForSignalSeq = currentSignalSeq + 1;
-				break;
-			}
-
-			atomic_thread_fence(mem_flags::mem_device, memory_order_seq_cst);
-		}
-
 		uint currentSignalNumber = atomic_load_explicit(waitTask.signalNumber, memory_order_relaxed);
 
 		switch ((WaitOp)waitOp) {
@@ -96,6 +79,8 @@ kernel void waitFor(
 					return;
 			}
 		}
+
+		atomic_thread_fence(mem_flags::mem_device, memory_order_seq_cst);
 	}
 }
 

@@ -12,7 +12,6 @@ enum SignalOp {
 };
 
 struct SignalTask {
-	device atomic_int*  signalSeq;
 	device atomic_uint*    signalNumber;
 	uint value;
 };
@@ -40,10 +39,8 @@ kernel void signalValue(
 			break;
 		}
 	}
-    
-	atomic_thread_fence(mem_flags::mem_device, memory_order_seq_cst);
 
-	atomic_fetch_add_explicit(task->signalSeq, 1, memory_order_relaxed);
+	atomic_thread_fence(mem_flags::mem_device, memory_order_seq_cst);
 }
 
 )msl";

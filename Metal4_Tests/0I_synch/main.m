@@ -160,26 +160,19 @@ void prepareSignalPipelines(id<MTLDevice> device, id<MTL4Compiler> compiler) {
 }
 
 struct WaitTask {
-	uintptr_t	signalSeq;
-	uint32_t	initialSignalSeq;
 	uintptr_t	signalNumber;
 	uint32_t	waitSignalNumber;
 };
 
 struct SignalTask {
-	uintptr_t	signalSeq;
 	uintptr_t	signalNumber;
 	uint		value;
 };
 
-uint32_t	currentSeq;
-id<MTLBuffer>	seqBuffer;
 id<MTLBuffer>	signalBuffer;
 
 void gpuWait(id<MTLDevice> device, id<MTL4ComputeCommandEncoder> computeEncoder, uint32_t value, enum WaitOp waitOp) {
 	struct WaitTask task;
-	task.signalSeq		= seqBuffer.gpuAddress;
-	task.initialSignalSeq	= *(uint32_t*)signalBuffer.contents;
 	task.signalNumber	= signalBuffer.gpuAddress;
 	task.waitSignalNumber	= value;
 
@@ -203,7 +196,6 @@ void gpuWait(id<MTLDevice> device, id<MTL4ComputeCommandEncoder> computeEncoder,
 
 void gpuSignal(id<MTLDevice> device, id<MTL4ComputeCommandEncoder> computeEncoder, uint32_t value, enum SignalOp signalOp) {
 	struct SignalTask task;
-	task.signalSeq		= seqBuffer.gpuAddress;
 	task.signalNumber	= signalBuffer.gpuAddress;
 	task.value		= value;
 
@@ -217,9 +209,9 @@ void gpuSignal(id<MTLDevice> device, id<MTL4ComputeCommandEncoder> computeEncode
 	id<MTL4ArgumentTable> arguments = [device newArgumentTableWithDescriptor:argumentsDesc error:nil];
 	[arguments setAddress:taskBuffer.gpuAddress atIndex:0];
 
-	// [computeEncoder barrierAfterEncoderStages:MTLStageBlit | MTLStageDispatch
-	// 	beforeEncoderStages:MTLStageBlit | MTLStageDispatch
-	// 	visibilityOptions:MTL4VisibilityOptionDevice];
+	[computeEncoder barrierAfterEncoderStages:MTLStageBlit | MTLStageDispatch
+		beforeEncoderStages:MTLStageBlit | MTLStageDispatch
+		visibilityOptions:MTL4VisibilityOptionDevice | MTL4VisibilityOptionResourceAlias];
 	[computeEncoder setComputePipelineState:signalPipelines[signalOp]];
 	[computeEncoder setArgumentTable:arguments];
 	[computeEncoder dispatchThreads:MTLSizeMake(1, 1, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
@@ -231,7 +223,6 @@ id<MTL4CommandAllocator> workerAllocator;
 
 void* secondThread(void* _) {
 	@autoreleasepool {
-
 		id<MTL4CommandQueue> queue = [device newMTL4CommandQueue];
 
 		id<MTL4CommandBuffer> commandBuffer = [device newCommandBuffer];
@@ -259,6 +250,10 @@ int main(void) {
 	device = MTLCreateSystemDefaultDevice();
 	mtl4BeginTracing(device);
 
+	MTLResidencySetDescriptor* desc = [MTLResidencySetDescriptor new];
+	desc.initialCapacity = 2;
+	id<MTLResidencySet> residencySet = [device newResidencySetWithDescriptor:desc error:nil];
+
 	MTL4CompilerDescriptor* compilerDesc = [MTL4CompilerDescriptor new];
 
 	id<MTL4Compiler> compiler = [device newCompilerWithDescriptor:compilerDesc error:nil];
@@ -266,7 +261,6 @@ int main(void) {
 	prepareWaitPipelines(device, compiler);
 	prepareSignalPipelines(device, compiler);
 
-	seqBuffer = [device newBufferWithLength:sizeof(uint32_t) options:MTLResourceStorageModeShared];
 	signalBuffer = [device newBufferWithLength:sizeof(uint32_t) options:MTLResourceStorageModeShared];
 
 	id<MTL4CommandQueue> queue = [device newMTL4CommandQueue];
