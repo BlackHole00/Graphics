@@ -131,9 +131,9 @@ void mtl4Deinit(void) {
 		[gMtl4Context.zeroBuffer release];
 	}
 
-	if (gMtl4Context.residencySet != nil) {
-		[gMtl4Context.residencySet release];
-	}
+	// if (gMtl4Context.residencySet != nil) {
+	// 	[gMtl4Context.residencySet release];
+	// }
 
 	if (gMtl4Context.availableDevices.devices != nullptr) {
 		for (size_t i = 0; i < gMtl4Context.availableDevices.count; i++) {

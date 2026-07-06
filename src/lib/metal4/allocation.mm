@@ -90,8 +90,10 @@ void mtl4FiniAllocationStorage(void) {
 
 	Mtl4AllocationMetadata* allocation;
 	while (cmnIterate(&iter, &allocation)) {
-		[allocation->backing release];
-		[allocation->buffer release];
+		if (!allocation->isSmallAllocation) {
+			[allocation->buffer release];
+			[allocation->backing release];
+		}
 	}
 
 	cmnDestroyPage(gMtl4AllocationStorage.miscPoolPage);

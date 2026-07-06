@@ -5,5 +5,5 @@ xcrun -sdk macosx metal -frecord-sources -gline-tables-only -c ./fragment.metal 
 xcrun -sdk macosx metallib ./vertex.air -o ./vertex.metallib
 xcrun -sdk macosx metallib ./fragment.air -o ./fragment.metallib
 
-cc main.c -I../../include -L../../build -lgpu -framework Metal -framework Foundation -g -o out
+cc main.c -I../../include -L../../build -lgpu -framework Metal -framework Foundation -framework QuartzCore -g -o out
 

@@ -284,7 +284,7 @@ void initPipeline(void) {
 
 	GpuColorTarget colorTarget = {};
 	colorTarget.format = GPU_FORMAT_RGBA8_UNORM;
-	colorTarget.writeMask = 0xFF;
+	colorTarget.writeMask = 0xF;
 
 	GpuRasterDesc raster = {};
 	raster.topology = GPU_TOPOLOGY_TRIANGLE_LIST;

@@ -200,6 +200,7 @@ int main(void) {
 	stbi_image_free(data);
 	
 	gpuDeinit();
+
 	return 0;
 }
 

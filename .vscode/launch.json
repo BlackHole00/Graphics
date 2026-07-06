@@ -1,0 +1,217 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Test",
+            "program": "${workspaceFolder}/build/test",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "MTL_DEBUG_LAYER": "1",
+            }
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "00_Test",
+            "program": "${workspaceFolder}/examples/00_Test/out",
+            "args": [],
+            "cwd": "${workspaceFolder}/examples/00_Test"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "01_Initialization",
+            "program": "${workspaceFolder}/examples/01_Initialization/out",
+            "args": [],
+            "cwd": "${workspaceFolder}/examples/01_Initialization"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "02_Buffers",
+            "program": "${workspaceFolder}/examples/02_Buffers/out",
+            "args": [],
+            "env": {
+                "MTL_DEBUG_LAYER": "1",
+                // "MTL_DEBUG_LAYER_WARNING_MODE": "nslog",
+                // "MTL_CAPTURE_ENABLED": "1"
+            },
+            "cwd": "${workspaceFolder}/examples/02_Buffers"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "03_Textures",
+            "program": "${workspaceFolder}/examples/03_Textures/out",
+            "args": [],
+            "env": {
+                "MTL_DEBUG_LAYER": "1",
+                // "MTL_DEBUG_LAYER_WARNING_MODE": "nslog",
+                // "MTL_CAPTURE_ENABLED": "1"
+            },
+            "cwd": "${workspaceFolder}/examples/03_Textures"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "04_Signals",
+            "program": "${workspaceFolder}/examples/04_Signals/out",
+            "args": [],
+            "env": {
+                "MTL_DEBUG_LAYER": "1",
+                // "MTL_DEBUG_LAYER_WARNING_MODE": "nslog",
+                // "MTL_CAPTURE_ENABLED": "1"
+            },
+            "cwd": "${workspaceFolder}/examples/04_Signals"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "05_Pipelines",
+            "program": "${workspaceFolder}/examples/05_Pipelines/out",
+            "args": [],
+            "env": {
+                "MTL_DEBUG_LAYER": "1",
+                // "MTL_DEBUG_LAYER_WARNING_MODE": "nslog",
+                // "MTL_CAPTURE_ENABLED": "1"
+            },
+            "cwd": "${workspaceFolder}/examples/05_Pipelines"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "06_ClearColor",
+            "program": "${workspaceFolder}/examples/06_ClearColor/out",
+            "args": [],
+            "env": {
+                "MTL_DEBUG_LAYER": "1",
+                // "MTL_DEBUG_LAYER_WARNING_MODE": "nslog",
+                // "MTL_CAPTURE_ENABLED": "1"
+            },
+            "cwd": "${workspaceFolder}/examples/06_ClearColor"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "07_Triangle",
+            "program": "${workspaceFolder}/examples/07_Triangle/out",
+            "args": [],
+            "env": {
+                "MTL_DEBUG_LAYER": "1",
+                // "MTL_DEBUG_LAYER_WARNING_MODE": "nslog",
+                // "MTL_CAPTURE_ENABLED": "1"
+            },
+            "cwd": "${workspaceFolder}/examples/07_Triangle"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "07b_TriangleWithBarriers",
+            "program": "${workspaceFolder}/examples/07b_TriangleWithBarriers/out",
+            "args": [],
+            "env": {
+                "MTL_DEBUG_LAYER": "1",
+                // "MTL_DEBUG_LAYER_WARNING_MODE": "nslog",
+                // "MTL_CAPTURE_ENABLED": "1"
+            },
+            "cwd": "${workspaceFolder}/examples/07b_TriangleWithBarriers"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "08_TexturedRectangle",
+            "program": "${workspaceFolder}/examples/08_TexturedRectangle/out",
+            "args": [],
+            "env": {
+                "MTL_DEBUG_LAYER": "1",
+                // "MTL_DEBUG_LAYER_WARNING_MODE": "nslog",
+                // "MTL_CAPTURE_ENABLED": "1"
+            },
+            "cwd": "${workspaceFolder}/examples/08_TexturedRectangle"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "09_IndirectTexturedRectangle",
+            "program": "${workspaceFolder}/examples/09_IndirectTexturedRectangle/out",
+            "args": [],
+            "env": {
+                "MTL_DEBUG_LAYER": "1",
+                // "MTL_DEBUG_LAYER_WARNING_MODE": "nslog",
+                // "MTL_CAPTURE_ENABLED": "1"
+            },
+            "cwd": "${workspaceFolder}/examples/09_IndirectTexturedRectangle"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "0A_MultiDrawIndirect",
+            "program": "${workspaceFolder}/examples/0A_MultiDrawIndirect/out",
+            "args": [],
+            "env": {
+                "MTL_DEBUG_LAYER": "1",
+                // "MTL_DEBUG_LAYER_WARNING_MODE": "nslog",
+                // "MTL_CAPTURE_ENABLED": "1"
+            },
+            "cwd": "${workspaceFolder}/examples/0A_MultiDrawIndirect"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "0B_Window",
+            "program": "${workspaceFolder}/examples/0B_Window/out",
+            "args": [],
+            "env": {
+                "MTL_DEBUG_LAYER": "1",
+                // "MTL_DEBUG_LAYER_WARNING_MODE": "nslog",
+                // "MTL_CAPTURE_ENABLED": "1"
+            },
+            "cwd": "${workspaceFolder}/examples/0B_Window"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Perf_boids",
+            "program": "${workspaceFolder}/perf/boids/boids",
+            "args": [],
+            "env": {
+                "MTL_DEBUG_LAYER": "1",
+                // "MTL_DEBUG_LAYER_WARNING_MODE": "nslog",
+                // "MTL_CAPTURE_ENABLED": "1"
+            },
+            "cwd": "${workspaceFolder}/perf/boids"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Perf_drawcalls",
+            "program": "${workspaceFolder}/perf/drawcalls/drawcalls",
+            "args": [],
+            "env": {
+                "MTL_DEBUG_LAYER": "1",
+                // "MTL_DEBUG_LAYER_WARNING_MODE": "nslog",
+                // "MTL_CAPTURE_ENABLED": "1"
+            },
+            "cwd": "${workspaceFolder}/perf/drawcalls"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Perf_mandelbrot",
+            "program": "${workspaceFolder}/perf/mandelbrot/drawcalls",
+            "args": [],
+            "env": {
+                "MTL_DEBUG_LAYER": "1",
+                // "MTL_DEBUG_LAYER_WARNING_MODE": "nslog",
+                // "MTL_CAPTURE_ENABLED": "1"
+            },
+            "cwd": "${workspaceFolder}/perf/mandelbrot"
+        }
+    ]
+}

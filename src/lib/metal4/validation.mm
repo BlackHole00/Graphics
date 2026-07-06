@@ -1107,24 +1107,48 @@ bool mtl4ValidateDrawIndexedInstanced(GpuCommandBuffer cb, void* vertexDataGpu, 
 		return false;
 	}
 
-	if (vertexDataGpu == nullptr || pixelDataGpu == nullptr || indicesGpu == nullptr) {
+	if (indicesGpu == nullptr) {
 		CMN_SET_RESULT(result, GPU_INVALID_PARAMETERS);
 		return false;
 	}
 
-	Mtl4AllocationMetadata* vertexMetadata = mtl4AcquireAllocationMetadataFrom(vertexDataGpu, true);
-	if (vertexMetadata == nullptr) {
-		CMN_SET_RESULT(result, GPU_NO_SUCH_ALLOCATION_FOUND);
-		return false;
-	}
-	defer (mtl4ReleaseAllocationMetadata());
+	if (vertexDataGpu != nullptr) {
+		Mtl4AllocationMetadata* vertexMetadata = mtl4AcquireAllocationMetadataFrom(vertexDataGpu, true);
+		if (vertexMetadata == nullptr) {
+			CMN_SET_RESULT(result, GPU_NO_SUCH_ALLOCATION_FOUND);
+			return false;
+		}
+		defer (mtl4ReleaseAllocationMetadata());
+	
+		if (mtl4IsAllocationScheduledForDeletion(vertexMetadata)) {
+			CMN_SET_RESULT(result, GPU_USE_AFTER_FREE);
+			return false;
+		}
 
-	Mtl4AllocationMetadata* pixelMetadata = mtl4AcquireAllocationMetadataFrom(pixelDataGpu, true);
-	if (pixelMetadata == nullptr) {
-		CMN_SET_RESULT(result, GPU_NO_SUCH_ALLOCATION_FOUND);
-		return false;
+		if (mtl4IsCpuAddress(vertexMetadata, vertexDataGpu)) {
+			CMN_SET_RESULT(result, GPU_ALLOCATION_MEMORY_IS_CPU);
+			return false;
+		}
 	}
-	defer (mtl4ReleaseAllocationMetadata());
+
+	if (pixelDataGpu != nullptr) {
+		Mtl4AllocationMetadata* pixelMetadata = mtl4AcquireAllocationMetadataFrom(pixelDataGpu, true);
+		if (pixelMetadata == nullptr) {
+			CMN_SET_RESULT(result, GPU_NO_SUCH_ALLOCATION_FOUND);
+			return false;
+		}
+		defer (mtl4ReleaseAllocationMetadata());
+
+		if (mtl4IsAllocationScheduledForDeletion(pixelMetadata)) {
+			CMN_SET_RESULT(result, GPU_USE_AFTER_FREE);
+			return false;
+		}
+
+		if (mtl4IsCpuAddress(pixelMetadata, pixelDataGpu)) {
+			CMN_SET_RESULT(result, GPU_ALLOCATION_MEMORY_IS_CPU);
+			return false;
+		}
+	}
 
 	Mtl4AllocationMetadata* indicesMetadata = mtl4AcquireAllocationMetadataFrom(indicesGpu, true);
 	if (indicesMetadata == nullptr) {
@@ -1133,13 +1157,13 @@ bool mtl4ValidateDrawIndexedInstanced(GpuCommandBuffer cb, void* vertexDataGpu, 
 	}
 	defer (mtl4ReleaseAllocationMetadata());
 
-	if (mtl4IsCpuAddress(vertexMetadata, vertexDataGpu) || mtl4IsCpuAddress(pixelMetadata, pixelDataGpu) || mtl4IsCpuAddress(indicesMetadata, indicesGpu)) {
-		CMN_SET_RESULT(result, GPU_ALLOCATION_MEMORY_IS_CPU);
+	if (mtl4IsAllocationScheduledForDeletion(indicesMetadata)) {
+		CMN_SET_RESULT(result, GPU_USE_AFTER_FREE);
 		return false;
 	}
 
-	if (mtl4IsAllocationScheduledForDeletion(vertexMetadata) || mtl4IsAllocationScheduledForDeletion(pixelMetadata) || mtl4IsAllocationScheduledForDeletion(indicesMetadata)) {
-		CMN_SET_RESULT(result, GPU_USE_AFTER_FREE);
+	if (mtl4IsCpuAddress(indicesMetadata, indicesGpu)) {
+		CMN_SET_RESULT(result, GPU_ALLOCATION_MEMORY_IS_CPU);
 		return false;
 	}
 
@@ -1170,24 +1194,48 @@ bool mtl4ValidateDrawIndexedInstancedIndirect(GpuCommandBuffer cb, void* vertexD
 		return false;
 	}
 
-	if (vertexDataGpu == nullptr || pixelDataGpu == nullptr || indicesGpu == nullptr || argsGpu == nullptr) {
+	if ( indicesGpu == nullptr || argsGpu == nullptr) {
 		CMN_SET_RESULT(result, GPU_INVALID_PARAMETERS);
 		return false;
 	}
 
-	Mtl4AllocationMetadata* vertexMetadata = mtl4AcquireAllocationMetadataFrom(vertexDataGpu, true);
-	if (vertexMetadata == nullptr) {
-		CMN_SET_RESULT(result, GPU_NO_SUCH_ALLOCATION_FOUND);
-		return false;
-	}
-	defer (mtl4ReleaseAllocationMetadata());
+	if (vertexDataGpu != nullptr) {
+		Mtl4AllocationMetadata* vertexMetadata = mtl4AcquireAllocationMetadataFrom(vertexDataGpu, true);
+		if (vertexMetadata == nullptr) {
+			CMN_SET_RESULT(result, GPU_NO_SUCH_ALLOCATION_FOUND);
+			return false;
+		}
+		defer (mtl4ReleaseAllocationMetadata());
+	
+		if (mtl4IsAllocationScheduledForDeletion(vertexMetadata)) {
+			CMN_SET_RESULT(result, GPU_USE_AFTER_FREE);
+			return false;
+		}
 
-	Mtl4AllocationMetadata* pixelMetadata = mtl4AcquireAllocationMetadataFrom(pixelDataGpu, true);
-	if (pixelMetadata == nullptr) {
-		CMN_SET_RESULT(result, GPU_NO_SUCH_ALLOCATION_FOUND);
-		return false;
+		if (mtl4IsCpuAddress(vertexMetadata, vertexDataGpu)) {
+			CMN_SET_RESULT(result, GPU_ALLOCATION_MEMORY_IS_CPU);
+			return false;
+		}
 	}
-	defer (mtl4ReleaseAllocationMetadata());
+
+	if (pixelDataGpu != nullptr) {
+		Mtl4AllocationMetadata* pixelMetadata = mtl4AcquireAllocationMetadataFrom(pixelDataGpu, true);
+		if (pixelMetadata == nullptr) {
+			CMN_SET_RESULT(result, GPU_NO_SUCH_ALLOCATION_FOUND);
+			return false;
+		}
+		defer (mtl4ReleaseAllocationMetadata());
+
+		if (mtl4IsAllocationScheduledForDeletion(pixelMetadata)) {
+			CMN_SET_RESULT(result, GPU_USE_AFTER_FREE);
+			return false;
+		}
+
+		if (mtl4IsCpuAddress(pixelMetadata, pixelDataGpu)) {
+			CMN_SET_RESULT(result, GPU_ALLOCATION_MEMORY_IS_CPU);
+			return false;
+		}
+	}
 
 	Mtl4AllocationMetadata* indicesMetadata = mtl4AcquireAllocationMetadataFrom(indicesGpu, true);
 	if (indicesMetadata == nullptr) {
@@ -1204,8 +1252,6 @@ bool mtl4ValidateDrawIndexedInstancedIndirect(GpuCommandBuffer cb, void* vertexD
 	defer (mtl4ReleaseAllocationMetadata());
 
 	if (
-		mtl4IsCpuAddress(vertexMetadata, vertexDataGpu) ||
-		mtl4IsCpuAddress(pixelMetadata, pixelDataGpu) ||
 		mtl4IsCpuAddress(indicesMetadata, indicesGpu) ||
 		mtl4IsCpuAddress(argsMetadata, argsGpu)
 	) {
@@ -1214,8 +1260,6 @@ bool mtl4ValidateDrawIndexedInstancedIndirect(GpuCommandBuffer cb, void* vertexD
 	}
 
 	if (
-		mtl4IsAllocationScheduledForDeletion(vertexMetadata) ||
-		mtl4IsAllocationScheduledForDeletion(pixelMetadata) ||
 		mtl4IsAllocationScheduledForDeletion(indicesMetadata) ||
 		mtl4IsAllocationScheduledForDeletion(argsMetadata)
 	) {
@@ -1245,29 +1289,53 @@ bool mtl4ValidateDrawIndexedInstancedIndirectMulti(GpuCommandBuffer cb, void* da
 		return false;
 	}
 
-	if (dataVxGpu == nullptr || dataPxGpu == nullptr || argsGpu == nullptr || drawCountGpu == nullptr) {
+	if (argsGpu == nullptr || drawCountGpu == nullptr) {
 		CMN_SET_RESULT(result, GPU_INVALID_PARAMETERS);
 		return false;
 	}
 
-	if (vxStride == 0 || pxStride == 0) {
+	if ((dataVxGpu != NULL && vxStride == 0) || (dataPxGpu != NULL && pxStride == 0)) {
 		CMN_SET_RESULT(result, GPU_INVALID_PARAMETERS);
 		return false;
 	}
 
-	Mtl4AllocationMetadata* vxMetadata = mtl4AcquireAllocationMetadataFrom(dataVxGpu, true);
-	if (vxMetadata == nullptr) {
-		CMN_SET_RESULT(result, GPU_NO_SUCH_ALLOCATION_FOUND);
-		return false;
-	}
-	defer (mtl4ReleaseAllocationMetadata());
+	if (dataVxGpu != nullptr) {
+		Mtl4AllocationMetadata* vertexMetadata = mtl4AcquireAllocationMetadataFrom(dataVxGpu, true);
+		if (vertexMetadata == nullptr) {
+			CMN_SET_RESULT(result, GPU_NO_SUCH_ALLOCATION_FOUND);
+			return false;
+		}
+		defer (mtl4ReleaseAllocationMetadata());
+	
+		if (mtl4IsAllocationScheduledForDeletion(vertexMetadata)) {
+			CMN_SET_RESULT(result, GPU_USE_AFTER_FREE);
+			return false;
+		}
 
-	Mtl4AllocationMetadata* pxMetadata = mtl4AcquireAllocationMetadataFrom(dataPxGpu, true);
-	if (pxMetadata == nullptr) {
-		CMN_SET_RESULT(result, GPU_NO_SUCH_ALLOCATION_FOUND);
-		return false;
+		if (mtl4IsCpuAddress(vertexMetadata, dataVxGpu)) {
+			CMN_SET_RESULT(result, GPU_ALLOCATION_MEMORY_IS_CPU);
+			return false;
+		}
 	}
-	defer (mtl4ReleaseAllocationMetadata());
+
+	if (dataPxGpu != nullptr) {
+		Mtl4AllocationMetadata* pixelMetadata = mtl4AcquireAllocationMetadataFrom(dataPxGpu, true);
+		if (pixelMetadata == nullptr) {
+			CMN_SET_RESULT(result, GPU_NO_SUCH_ALLOCATION_FOUND);
+			return false;
+		}
+		defer (mtl4ReleaseAllocationMetadata());
+
+		if (mtl4IsAllocationScheduledForDeletion(pixelMetadata)) {
+			CMN_SET_RESULT(result, GPU_USE_AFTER_FREE);
+			return false;
+		}
+
+		if (mtl4IsCpuAddress(pixelMetadata, dataPxGpu)) {
+			CMN_SET_RESULT(result, GPU_ALLOCATION_MEMORY_IS_CPU);
+			return false;
+		}
+	}
 
 	Mtl4AllocationMetadata* argsMetadata = mtl4AcquireAllocationMetadataFrom(argsGpu, true);
 	if (argsMetadata == nullptr) {
@@ -1284,8 +1352,6 @@ bool mtl4ValidateDrawIndexedInstancedIndirectMulti(GpuCommandBuffer cb, void* da
 	defer (mtl4ReleaseAllocationMetadata());
 
 	if (
-		mtl4IsCpuAddress(vxMetadata, dataVxGpu) ||
-		mtl4IsCpuAddress(pxMetadata, dataPxGpu) ||
 		mtl4IsCpuAddress(argsMetadata, argsGpu) ||
 		mtl4IsCpuAddress(drawCountMetadata, drawCountGpu)
 	) {
@@ -1294,8 +1360,6 @@ bool mtl4ValidateDrawIndexedInstancedIndirectMulti(GpuCommandBuffer cb, void* da
 	}
 
 	if (
-		mtl4IsAllocationScheduledForDeletion(vxMetadata) ||
-		mtl4IsAllocationScheduledForDeletion(pxMetadata) ||
 		mtl4IsAllocationScheduledForDeletion(argsMetadata) ||
 		mtl4IsAllocationScheduledForDeletion(drawCountMetadata)
 	) {
