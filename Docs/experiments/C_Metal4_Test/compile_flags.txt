@@ -1,7 +1,0 @@
--xobjective-c
--std=c11
-
--I./libs/rgfw/include
-
--Wno-undefined-inline
-
