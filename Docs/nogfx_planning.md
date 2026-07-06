@@ -58,7 +58,7 @@ L'Api NoGfx risulta quasi totalmente completa, però omette alcuni dettagli, nel
 - Selezione del device e dettagli di creazione della `GpuQueue`.
 - Presentazione a schermo.
 - Gestione degli errori (che possono generare dal layer di validazione o dall'API nativa sottostante).
-- Accesso ai primitivi dell'api nativa.
+ Accesso ai primitivi dell'api nativa.
 
 #### Inizializzazione della libreria e selezione del device
 Al momento dell'inizializzazione l'utilizzatore della libreria dovrà stabilire le proprietà di inizializzazione di essa. Per far ciò utilizzerà la struttura `GpuInitDesc`, specificando api sottostante da utilizzare, richiedendo o meno la validazione e fornendo layer extra di terze parti.
@@ -72,23 +72,24 @@ Al momento della terminazione dell'applicazione l'utente potrà chiamare `gpuDei
 Segue quindi la parte di Api rilevante:
 
 ```c
-typedef enum GPU_BACKEND {
+typedef enum GpuBackend {
   GPU_NONE = 0,
   GPU_METAL_4,
   GPU_VULKAN,
-  // ... 
+  // ...
 };
 
-typedef enum GPU_DEVICE_TYPE {
+typedef enum GpuDeviceType {
   GPU_INTEGRATED,
   GPU_DEDICATED,
 };
 
 typedef struct GpuInitDesc {
-  GPU_BACKEND backend;
+  GpuBackend backend;
   bool validationEnabled;
   GpuLayer* extraLayers;
   size_t extraLayerCount;
+  // ...
 } GpuInitDesc;
 
 typedef size_t GpuDeviceId;
@@ -97,19 +98,31 @@ typedef struct GpuDeviceInfo {
   GpuDeviceId identifier;
   const char* name;
   const char* vendor;
-  GPU_DEVICE_TYPE type;
-  // TODO: device capabilities, limits, etc...
+  GpuDeviceType type;
+  // ...
 } GpuDeviceInfo;
 
-void gpuInit(const GPUInitDesc* desc, GPU_RESULT* result);
-void gpuDeinit();
+void gpuInit(const GPUInitDesc* desc, GpuResult* result);
+void gpuDeinit(void);
 
-size_t gpuEnumerateDevices(GpuDeviceInfo* devices, size_t devices_size, GPU_RESULT* result);
-void gpuSelectDevice(GpuDeviceId deviceId, GPU_RESULT* result);
+size_t gpuEnumerateDevices(GpuDeviceInfo* devices, size_t devices_size, GpuResult* result);
+void gpuSelectDevice(GpuDeviceId deviceId, GpuResult* result);
 ```
 
 #### Creazione della Queue
-TODO: Su Metal non servirebbe specificare nient'altro in teoria. Probabilmente si intende qualcosa di simile alle QueueFamilies di vulkan, ma non saprei
+L'Api proposta dall'articolo omette specifiche relative alla creazione della _Queue_.
+
+È difficile interpretare l'articolo per capire se si intenda l'implementazione di una coda in stile DirectX/Vulkan (più code, ogniuna con diverse proprietà e caratteristiche) o Metal (una coda in grado di accettare qualsiasi comando).  
+In nessun pezzo di codice d'esempio avviene la submission di sia comandi di render/compute che di comandi di blit, tuttavia i _command buffer_ non appaiono categorizzati in diversi tipi e la variabile rappresentante la coda, rimane sempre chiamata _queue_.  
+Si ipotizza quindi di implementare una coda in stile Metal.
+
+L'api quindi si semplificherebbe in:
+```
+GpuQueue gpuCreateQueue(GpuResult* result);
+```
+
+<!-- TODO: Vatti anche a vedere come functiona l'hardware moderno, per vedere se più tipi di code sono strettamente necessarie -->
+<!-- TODO: Su Metal non servirebbe specificare nient'altro in teoria. Probabilmente si intende qualcosa di simile alle QueueFamilies di vulkan, ma non saprei -->
 
 #### Presentazione
 TODO: Guarda cosa fanno Vulkan, WebGpu e SDL3_GPU. Metal è proprio semplice.
@@ -234,6 +247,32 @@ Notiamo che questa trasformazione, in realtà, è un semplice cast, in quanto un
 
 <!-- TODO: Migliora la spiagazione a lato shader ed integra con l'utilizzo di slang. -->
 
+### Sincronizazione
+#### Barriers
+
+#### Signals
+_No Graphics_ propone un modello di sincronizzazione _inter command buffer_ estremamente flessibile, basandosi su un valore in _gpu memory_, è possibile modificare quest'ultimo arbitrariamente, potendo segnalare qualsiasi valore (sia attraverso shader, sia attraverso l'apposito comando `gpuSignalAfter`). In modo simile, anche l'attesa è flessibile, non solo aspettando uno specifico valore, ma addirittura un qualsiasi che soddisfi i requisiti definiti nella chiamata a `gpuWaitBefore`.  
+
+Metal purtroppo non fornisce primitivi di sincronizzazione _inter command buffer_ ugualmente flessibili, mettendo a disposizione solo una semplice fence (`MTLFence`), che supporta solamente le seguenti operazioni, senza fornire un contatore interno:
+- `- (void) waitForFence:`
+- `- (void) updateFence:`
+Non vi è quindi un corrispettivo Metal per questo primitivo. Si nota che `MTLEvent` e `MTLSharedEvent` non sono ugualmente compatibili per molteplici motivi, sebbene forniscano un contatore:
+- Supportano sono sequenze di segnali monotonicamente crescenti.
+- Pensati per la sincronizzazione gpu-cpu, quindi molto più inefficienti.
+- Il valore segnalato dipende dal contenuto in _gpu memory_, che non è ottenibile al tempo di codifica del command buffer.
+
+Sono state analizzate i seguenti _workaround_:
+- Utilizzo di shader "di sincronizzazione": L'operazione `gpuWaitBefore` lancia un'istanza di una compute shader che va in _spin-wait_, mentre l'operazione `gpuSignalAfter` lancia una compute shader che modifica il valore da segnalare. Questo approccio risulta non adeguato perché lo scheduler Metal può vedere la shader di attesa in esecuzione ed attendere che essa finisca prima di mandare in esecuzione quella di segnalazione, risultando in deadlock.  
+- Queue flushing e read-back dalla gpu: Eseguiamo di comandi precedentemente codificati, vediamo il contenuto del valore da segnalare e decidiamo chi mandare in esecuzione. Questo approccio, sebbene sia teoricamente funzionante, è la peggiore cosa che si possa fare in computer grafica: rende impossibile alcuni tipi di ottimizzazioni (in-flight rendering) ed è estremamente inefficiente, sembrando all'utente una semplice operazione.
+- Limitare le funzionalità dei segnali ad un subset utilizzabile in Metal senza problemi di performance catastrofici.
+
+Si è scelta l'ultima opzione. Seguono le seguenti limitazioni:
+- I segnali sono sempre basati su valori in _gpu memory_. Questi ultimi solo sia leggibili che modificabili (anche se questo non risulterà utile per le limitazioni poste in seguito).
+- Solo l'operazione `GPU_SIGNAL_SET` è supportata per `gpuSignalAfter`.
+<!-- - Solo l'operazione `GPU_OP_EQUAL` con mask `~0` è supportata per `gpuWaitBefore` -->
+
+Queste limitazioni permettono di conoscere il valore del segnale al tempo di codifica del command buffer. Questo rende possibile implementare i segnali in un modo performante.
+
 # Progettazione dell'implementazione
 <!-- Si è deciso di usare C, nel particolare C89 (anche conosciuto come ANSI C), in quanto la codebase deve restare compatibile sia con ObjectiveC (per interop con Metal), sia con C++ (per un'eventuale futuro interop con DirectX). -->  
 <!-- Diversamente da come spesso si pensi, C e C++ sono due linguaggi differenti, che, nella loro crescita negli ultimi quarant'anni, hanno avuto un'evoluzione diversa. -->  
@@ -249,6 +288,105 @@ Objective-C++ verrà utilizzato per l'integrazione con Metal.
 
 ## Scelta del linguaggio di shading
 In previsione del futuro, viene scelto, Slang, in quanto è l'unico linguaggio cross-platform che supporta puntatori a device memory. Verrà sviluppata una libreria slang che renderà trasparente l'integrazione con NoGfx.
+
+## Strategia di multithreading
+Ogni risorsa, ha lifetime diverso. L'utente può distruggere un oggetto da qualsiasi thread, anche mentre quest'ultimo è in utilizzo.  
+Una soluzione naive sarebbe quella di implementare reference-couting e mutex per ogni oggetto, tuttavia questa è una scelta innefficiente.
+
+Si prevede quindi di utilizzare la strategia della _deferred deletion_. Quando l'utente richiede la distruzione di un oggetto, quest'ultimo viene solo segnato come eliminato, ma l'effettivo rilascio delle risorse avviene in un secondo momento, quando si è sicuri che non vi sono attivi riferimenti ad esso nel codice.  
+
+Ogni _resource storage_ presenta un `RWMutex`, per regolamentare gli accessi.
+Ogni _resource storage_ può essere in uno dei seguenti stati:
+- _NORMAL_: Nessuna risorsa sta venendo rimossa.
+- _PENDING REMOVAL_: Un thread sta per rimuovere le risorse. È in attesa che nessuno usi lo storage. I nuovi utilizzi di esso attenderanno la rimozione delle risorse.
+- _REMOVING_: Il thread sta rimuovendo, in modalità esclusiva le risorse.
+
+Ogni _resource storage_ presenta quindi i seguenti primitivi di sincronizzazione:
+```cpp
+CmnFutex  storageState;
+CmnFutex  resourceUsers;
+CmnRWMutex mutex;
+```
+Il mutex rappresenta solo il locking dello storage, non delle singole risorse, mentre _resource users_ indica il numero di utilizzatori di risorse nello storage.
+
+Le procedure di locking avvengono seguendo il seguente pseudo codice:
+```
+lockRead() {
+  futexWait(storageMode, REMOVING)
+  mutexReadLock(mutex)
+}
+
+lockWrite() {
+  futexWait(storageMode, REMOVING);
+  mutexWriteLock(mutex);
+}
+
+markAsUsingResources() {
+  atomicInc(resourceUsers)
+}
+
+markAsNotUsingResources() {
+  count = atomicDec(resourceUsers)
+  if (count == 0) {
+    futexSignal(resourceUsers)
+  }
+}
+
+lockDeletion() {
+  loop {
+    futexWait(storageMode, REMOVING);
+    futexWait(resourceUsers, -1);
+    if (atomicCompareExchangeStrong(storageMode, NORMAL, REMOVING)) {
+      mutexWriteLock(mutex)
+      break
+    }
+  }
+  atomicStore(storageMode, REMOVING)
+}
+
+unlockDeletion() {
+  atomicStore(storageMode, NORMAL)
+  mutexWriteUnlock(mutex)
+  futexBroadcast(storageState);
+}
+```
+L'utilizzo risulta il seguente:
+```
+resourceOf(handle) {
+  lockRead()
+  ptr = storageHandleMap[handle]
+  unlockRead()
+}
+
+useResource(handle) {
+  markAsUsingResources()
+
+  ptr = resourceOf(handle)
+  // use ptr
+
+  markAsNotUsingResources()
+}
+```
+
+Ogni risorsa è identificabile da un handle, che fa riferimento ad una `CmnHandleMap`, la quale supporta puntatori stabili agli elementi. L'utilizzatore della risorsa è quindi in grado di mantenere un riferimento ad un oggetto per l'inte.  
+Ogni risorsa prevede due tipi di informazioni:
+- informazioni costanti: ottenibili atomicamente.
+- informazioni condivise: protette da `RWMutex`.
+
+Si preve l'implementazione della seguente Api interna:
+```cpp
+void mtl4ScheduleDeletionFor(void* ptr);
+void mtl4ScheduleDeletionFor(GpuTexture texture);
+// ...
+
+void mtl4DeleteScheduledObjects(void);
+```
+
+Notiamo che la rimozione effettiva può avvenire in diversi momenti:
+- presentazione di un frame
+- submission di un command buffer
+- sul soglie di utilizzo della memoria
+La rimozione deve essere rara, in quanto comporta il blocco di uno storage alla volta.
 
 # Progettazione del testing
 
