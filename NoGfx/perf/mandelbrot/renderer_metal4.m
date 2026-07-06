@@ -265,6 +265,7 @@ void draw(void) { @autoreleasepool {
 	id<CAMetalDrawable> drawable = [gRenderer.layer nextDrawable];
 
 	startTimer(&gRenderer.encodeTimer);
+	[gRenderer.commandAllocator reset];
 	id<MTL4CommandBuffer> commandBuffer = [[gRenderer.device newCommandBuffer] autorelease];
 	[commandBuffer beginCommandBufferWithAllocator:gRenderer.commandAllocator];
 
@@ -276,10 +277,17 @@ void draw(void) { @autoreleasepool {
 
 	id<MTL4RenderCommandEncoder> renderpass = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDesc];
 
-	// [gRenderer.argumentTable setAddress:[gRenderer.boids[frameId] gpuAddress] atIndex:0];
-	[gRenderer.vertexArgumentTable setAddress:[gRenderer.vertices gpuAddress] atIndex:0];
+	MTLAllocation vertexArgs = MTLBumpAlloc(&gRenderer.bumpAllocator, sizeof(MTLGPUAddress));
+	*(MTLGPUAddress*)vertexArgs.cpu = [gRenderer.vertices gpuAddress];
+
+	MTLAllocation fragmentArgs = MTLBumpAlloc(&gRenderer.bumpAllocator, sizeof(float));
+	*(float*)fragmentArgs.cpu = gRenderer.frameCount / 100.0;
+
+	[gRenderer.vertexArgumentTable setAddress:vertexArgs.gpu atIndex:0];
+	[gRenderer.fragmentArgumentTable setAddress:fragmentArgs.gpu atIndex:0];
 
 	[renderpass setArgumentTable:gRenderer.vertexArgumentTable atStages:MTLRenderStageVertex];
+	[renderpass setArgumentTable:gRenderer.fragmentArgumentTable atStages:MTLRenderStageFragment];
 	[renderpass setRenderPipelineState:gRenderer.renderPSO];
 	[renderpass drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3 instanceCount:1];
 

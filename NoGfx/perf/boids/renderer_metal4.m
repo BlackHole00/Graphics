@@ -16,6 +16,11 @@ const Vertex BOID_VERTICES[] = {
 	{  0,  5 }
 };
 
+typedef struct {
+	MTLGPUAddress	boids;
+	MTLGPUAddress	vertices;
+} GpuArgs;
+
 uint8_t* readEntireFile(const char* file, size_t* fileLength) {
 	FILE* handle = fopen(file, "rb");
 	if (handle == NULL) {
@@ -51,6 +56,7 @@ struct {
 	id<MTLResidencySet>	residencySet;
 	id<MTLHeap>		heap;
 	id<MTLBuffer>		boids[3];
+	id<MTLBuffer>		args[3];
 	id<MTLBuffer>		vertices;
 
 	id<MTLRenderPipelineState>	renderPSO;
@@ -105,6 +111,10 @@ void initRenderer(void) { @autoreleasepool {
 
 	gRenderer.vertices = [gRenderer.heap newBufferWithLength:sizeof(Vertex) * 3 options:MTLResourceStorageModeShared | MTLResourceHazardTrackingModeTracked];
 	memcpy([gRenderer.vertices contents], &BOID_VERTICES[0], sizeof(Vertex) * 3);
+
+	gRenderer.args[0] = [gRenderer.heap newBufferWithLength:sizeof(GpuArgs) options:MTLResourceStorageModeShared | MTLResourceHazardTrackingModeTracked];
+	gRenderer.args[1] = [gRenderer.heap newBufferWithLength:sizeof(GpuArgs) options:MTLResourceStorageModeShared | MTLResourceHazardTrackingModeTracked];
+	gRenderer.args[2] = [gRenderer.heap newBufferWithLength:sizeof(GpuArgs) options:MTLResourceStorageModeShared | MTLResourceHazardTrackingModeTracked];
 
 	assert(gRenderer.boids[0] != NULL && gRenderer.boids[1] != NULL && gRenderer.boids[2] != NULL && gRenderer.vertices != NULL);
 
@@ -206,8 +216,11 @@ void draw(void) { @autoreleasepool {
 
 	id<MTL4RenderCommandEncoder> renderpass = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDesc];
 
-	[gRenderer.argumentTable setAddress:[gRenderer.boids[frameId] gpuAddress] atIndex:0];
-	[gRenderer.argumentTable setAddress:[gRenderer.vertices gpuAddress] atIndex:1];
+	GpuArgs* args = (GpuArgs*)[gRenderer.args[frameId] contents];
+	args->boids = [gRenderer.boids[frameId] gpuAddress];
+	args->vertices = [gRenderer.vertices gpuAddress];
+
+	[gRenderer.argumentTable setAddress:[gRenderer.args[frameId] gpuAddress] atIndex:0];
 
 	[renderpass setArgumentTable:gRenderer.argumentTable atStages:MTLRenderStageVertex];
 	[renderpass setRenderPipelineState:gRenderer.renderPSO];

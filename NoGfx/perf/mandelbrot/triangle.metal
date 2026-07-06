@@ -1,27 +1,31 @@
 #include <metal_stdlib>
 using namespace metal;
 
-constant uint width [[function_constant(0)]];
-constant uint height [[function_constant(1)]];
-constant uint iterations [[function_constant(2)]];
-
 typedef packed_float2 Vertex;
 
 struct VertexOut {
 	float4 position [[position]];
 };
 
+struct Args {
+	device	Vertex*		vertices;
+};
+
 vertex VertexOut vertexMain(
 		uint		vertexIndex	[[vertex_id]],
 		uint		instanceId	[[instance_id]],
-	device	const Vertex*	vertices	[[buffer(0)]]
+	device	const Args&	args		[[buffer(0)]]
 ) {
-	float2 position = vertices[vertexIndex].xy;
+	float2 position = args.vertices[vertexIndex].xy;
 
 	VertexOut vertexOut;
 	vertexOut.position = float4(position, 0.0, 1.0);
 	return vertexOut;
 }
+
+constant uint width [[function_constant(0)]];
+constant uint height [[function_constant(1)]];
+constant uint iterations [[function_constant(2)]];
 
 struct DrawArg {
 	float time;
@@ -55,8 +59,7 @@ fragment float4 fragmentMain(
 	float2 uv = position.xy / float2(float(640), float(480));
 	float2 ndc = uv * 2.0 - 1.0;
 	float aspect = float(640) / float(480);
-	// float zoom = 1.5 * (1.0 + 0.3 * sin(drawArgs.time));
-	float zoom = 1.5 * (1.0 + 0.3);
+	float zoom = 1.5 * (1.0 + 0.3 * sin(drawArgs.time));
 	
 	// 4x4 antialiasing
 	float pixelSize = 1.0 / float(640);
@@ -65,7 +68,7 @@ fragment float4 fragmentMain(
 		for (int sx = 0; sx < 4; ++sx) {
 			float2 offset = float2(float(sx) - 1.5, float(sy) - 1.5) * pixelSize * 0.25;
 			float2 c = float2((ndc.x + offset.x) * aspect, ndc.y + offset.y) * zoom + float2(-0.5, 0.5);
-			value += mandelbrot(c, 512);
+			value += mandelbrot(c, 1024);
 		}
 	}
 	value *= 0.25;
@@ -75,6 +78,5 @@ fragment float4 fragmentMain(
 	float3 color = mix(inside, outside, value);
 
 	return float4(color, 1.0);
-	// return float4(1.0, 1.0, 1.0, 1.0);
 }
 

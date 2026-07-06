@@ -44,6 +44,12 @@ typedef struct {
 	uintptr_t		gpu;
 } MTLBumpAllocator;
 
+typedef struct DrawVertexArgs {
+	MTLGPUAddress	vertices;
+	Position2	position;
+} DrawVertexArgs;
+
+
 struct {
 	NSView*			view;
 	CAMetalLayer*		layer;
@@ -270,11 +276,12 @@ void draw(void) { @autoreleasepool {
 
 	[renderpass setRenderPipelineState:gRenderer.renderPSO];
 	for (int i = 0; i < gState.activeTriangles; i++) {
-		MTLAllocation drawArgs = MTLBumpAlloc(&gRenderer.bumpAllocator, sizeof(Position2));
-		*(Position2*)drawArgs.cpu = gState.triangles[i];
+		MTLAllocation drawArgs = MTLBumpAlloc(&gRenderer.bumpAllocator, sizeof(DrawVertexArgs));
+		DrawVertexArgs* args = (DrawVertexArgs*)drawArgs.cpu;
+		args->position = gState.triangles[i];
+		args->vertices = [gRenderer.vertices gpuAddress];
 
 		[gRenderer.argumentTable setAddress:drawArgs.gpu atIndex:0];
-		[gRenderer.argumentTable setAddress:[gRenderer.vertices gpuAddress] atIndex:1];
 
 		[renderpass setArgumentTable:gRenderer.argumentTable atStages:MTLRenderStageVertex];
 		[renderpass drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3 instanceCount:1];
