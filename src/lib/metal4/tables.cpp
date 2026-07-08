@@ -41,10 +41,10 @@ const MTLTextureType gMtl4GpuToMtlTextureType[] = {
 };
 
 const MTLTextureUsage gMtl4GpuToMtlUsage[] = {
-	/*GPU_USAGE_SAMPLED*/	 		MTLTextureUsageShaderRead,
-	/*GPU_USAGE_STORAGE*/			MTLTextureUsageShaderRead | MTLTextureUsageShaderWrite,
-	/*GPU_USAGE_COLOR_ATTACHMENT*/		MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead,
-	/*GPU_USAGE_DEPTH_STENCIL_ATTACHMENT*/	MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead,
+	/*GPU_USAGE_SAMPLED*/	 		MTLTextureUsagePixelFormatView | MTLTextureUsageShaderRead,
+	/*GPU_USAGE_STORAGE*/			MTLTextureUsagePixelFormatView | MTLTextureUsageShaderRead | MTLTextureUsageShaderWrite,
+	/*GPU_USAGE_COLOR_ATTACHMENT*/		MTLTextureUsagePixelFormatView | MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead,
+	/*GPU_USAGE_DEPTH_STENCIL_ATTACHMENT*/	MTLTextureUsagePixelFormatView | MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead,
 };
 
 const size_t gMtl4GpuFormatPixelSize[] = {
